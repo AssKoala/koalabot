@@ -14,10 +14,9 @@
     to make lookups O(logn) rather than devolving into O(n).
 */
 
-import { logInfo, logError, logWarning, registerCommandModule } from '../common.js';
+import { Common } from '../common.js';
 import dictData from './../data/dictdata.json' assert { type: 'json' }
 import fs from 'fs'
-
 import { SlashCommandBuilder } from 'discord.js';
 
 /**
@@ -26,7 +25,25 @@ import { SlashCommandBuilder } from 'discord.js';
  */
 function sortDictData()
 {
-    dictData.dict_data.sort((a,b) => a.entry_name.localeCompare(b.entry_name));
+    const start = Common.startTiming("sortDictData(): ");
+    try {
+        dictData.sort((a, b) => {
+            a.entry.localeCompare(b.entry)
+        });
+    } catch (e) {
+        Common.logError(`Failed to sort dict data, got ${e}`);
+    }
+    Common.endTiming(start);
+}
+
+function getDictDataEntryCount()
+{
+    try {
+        return dictData.length;
+    } catch (e) {
+        Common.logError(`dict data not defined, got ${e}`);
+        return 0;
+    }
 }
 
 /**
@@ -36,20 +53,22 @@ function sortDictData()
  */
 async function flushDictData()
 {
+    const start = Common.startTiming("flushDictData(): ");
     try {
         const jsonString = JSON.stringify(dictData, null, 2);
         fs.writeFile('./data/dictdata.json', jsonString, err => {
             if (err) {
-                logError(`Error flushing dict data file, got ${err}`);
+                Common.logError(`Error flushing dict data file, got ${err}`);
                 return false;
             } else {
-                logInfo('Successfully wrote dict data');
+                Common.logInfo('Successfully wrote dict data');
                 return true;
             }
         });
     } catch (e) {
-        logError(`Failed to flush dict data to disk, got error ${e}`);
+        Common.logError(`Failed to flush dict data to disk, got error ${e}`);
     }
+    Common.endTiming(start);
 }
 
 /**
@@ -59,14 +78,7 @@ async function flushDictData()
  */
 function getDefaultDictEntry(author = "")
 {
-    try {
-        let copied = JSON.parse(JSON.stringify(dictData.primordial));
-        copied.author = author;
-        return copied;
-    } catch (e) {
-        logError(`Failed to copy primordial dictionary entry, got error ${e}`);
-        return null;
-    }
+    return { "author": author, "entry": "", "definition": "" };
 }
 
 /**
@@ -78,23 +90,29 @@ function getDefaultDictEntry(author = "")
  */
 function getIndexOf(array, target, compareFunc)
 {
-    let start = 0;
-    let end = array.length - 1;
-    
-    while (start <= end) {
-        let middle = Math.floor((start+end)/2);
+    try {
+        let start = 0;
+        let end = array.length - 1;
+        let iterations = 0;
 
-        let result = compareFunc(array[middle], target);
+        while (start <= end) {
+            let middle = Math.floor((start + end) / 2);
 
-        if (result === 0) {
-            return middle;
-        } else if (result < 0) {
-            start = middle + 1;
-        } else {
-            end = middle - 1;
+            let result = compareFunc(array[middle], target);
+
+            if (result === 0) {
+                return middle;
+            } else if (result < 0) {
+                start = middle + 1;
+            } else {
+                end = middle - 1;
+            }
+            iterations++;
         }
+    } catch (e) {
+        Common.logError(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
     }
-
+    
     return -1;
 }
 
@@ -105,20 +123,23 @@ function getIndexOf(array, target, compareFunc)
  */
 function findDictionaryEntry(entryName)
 {
-    let result = getIndexOf(dictData.dict_data, entryName, 
-        (x,y) => { 
-            const left = x.entry_name.toLowerCase();
-            const right = y.toLowerCase();
+    try {
+        let result = getIndexOf(dictData, entryName,
+            (x, y) => {
+                const left = x.entry.toLowerCase();
+                const right = y.toLowerCase();
 
-            return left.localeCompare(right);
-        });
+                return left.localeCompare(right);
+            });
 
-    if (result === -1)
-    {
-        return null;   
-    } else {
-        return [ dictData.dict_data[result].author, dictData.dict_data[result].definition ];
+        if (result != -1) {
+            return { "author": dictData[result].author, "definition": dictData[result].definition };
+        }
+    } catch (e) {
+        Common.logError(`Failed to find dictionary entry ${entryName}, got ${e}`);
     }
+
+    return null;
 }
 
 /**
@@ -127,30 +148,34 @@ function findDictionaryEntry(entryName)
  */
 async function handleDictCommand(interaction)
 {
+    const start = Common.startTiming("handleDictCommand(): ");
+
     try {
+        await interaction.deferReply();
+
         if (interaction.options.data.length < 1) {
-            await logError(`Invalid interaction object sent to dict, data length 0!`, interaction);
+            await Common.logError(`Invalid interaction object sent to dict, data length 0!`, interaction, true);
             return;
         }
-        
+
         const dictRequested = interaction.options.data[0].value.trim();
-        
+
         if (dictRequested == '') {
-            await interaction.reply("DICT entry for what, /dict WHAT");
+            await interaction.editReply("DICT entry for what, /dict WHAT");
             return;
         }
-        
+
         const result = findDictionaryEntry(dictRequested);
 
-        if (result != null)
-        {
-            await interaction.reply(`**DICT:** **${dictRequested}** = ${result[1]} [added by: ${result[0]}]`);
+        if (result != null) {
+            await interaction.editReply(`**DICT:** **${dictRequested}** = ${result.definition} [added by: ${result.author}]`);
         } else {
-            await interaction.reply(`**DICT:** No definition for ${dictRequested}`);
+            await interaction.editReply(`**DICT:** No definition for ${dictRequested}`);
         }
     } catch (e) {
-        await logError(`Failed to handle DICT command, got error: ${e}`, interaction);
+        await Common.logError(`Failed to handle DICT command, got error: ${e}`, interaction, true);
     }
+    Common.endTiming(start);
 }
 
 /**
@@ -159,16 +184,18 @@ async function handleDictCommand(interaction)
  */
 async function handleDefineCommand(interaction)
 {
+    const start = Common.startTiming("handleDefineCommand(): ");
+
     try {
         if (interaction.options.data.length < 1) {
-            await logError(`Invalid interaction object sent to dict, data length 0!`, interaction);
+            await Common.logError(`Invalid interaction object sent to dict, data length 0!`, interaction);
             return;
         }
 
         if (interaction.options.data.length < 2)
         {
             await interaction.reply('Missing entries for define command, need phrase and definiton plzsir');
-            logWarning(`Failed to get data for define command, got ${options.data}`);
+            Common.logWarning(`Failed to get data for define command, got ${options.data}`);
             return;
         }
 
@@ -178,10 +205,10 @@ async function handleDefineCommand(interaction)
 
         if (existingEntry === null) {
             let newEntry = getDefaultDictEntry(interaction.user.username);
-            newEntry.entry_name = entryName;
+            newEntry.entry = entryName;
             newEntry.definition = definition;
 
-            dictData.dict_data.push(newEntry);
+            dictData.push(newEntry);
             sortDictData(); // insertion sort would be faster but screw it I'm lazy
             flushDictData();
 
@@ -190,8 +217,48 @@ async function handleDefineCommand(interaction)
             await interaction.reply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry[1]} by ${existingEntry[0]}`);
         }
     } catch (e) {
-        await logError(`Failed to set definition, got error ${e}`, interaction);
+        await Common.logError(`Failed to set definition, got error ${e}`, interaction);
     }
+
+    Common.endTiming(start);
+}
+
+/**
+ * Handles the /index command
+ * @param {Discord.interaction} interaction - discord interaction to reply to
+ */
+async function handleIndexCommand(interaction)
+{
+    const start = Common.startTiming("handleIndexCommand(): ");
+
+    try {
+        await interaction.deferReply();
+
+        const search_string = interaction.options.data[0].value.trim().toLowerCase();
+
+        const matches = dictData.filter(entry => entry.definition.toLowerCase().includes(search_string));
+
+        let outputString;
+
+        if (matches.length > 0) {
+            outputString = `Search string ${search_string} found in entries: `;
+            for (let i = 0; i < matches.length; i++) {
+                if (i > 0) {
+                    outputString += ", ";
+                }
+                outputString += "\"" + matches[i].entry + "\"";
+            }
+        } else {
+            outputString = `Search string ${search_string} not found in entries.`;
+        }
+
+        await interaction.editReply(outputString);
+
+    } catch (e) {
+        await Common.logError(`Failed to handle index command, got error ${e}`);
+    }
+
+    Common.endTiming(start);
 }
 
 // discord dict command
@@ -220,6 +287,18 @@ const defineCommand = new SlashCommandBuilder()
             option
                 .setName('definition')
                 .setDescription('Definition of the phrase')
+                .setRequired(true),
+        )
+;
+
+// discord index command
+const indexCommand = new SlashCommandBuilder()
+        .setName('index')
+        .setDescription("Search dict entries")
+        .addStringOption((option) =>
+            option
+                .setName('search_string')
+                .setDescription('String to look for (case insensitive)')
                 .setRequired(true),
         )
 ;
@@ -264,7 +343,28 @@ function getDefineJSON()
     return defineCommand.toJSON();
 }
 
-registerCommandModule(registerDictCommand, getDictJSON);
-registerCommandModule(registerDefineCommand, getDefineJSON);
+// register the index command
+function registerIndexCommand(client)
+{
+    const index = 
+    {
+        data: indexCommand,
+        async execute(interaction) {
+            await handleIndexCommand(interaction);
+        }
+    }
 
-export { sortDictData, registerDictCommand, registerDefineCommand, getDictJSON, getDefineJSON }
+    client.commands.set(index.data.name, index);
+}
+
+// retrieve the index command as JSON
+function getIndexJSON()
+{
+    return indexCommand.toJSON();
+}
+
+Common.registerCommandModule(registerDictCommand, getDictJSON);
+Common.registerCommandModule(registerDefineCommand, getDefineJSON);
+Common.registerCommandModule(registerIndexCommand, getIndexJSON);
+
+export { sortDictData, getDictDataEntryCount }

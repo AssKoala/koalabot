@@ -1,0 +1,74 @@
+[
+    {
+        "profanity": "ass",
+        "matches": [
+            "^[a@][s\\$][s\\$]$",
+            "[a@][s\\$][s\\$]h[o0][l1][e3][s\\$]?"
+        ]
+    },
+	{
+		"profanity": "bitch",
+        "matches": [
+            "b[i1][t\\+]ch[s\\$]?",
+			"b[i1][t\\+]ch[e3]r[s\\$]?",
+			"b[i1][t\\+]ch[e3][s\\$]",
+			"b[i1][t\\+]ch[i1]ng?"
+        ]
+	},
+	{
+		"profanity": "cock",
+		"matches": [
+			"cock",
+			"^(c|k|ck|q)[o0](c|k|ck|q)[s\\$]?$",
+			"(c|k|ck|q)[o0](c|k|ck|q)[s\\$]u",
+			"(c|k|ck|q)[o0](c|k|ck|q)[s\\$]u(c|k|ck|q)[e3]d",
+			"(c|k|ck|q)[o0](c|k|ck|q)[s\\$]u(c|k|ck|q)[e3]r",
+			"(c|k|ck|q)[o0](c|k|ck|q)[s\\$]u(c|k|ck|q)[i1]ng",
+			"(c|k|ck|q)[o0](c|k|ck|q)[s\\$]u(c|k|ck|q)[s\\$]"
+		]
+	},
+	{
+		"profanity": "cunt",
+		"matches": [
+			"(c|k|ck|q)un[t\\+][s\\$]?"
+		]
+	},
+	{
+		"profanity": "fuck",
+		"matches": [
+			"(ph|f)u(c|k|ck|q)",
+			"(ph|f)u(c|k|ck|q)[s\\$]?"
+		]
+	},
+	{
+		"profanity": "pussy",
+		"matches": [
+			"pu[s\\$][s\\$][i1][e3][s\\$]",
+			"pu[s\\$][s\\$]y[s\\$]?"
+		]
+	},
+	{
+		"profanity": "shit",
+		"matches": [
+			"[s\\$]h[i1][t\\+][s\\$]?"
+		]
+	},
+	{
+		"profanity": "ree",
+		"matches": [
+			"ree"
+		]
+	},
+	{
+		"profanity": "retard",
+		"matches": [
+			"retard"
+		]
+	},
+	{
+		"profanity": "trump",
+		"matches": [
+			"trump"
+		]
+	}
+]

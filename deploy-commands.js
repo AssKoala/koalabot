@@ -2,10 +2,10 @@ import { Client, REST, Routes, GatewayIntentBits } from 'discord.js';
 
 // Pull in clientId, guildId, and token
 import dotenv from "dotenv"
-import { getDiscordKey, getDiscordAppId, getDiscordGuildId } from "./common.js";
+import { Common } from "./common.js";
 dotenv.config();
 
-const clientId = getDiscordAppId();
+const clientId =  Common.getDiscordAppId();
 /*
 	Usage:
 		Comment out the getDiscordGuildId() line and uncomment the 2cpu one to swap servers
@@ -22,8 +22,8 @@ const clientId = getDiscordAppId();
 		node .\deploy-commands.js [prod?] [global|guild] clear
 
 */
-const guildIdList = getDiscordGuildId().split(",");
-const token = getDiscordKey();
+const guildIdList =  Common.getDiscordGuildId().split(",");
+const token =  Common.getDiscordKey();
 
 const commands = [];
 

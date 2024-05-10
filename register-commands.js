@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { logInfo, logWarning, logError, getDiscordKey, registrationList } from './common.js';
+import { Common } from './common.js';
 dotenv.config();
 
 async function importCommands()
@@ -10,19 +10,22 @@ async function importCommands()
 
         for (const command of autoCommands) 
         {
+            const start = Common.startTiming(`importCommands::import(${command})`);
+
             const modulePath = `./commands/${command}.js`;
 
             try {
                 await import(modulePath);
-                logInfo(`Successfully Loaded ${modulePath}`);
+                Common.logInfo(`Successfully Loaded ${modulePath}`);
             }
             catch (e) {
-                logError(`Failed to load module ${modulePath}, got error ${e}`);
+                Common.logError(`Failed to load module ${modulePath}, got error ${e}`);
             }
-            
+
+            Common.endTiming(start);
         }
     } catch (e) {
-        logError(`Failed to import all commands, got error ${e}`);
+        Common.logError(`Failed to import all commands, got error ${e}`);
     }
 }
 
@@ -31,20 +34,23 @@ async function importCommands()
  * @param {*} client 
  */
 async function registerCommands(client) {
+    const start = Common.startTiming("registerCommands(): ");
+
     if (!client) {
-        logError("Trying to register without a valid client");
+        Common.logError("Trying to register without a valid client");
     }
 
     try {
         await importCommands();
 
         // Register all the dynamic commands
-        registrationList.forEach(entry => entry['registrationFunc'](client));
+        Common.registrationList.forEach(entry => entry['registrationFunc'](client));
 
     } catch (e) {
-        logError("Error registering commands, got: " + e);
+        Common.logError("Error registering commands, got: " + e);
     }
-    
+
+    Common.endTiming(start);
 }
 
 /**
@@ -52,7 +58,7 @@ async function registerCommands(client) {
  * @param {*} commands 
  */
 function deployCommandsJSON(commands) {
-    registrationList.forEach(entry => commands.push(entry['jsonFunc']()));
+    Common.registrationList.forEach(entry => commands.push(entry['jsonFunc']()));
 }
 
 export { registerCommands, deployCommandsJSON, importCommands }

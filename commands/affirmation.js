@@ -8,21 +8,35 @@
     Daily affirmations module
 */
 
-import { logInfo, logError, logWarning, registerCommandModule } from '../common.js';
+import { Common } from '../common.js';
 import affirmationData from './../data/affirmations.json' assert { type: 'json' }
 import { SlashCommandBuilder } from 'discord.js';
+
+function getAffirmationCount()
+{
+    try {
+        return affirmationData.affirmations.length;
+    } catch (e) {
+        Common.logError(`Failed to retrieve affirmation count, got ${e}`);
+        return 0;
+    }
+}
 
 /**
  * Retrieves a random affirmation from the affirmations.json file and replies it to the interaction
  * @param {*} interaction - Discord interaction
  */
 async function handleAffirmationCommand(interaction) {
+    const start = Common.startTiming("handleAffirmationCommand(): ");
+
     try {
         const index = Math.floor(Math.random() * affirmationData.affirmations.length);
         await interaction.reply(`${affirmationData.affirmations[index].entry} by **${affirmationData.affirmations[index].author}**`);
     } catch (e) {
-        logError(`Failed to get affirmation, got exception ${e}`, interaction);
+        Common.logError(`Failed to get affirmation, got exception ${e}`, interaction);
     }
+
+    Common.endTiming(start);
 }
 
 // discord affirmation command
@@ -49,6 +63,6 @@ function getAffirmationJSON()
     return affirmationCommand.toJSON();
 }
 
-registerCommandModule(registerAffirmationCommand, getAffirmationJSON);
+Common.registerCommandModule(registerAffirmationCommand, getAffirmationJSON);
 
-export { getAffirmationJSON, registerAffirmationCommand };
+export { getAffirmationCount };

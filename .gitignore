@@ -1,5 +1,11 @@
 .env
 .vscode
+.vs
+bin
+obj
+*.user
 node_modules
 BottyMcBotFace.code-workspace
-update.sh
+logs
+temp-images
+

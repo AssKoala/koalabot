@@ -42,17 +42,23 @@ Comma separate list of commands to load.  All commands are expected to be in the
 
 e.g. COMMAND_LIST="weather,settings,affirmation"
 
-#### INFO_TAG
-Logging tag for informational messages, e.g. '[INFO] '.  Tag is prepended, as-is, with no extra spacing.
-
-#### WARN_TAG
-Tag for warning level messages.
-
-#### ERR_TAG
-Tag for error level messages
-
 #### DEBUG_ENABLE
 Set to true to enable debug logging from discord in addition to normal logging messages
+
+#### LOG_PATH
+Folder to write logs to
+
+#### MESSAGE_LOG_FILENAME
+Log file to write discord messages to
+
+#### FULL_LOG_FILENAME
+Log file to write logs to
+
+#### LOG_TO_CONSOLE
+Whether to write output to stdout as well
+
+#### LOG_MAX_ENTRIES
+Maximum number of entries to keep in memory
 
 ### Weather command settings
 

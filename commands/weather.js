@@ -15,7 +15,7 @@
 
 import dotenv from "dotenv";
 import fetch from 'node-fetch';
-import {logInfo, logWarning, logError, getUserData, registerCommandModule} from './../common.js';
+import { Common } from './../common.js';
 import validator from 'validator';
 import { SlashCommandBuilder } from "discord.js";
 dotenv.config();
@@ -54,8 +54,12 @@ function celsiusToFahrenheit(temperatureCelsius)
  */
 function getTemperatureString(temperatureKelvin)
 {
-    let temperatureCelsius = temperatureKelvin - 273.15;
-	return celsiusToFahrenheit(temperatureCelsius) + 'F/' + temperatureCelsius.toFixed(0) + 'C';
+    try {
+        let temperatureCelsius = temperatureKelvin - 273.15;
+        return celsiusToFahrenheit(temperatureCelsius) + 'F/' + temperatureCelsius.toFixed(0) + 'C';
+    } catch (e) {
+        Common.logError(`Failed to convert temperature ${temperatureKelvin}, got ${e}`);
+    }
 }
 
 /**
@@ -65,10 +69,15 @@ function getTemperatureString(temperatureKelvin)
  */
 function degreesToCompass(degrees)
 {
-	var val = (Number(degrees)/22.5 + 5).toFixed(0);
-	var directions = ["N","NNE","NE","ENE","E","ESE", "SE", "SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    try {
+        var val = (Number(degrees) / 22.5 + 5).toFixed(0);
+        var directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 
-	return directions[val % 16];
+        return directions[val % 16];
+    } catch (e) {
+        Common.logError(`Failed to convert ${degrees}, got ${e}`);
+        return -1;
+    }
 }
 
 /**
@@ -77,13 +86,17 @@ function degreesToCompass(degrees)
  */
 function getUserPreferredUnits(interaction) 
 {
-    const userData = getUserData(interaction.user.username);
+    try {
+        const userData = Common.getUserData(interaction.user.username);
 
-    if (userData) {
-        return userData.weather_settings.preferred_units;
-    } else {
-        return "rankine";
+        if (userData) {
+            return userData.weather_settings.preferred_units;
+        }
+    } catch (e) {
+        Common.logError(`Failed to get preferred units, got ${e}`);
     }
+
+    return "rankine";
 }
 
 /**
@@ -96,28 +109,31 @@ async function getWeatherLocation(interaction)
 {
     let location = null;
 
-    for (let i = 0; i < interaction.options.data.length; i++) {
-        if (interaction.options.data[i].name == 'location') {
-            location = interaction.options.data[i].value.trim();
-            break;
+    try {
+        for (let i = 0; i < interaction.options.data.length; i++) {
+            if (interaction.options.data[i].name == 'location') {
+                location = interaction.options.data[i].value.trim();
+                break;
+            }
         }
-    }
 
-    if (location === null)
-    {
-        const userData = getUserData(interaction.user.username);
+        if (location === null) {
+            const userData = Common.getUserData(interaction.user.username);
 
-        if (userData) { // if the user data exists, we can use that for the location if none was specified
-            try {
-                location = userData.weather_settings.location;
-            } catch (e) {
-                await logError(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction);
+            if (userData) { // if the user data exists, we can use that for the location if none was specified
+                try {
+                    location = userData.weather_settings.location;
+                } catch (e) {
+                    await Common.logError(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction, true);
+                    return null;
+                }
+            } else {
+                await interaction.editReply('You need to either set your location with /settings or specify the location for the weather, pal.');
                 return null;
             }
-        } else {
-            await interaction.reply('You need to either set your location with /settings or specify the location for the weather, pal.');
-            return null;
         }
+    } catch (e) {
+        await Common.logError(`Failed to get weather location, got ${e}`, interaction, true);
     }
 
     return location;
@@ -130,33 +146,36 @@ async function getWeatherLocation(interaction)
  */
 async function getWeatherLocationGoogleMapsAPI(interaction)
 {
-    const key = process.env.GOOGLE_MAPS_API_KEY;
-    const location = await getWeatherLocation(interaction);
-    if (!location) {
-        return null;
-    }
-
-    const query = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${key}`;
-    if (!validator.isURL(query))
-    {
-        logWarning(`Location passed in does not appear to be properly useable as a URL: ${location}`);
-        await interaction.reply("Whatever you wrote apparently doesn't work as a URL so maybe ask differently");
-        return null;
-    }
-
     try {
-        const result = await fetch(query);
-        const locationData = await result.json();
+        const key = process.env.GOOGLE_MAPS_API_KEY;
+        const location = await getWeatherLocation(interaction);
+        if (!location) {
+            return null;
+        }
 
-        if (locationData.results.length > 0) {
-            return [ locationData.results[0].formatted_address, locationData.results[0].geometry.location.lat, locationData.results[0].geometry.location.lng ];
-        } else {
-            await interaction.reply(`Failed to get any geocoordinate results for ${location}, try being more specific maybe?`);
+        const query = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${key}`;
+        if (!validator.isURL(query)) {
+            Common.logWarning(`Location passed in does not appear to be properly useable as a URL: ${location}`);
+            await interaction.editReply("Whatever you wrote apparently doesn't work as a URL so maybe ask differently");
+            return null;
+        }
+
+        try {
+            const result = await fetch(query);
+            const locationData = await result.json();
+
+            if (locationData.results.length > 0) {
+                return [locationData.results[0].formatted_address, locationData.results[0].geometry.location.lat, locationData.results[0].geometry.location.lng];
+            } else {
+                await interaction.editReply(`Failed to get any geocoordinate results for ${location}, try being more specific maybe?`);
+                return null;
+            }
+        } catch (e) {
+            await Common.logError(`Failed to get geocoded data, got error: ${e}`, interaction, true);
             return null;
         }
     } catch (e) {
-        await logError(`Failed to get geocoded data, got error: ${e}`, interaction);
-        return null;
+        await Common.logError(`Failed to get weather location using maps API, got ${e}`, interaction, true);
     }
 
 }
@@ -170,39 +189,43 @@ async function getWeatherLocationGoogleMapsAPI(interaction)
  */
 async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "alerts")
 {
-    if (locationData.length != 3)
-    {
-        logError(`Trying to print API with incorrect location data: ${locationData}`);
-    }
-
-    const city = locationData[0];
-    const lat = locationData[1];
-    const lon = locationData[2];
-    const key = process.env.OPEN_WEATHER_KEY;
-
-    logInfo(`Getting weather for ${city} @ lat=${lat}&lon=${lon}`);
-
-    // modify as we extend functionality
-    const apiCall = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=${excludes}&appid=${key}`;
-    logInfo(`WeatherAPI Call: ${apiCall}`);
-
     try {
-        const result = await fetch(apiCall);
-        const weatherData = await result.json();
-        logInfo('Received JSON data: ');
-        logInfo(JSON.stringify(weatherData));
-
-        return weatherData;
-    } catch (e) {
-        if (e.message.includes('ETIMEDOUT')) {
-            await interaction.reply('TImed out trying to get weather from One API, try again later');
-        } else {
-            await interaction.reply(`${process.env.BOT_NAME} breakdown trying to get the weather, check logs`);
+        if (locationData.length != 3) {
+            await Common.logError(`Trying to print API with incorrect location data: ${locationData}`, interaction, true);
+            return null;
         }
-        
-        logError(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction);
 
-        return null;
+        const city = locationData[0];
+        const lat = locationData[1];
+        const lon = locationData[2];
+        const key = process.env.OPEN_WEATHER_KEY;
+
+        Common.logInfo(`Getting weather for ${city} @ lat=${lat}&lon=${lon}`);
+
+        // modify as we extend functionality
+        const apiCall = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=${excludes}&appid=${key}`;
+        Common.logInfo(`WeatherAPI Call: ${apiCall}`);
+
+        try {
+            const result = await fetch(apiCall);
+            const weatherData = await result.json();
+            Common.logInfo('Received JSON data: ');
+            Common.logInfo(JSON.stringify(weatherData));
+
+            return weatherData;
+        } catch (e) {
+            if (e.message.includes('ETIMEDOUT')) {
+                await interaction.editReply('TImed out trying to get weather from One API, try again later');
+            } else {
+                await interaction.editReply(`${process.env.BOT_NAME} breakdown trying to get the weather, check logs`);
+            }
+
+            Common.logError(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction, true);
+
+            return null;
+        }
+    } catch (e) {
+        await Common.logError(`Failed to get weather using one api, got ${e}`, interaction, true);
     }
 }
 
@@ -213,17 +236,18 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
  */
 async function printWeatherUsingOneApiv3(locationData, interaction)
 {
-    const excludes = "minutely,hourly,alerts";
-    const weatherData = await getWeatherUsingOneApiv3(locationData, interaction, excludes);
-
     try {
+        const excludes = "minutely,hourly,alerts";
+        const weatherData = await getWeatherUsingOneApiv3(locationData, interaction, excludes);
+
         if (weatherData)
         {   
             const city = locationData[0];
 
-            await interaction.reply(
+            await interaction.editReply(
                 `**${city} Weather** :: ${getTemperatureString(weatherData.current.temp)} (Humidity: ${weatherData.current.humidity}%)`
                 + ` | **Feels Like:** ${getTemperatureString(weatherData.current.feels_like)}`
+                + ` | **Dew Point:** ${getTemperatureString(weatherData.current.dew_point)}`
                 + ` | **Wind:** ${degreesToCompass(weatherData.current.wind_deg)}@${weatherData.current.wind_speed}km/h`
                 + ` | **Today's High:** ${getTemperatureString(weatherData.daily[0].temp.max)}`
                 + ` | **Today's Low:** ${getTemperatureString(weatherData.daily[0].temp.min)}`
@@ -231,7 +255,7 @@ async function printWeatherUsingOneApiv3(locationData, interaction)
             );
         } 
     } catch (e) {
-        await logError(`Received malformed weather data, got error ${e}`, interaction);
+        await Common.logError(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
@@ -240,7 +264,11 @@ async function printWeatherUsingOneApiv3(locationData, interaction)
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
 async function handleWeatherCommand(interaction) {
+    const start = Common.startTiming("handleWeatherCommand(): ");
+
     try {
+        await interaction.deferReply();
+
         let result;
 
         result = await getWeatherLocationGoogleMapsAPI(interaction);
@@ -250,8 +278,10 @@ async function handleWeatherCommand(interaction) {
             printWeatherUsingOneApiv3(result, interaction);
         }        
     } catch (e) {
-        await logError(`Failed to handle weather command, got error: ${e}`, interaction);
+        await Common.logError(`Failed to handle weather command, got error: ${e}`, interaction, true);
     }
+
+    Common.endTiming(start);
 }
 
 /**
@@ -269,9 +299,9 @@ async function printHourlyForecast(locationData, interaction, weatherData) {
             hourlyWeatherString += `**:: ${i} hrs:** ${tempStr}, **Feels like:** ${tempStrFeels} ::  ${weatherData.hourly[i].humidity}% humidity, ${weatherData.hourly[i].weather[0].description}\n`;
         }
 
-        await interaction.reply(hourlyWeatherString);
+        await interaction.editReply(hourlyWeatherString);
     } catch (e) {
-        await logError(`Failed to generate hourly weather string, got ${e}`, interaction);
+        await Common.logError(`Failed to generate hourly weather string, got ${e}`, interaction, true);
     }
 }
 
@@ -282,7 +312,52 @@ async function printHourlyForecast(locationData, interaction, weatherData) {
  * @param {JSON} weatherData - OneAPI weather data that includes minutely
  */
 async function printMinutelyForecast(locationData, interaction, weatherData) {
-    await interaction.reply(`No one ever uses this, ask someone to implement it`);
+    try {
+        let messageStr = `No precipitation expected in the next ${weatherData.minutely.length} minutes.`;
+
+        if (weatherData.minutely[0].precipitation != 0) {
+            messageStr = `It's probably raining right now, look outside.`;
+
+            let found = false;
+            for (let i = 1; i < weatherData.minutely.length; i++) {
+                if (weatherData.minutely[i].precipitation == 0) {
+                    messageStr += ` It should be over in ${i} minutes.`;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                messageStr += ` There's no end in sight.  Or at least for the next hour.`;
+            }
+        } else {
+            let found = false;
+            let rainStart = -1;
+
+            for (let i = 0; i < weatherData.minutely.length; i++) {
+                if (!found && weatherData.minutely[i].precipitation != 0) {
+                    messageStr = `Precipitation expected to start in ${i} minutes.`;
+                    rainStart = i;
+                    found = true;
+                }
+                if (found && weatherData.minutely[i].precipitation == 0) {
+                    messageStr += ` With a break in the rain in ${i} minutes.`;
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                const rainLeft = weatherData.minutely.length - rainStart;
+                messageStr += ` For at least ${rainLeft} minutes.`;
+            }
+        }
+
+        await interaction.editReply(`**Minutely forecast for ${locationData[0]}** :: ` + messageStr);
+    }
+    catch (e) {
+        await Common.logError(`Failed to get minutely weather, got ${e}`, interaction, true);
+    }
 }
 
 /**
@@ -362,9 +437,9 @@ async function printDailyForecast(locationData, interaction, weatherData) {
             dailyWeatherString += tempStr;
         }
 
-        await interaction.reply(dailyWeatherString);
+        await interaction.editReply(dailyWeatherString);
     } catch (e) {
-        await logError(`Failed to generate daily weather data, got ${e}`, interaction);
+        await Common.logError(`Failed to generate daily weather data, got ${e}`, interaction, true);
     }
 }
 
@@ -382,12 +457,12 @@ async function printAlertForecast(locationData, interaction, weatherData) {
             for (let i = 0; i < weatherData.alerts.length; i++) {
                 alertStr += ` :: **Event:** ${weatherData.alerts[i].event} **From:** ${weatherData.alerts[i].sender_name}`;
             }
-            await interaction.reply(alertStr);
+            await interaction.editReply(alertStr);
         } else {
-            await interaction.reply(`No active alerts for ${locationData[0]}`);
+            await interaction.editReply(`No active alerts for ${locationData[0]}`);
         }
     } catch (e) {
-        await logError(`Failed to process the alert forecast, got ${e}`, interaction);
+        await Common.logError(`Failed to process the alert forecast, got ${e}`, interaction, true);
     }
 }
 
@@ -398,12 +473,17 @@ async function printAlertForecast(locationData, interaction, weatherData) {
  */
 function getForecastMapData(forecastType)
 {
-    for (let i = 0; i < forecastTypeMap.length; i++) {
-        if (forecastTypeMap[i][0] === forecastType)
-        {
-            return forecastTypeMap[i];
+    try {
+        for (let i = 0; i < forecastTypeMap.length; i++) {
+            if (forecastTypeMap[i][0] === forecastType) {
+                return forecastTypeMap[i];
+            }
         }
+    } catch (e) {
+        Common.logError(`Failed to get forecast map data, got ${e}`);
     }
+
+    return null;
 }
 
 /**
@@ -420,10 +500,10 @@ async function printForecastUsingOneApiv3(locationData, interaction, forecastTyp
         if (weatherData) {
             await forecastMapData[2](locationData, interaction, weatherData);
         } else {
-            logInfo(`Failed to get forecast data`);
+            Common.logInfo(`Failed to get forecast data`);
         }
     } catch (e) {
-        await logError(`Received malformed weather data, got error ${e}`, interaction);
+        await Common.logError(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
@@ -448,13 +528,13 @@ async function getForecastOptions(interaction)
                     location = interaction.options.data[i].value.trim();
                     break;
                 default:
-                    logWarning(`Got unexpected value in forecast interaction: ${interaction.options.data[i]}`);
+                    Common.logWarning(`Got unexpected value in forecast interaction: ${interaction.options.data[i]}`);
             }
         }
 
         return [forecastType, location];
     } catch (e) {
-        await logError(`Error getting forecast options, got: ${e}`, interaction);
+        await Common.logError(`Error getting forecast options, got: ${e}`, interaction, true);
     }
 }
 
@@ -464,7 +544,11 @@ async function getForecastOptions(interaction)
  */
 async function handleForecastCommand(interaction)
 {
+    const start = Common.startTiming("handleForecastCommand(): ");
+
     try {
+        await interaction.deferReply();
+
         let result;
 
         const forecastOptions = await getForecastOptions(interaction);
@@ -472,7 +556,7 @@ async function handleForecastCommand(interaction)
         if (!forecastOptions) {
             return;
         } else if (getForecastMapData(forecastOptions[0]) == null) {
-            await logError(`Unexpected forecast type received: ${forecastOptions[0]}`);
+            await Common.logError(`Unexpected forecast type received: ${forecastOptions[0]}`);
             return;
         }
 
@@ -483,8 +567,10 @@ async function handleForecastCommand(interaction)
             printForecastUsingOneApiv3(result, interaction, forecastOptions[0]);
         }
     } catch (e) {
-        await logError(`Failed to handle weather command, got error: ${e}`, interaction);
+        await Common.logError(`Failed to handle weather command, got error: ${e}`, interaction, true);
     }
+
+    Common.endTiming(start);
 }
 
 const weatherCommand = new SlashCommandBuilder()
@@ -557,7 +643,7 @@ function getForecastJSON()
     return forecastCommand.toJSON();
 }
 
-registerCommandModule(registerWeatherCommand, getWeatherJSON);
-registerCommandModule(registerForecastCommand, getForecastJSON);
+ Common.registerCommandModule(registerWeatherCommand, getWeatherJSON);
+ Common.registerCommandModule(registerForecastCommand, getForecastJSON);
 
 export { registerWeatherCommand, getWeatherJSON, registerForecastCommand, getForecastJSON }

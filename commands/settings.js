@@ -9,8 +9,7 @@
 */
 
 import dotenv from "dotenv"
-import {logInfo, logWarning, logError, getUserData, setUserData, registerCommandModule } from './../common.js'
-import validator from 'validator'
+import { Common } from './../common.js'
 dotenv.config();
 
 import { SlashCommandBuilder } from 'discord.js';
@@ -21,18 +20,33 @@ import { SlashCommandBuilder } from 'discord.js';
  */
 async function setUserLocation(interaction)
 {
-    const newLocation = interaction.options.data[0].options[0].options[0].value;
+    try {
+        const newLocation = interaction.options.data[0].options[0].options[0].value;
 
-    // If they didn't specify a location, let them know and bail
-    if (newLocation == "")
-    {
-        await interaction.reply('You gotta specify a location after set_location, buddy');
-    } else {
-        let userData = getUserData(interaction.user.username, true);
-        await interaction.reply(`Setting your location to ${newLocation} from ${userData.weather_settings.location}`);
-        userData.weather_settings.location = newLocation;
-        setUserData(userData, true);
+        // If they didn't specify a location, let them know and bail
+        if (newLocation == "")
+        {
+            await interaction.editReply('You gotta specify a location after set_location, buddy');
+        } else {
+            let userData = Common.getUserData(interaction.user.username, true);
+
+            if (userData) {
+                if (userData.weather_settings.location === "") {
+                    await interaction.editReply(`Setting your location to ${newLocation}`);
+                } else {
+                    await interaction.editReply(`Setting your location to ${newLocation} from ${userData.weather_settings.location}`);
+                }
+                
+                userData.weather_settings.location = newLocation;
+                Common.setUserData(userData, true);
+            } else {
+                await interaction.editReply(`Failed to create user data, something has gone wrong, check the logs!`);
+            }
+        }
+    } catch (e) {
+        logError(`Failed to set user location, got ${e}`);
     }
+    
 }
 
 /**
@@ -46,8 +60,8 @@ async function setPreferredUnits(interaction)
         if (interaction.options.data[0].options.length < 1)
         {
             const str = 'Interaction did not contain unit data'
-            logError(str);
-            await interaction.reply(str);
+            Common.logError(str);
+            await interaction.editReply(str);
         } else {
             // Assume the position element is the one we want
             const preferred_units = interaction.options.data[0].options[0].options[0].value;
@@ -56,16 +70,16 @@ async function setPreferredUnits(interaction)
             if (preferred_units !== 'celsius' && preferred_units !== 'fahrenheit'
                 && preferred_units !== 'kelvin' && preferred_units !== 'rankine')
             {
-                await interaction.reply(`Maybe try using real units not whatever the hell ${preferred_units} is, friend`);
+                await interaction.editReply(`Maybe try using real units not whatever the hell ${preferred_units} is, friend`);
             } else {
-                let userData = getUserData(interaction.user.username, true);
-                await interaction.reply(`Setting your preferred units to ${preferred_units} from ${userData.weather_settings.preferred_units}`);
+                let userData = Common.getUserData(interaction.user.username, true);
+                await interaction.editReply(`Setting your preferred units to ${preferred_units} from ${userData.weather_settings.preferred_units}`);
                 userData.weather_settings.preferred_units = preferred_units;
-                setUserData(userData, true);
+                Common.setUserData(userData, true);
             }
         }
     } catch (e) {
-        await logError(`Failed to set preferred units, got error ${e}`, interaction);
+        await Common.logError(`Failed to set preferred units, got error ${e}`, interaction);
     }
 }
 
@@ -75,15 +89,19 @@ async function setPreferredUnits(interaction)
  */
 async function getUserSettings(interaction)
 {
-    const userData = getUserData(interaction.user.username);
+    try {
+        const userData = Common.getUserData(interaction.user.username);
 
-    if (userData) {
-        await interaction.reply(`Your settings:\n`
+        if (userData) {
+            await interaction.editReply(`Your settings:\n`
                 + `location: ${userData.weather_settings.location}\n`
                 + `preferred_units: ${userData.weather_settings.preferred_units}`
-                );
-    } else {
-        await interaction.reply(`LOL you don't have any options saved, loser.`);
+            );
+        } else {
+            await interaction.editReply(`LOL you don't have any options saved, loser.`);
+        }
+    } catch (e) {
+        await Common.logError(`Failed to get user settings, got ${e}`, interaction, true);
     }
 }
 
@@ -103,7 +121,7 @@ async function setUserSettings(interaction)
                 break;
         }
     } catch (e) {
-        await logError(e, interaction);
+        await Common.logError(e, interaction);
     }
 }
 
@@ -112,11 +130,15 @@ async function setUserSettings(interaction)
  * @returns nothing
  */
 async function handleSettingsCommand(interaction) {
+    const start = Common.startTiming("handleSettingsCommand(): ");
+
     try {
+        await interaction.deferReply();
+
         if (interaction.options.data.length < 1) {
             const str = `Interaction data missing, got length: ${interaction.options.data.length}`;
-            logError(str);
-            await interaction.reply(str);
+            Common.logError(str);
+            await interaction.editReply(str);
         }
 
         switch (interaction.options.data[0].name) {
@@ -127,12 +149,14 @@ async function handleSettingsCommand(interaction) {
                 await setUserSettings(interaction);
                 break;
             default:
-                logError(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
+                Common.logError(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
                 break;
         }
     } catch (e) {
-        await logError(`Failed to handle settings command, got error: ${e}`, interaction);
+        await Common.logError(`Failed to handle settings command, got error: ${e}`, interaction);
     }
+
+    Common.endTiming(start);
 }
 
 /**
@@ -209,6 +233,6 @@ function getSettingsJSON()
     return settingsCommand.toJSON();
 }
 
-registerCommandModule(registerSettingsCommand, getSettingsJSON);
+ Common.registerCommandModule(registerSettingsCommand, getSettingsJSON);
 
 export { registerSettingsCommand, getSettingsJSON }

@@ -10,14 +10,14 @@
 
 // Imports
 import dotenv from "dotenv";
-import { logInfo, logWarning, logError, getDiscordKey, logDebug } from './common.js';
+import { Common } from './common.js';
 
 const fs = import('fs');
 const path = import('path');
 import { Client, Collection, Events, DataResolver, GatewayIntentBits } from 'discord.js';
 
 // Command setup
-import { sortDictData } from './commands/dict.js';
+import { sortDictData, getDictDataEntryCount } from './commands/dict.js';
 import { registerCommands } from "./register-commands.js";
 
 // Read in the environment configuration
@@ -43,7 +43,7 @@ await registerCommands(client);	// Register all the commands in the client objec
 // Interaction command event
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
-	logInfo(interaction);
+	Common.logInfo(interaction);
 
 	const command = interaction.client.commands.get(interaction.commandName);
 
@@ -64,24 +64,25 @@ client.on(Events.InteractionCreate, async interaction => {
  * Informational log that we're started up
  */
 client.on('ready', () => {
-    logInfo(`Logged in as ${client.user.tag}!`);
+    Common.logInfo(`Logged in as ${client.user.tag}!`);
+	Common.setDiscordClient(client);
 	sortDictData();
-	logInfo(`Sorted the loaded dictionary data`);
+	Common.logInfo(`Sorted ${getDictDataEntryCount()} dictionary items.`);
 });
 
 // Enable debug features
 if (process.env.DEBUG_ENABLE == `true`)
 {
-	logInfo("Enabling debug information");
+	Common.logInfo("Enabling debug information");
 
 	/**
 	 * Debug messaging
 	 */
-	client.on('debug', logDebug);
+	client.on('debug', Common.logDebug);
 }
 else
 {
-	logInfo("Debugging information disabled");
+	Common.logInfo("Debugging information disabled");
 }
 
 
@@ -89,9 +90,20 @@ else
  * Respond to Discord messages
  */
 client.on("messageCreate", (message) => {
-	if (message.author.bot) return false; 
-  
-	logInfo(`Message from ${message.author.username}: ${message.content}`);
+	if (message.content.includes('@slimeline'))
+	{
+		// slimeline, skullone thing.  Refactor into its own file.
+		//346696662619521026
+		message.reply(`Hey <@346696662619521026>, ${message.author.username} wants you!`);
+	}
+	else 
+	{
+		Common.sendMessageToListeners(message);
+	}
+
+	if (message.author.bot && message.content.length == 0) return false;
+
+	Common.logDiscordMessage(Common.getStandardDiscordMessageFormat(message));
 });
 
 /**
@@ -101,4 +113,4 @@ process.on('unhandledRejection', error => {
 	console.error('Unhandled promise rejection:', error);
 });
 
-client.login(getDiscordKey());
+client.login( Common.getDiscordKey());

@@ -15,7 +15,7 @@
     the Discord API massaging.
 */
 
-import { logInfo, logError, logWarning, registerCommandModule } from '../common.js';
+import { Common } from '../common.js';
 import { SlashCommandBuilder } from 'discord.js';
 import { replyRandomLink } from '../command_impl/reddit.js'
 import dotenv from "dotenv"
@@ -57,4 +57,4 @@ function registerRedditLinkCommand(client) {
     client.commands.set(redditLink.data.name, redditLink);
 }
 
-registerCommandModule(registerRedditLinkCommand, getRedditLinkJSON);
+ Common.registerCommandModule(registerRedditLinkCommand, getRedditLinkJSON);

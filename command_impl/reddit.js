@@ -8,7 +8,7 @@
 */
 
 import dotenv from "dotenv";
-import { logInfo, logWarning, logError } from './../common.js';
+import { Common } from './../common.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import validator from 'validator';
@@ -41,12 +41,12 @@ async function getRedditLinks(searchLimit, timeFilter, subredditList) {
                 searchLimit, 
                 timeFilter, ...subredditList ];
 
-        logInfo(`Running ${python} with args ${args} from ${__dirname}`);
+        Common.logInfo(`Running ${python} with args ${args} from ${__dirname}`);
 
         const childprocess = cp.spawnSync(python, args, {cwd: __dirname });
         const output = `${childprocess.stdout}`;
 
-        logInfo(`Got reddit output: ${output} and error: ${childprocess.stderr}`);
+        Common.logInfo(`Got reddit output: ${output} and error: ${childprocess.stderr}`);
 
         const lines = output.split("\n").map(line => 
                             {
@@ -58,7 +58,7 @@ async function getRedditLinks(searchLimit, timeFilter, subredditList) {
                             });
         return filtered;
     } catch (e) {
-        logError(`Failed to get reddit links, got ${e}`);
+        Common.logError(`Failed to get reddit links, got ${e}`);
         return null;
     }
 }
@@ -70,6 +70,8 @@ async function getRedditLinks(searchLimit, timeFilter, subredditList) {
  * @param { [string] } subredditList - Array of subreddits to view
  */
 async function replyRandomLink(interaction, searchLimit, subredditList) {
+    const start = Common.startTiming("replyRandomLink(): ");
+
     try {
         await interaction.deferReply();
 
@@ -92,14 +94,15 @@ async function replyRandomLink(interaction, searchLimit, subredditList) {
             const index = Math.floor(Math.random() * links.length);
             await interaction.editReply(`${links[index]}`);
         } else {
-            logWarning("Failed to get reddit links");
+            Common.logWarning("Failed to get reddit links");
             await interaction.editReply("Failed to get reddit links!");
         }
     } catch (e) {
-        logError(`Failed to get links, got exception ${e}`, interaction);
+        Common.logError(`Failed to get links, got exception ${e}`, interaction);
     }
-    
+
+    Common.endTiming(start);
 }
 
-export { replyRandomLink, getRedditLinks }
+export { replyRandomLink }
 
