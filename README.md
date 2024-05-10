@@ -6,7 +6,7 @@ Written in a rather verbose way to make it easy for a beginner to read.  There m
 
 ## Basic instructions
 - Clone repo
-- Copy example env file to .env
+- Copy dotenv-example.txt file to .env
 - Fill out .env with the stuff
 - npm install
 - node ./deploy-commands.js prod
