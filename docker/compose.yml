@@ -1,0 +1,14 @@
+services:
+  boobs:
+    image: boobs-bot
+    user: node
+    working_dir:  /boobs/bot
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ../logs:/logs
+      - ../data:/data
+      - ./environment/dotenv-prod.txt:/boobs/bot/.env
+      - ../temp:/temp
+    command: "npm run prodstart"
+    restart: always

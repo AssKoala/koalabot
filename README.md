@@ -6,7 +6,7 @@ Written in a rather verbose way to make it easy for a beginner to read.  There m
 
 ## Basic instructions
 - Clone repo
-- Copy dotenv-example.txt file to .env
+- Copy example env file to .env
 - Fill out .env with the stuff
 - npm install
 - node ./deploy-commands.js prod
@@ -87,6 +87,9 @@ Name/location of python binary, e.g. python3  Needs PRAW installed to work with 
 
 #### OPENAI_API_KEY
 OpenAI API key to access data
+
+#### OPENAI_MODEL
+OpenAI model to use, e.g. 'text-davinci-003'
 
 #### QUERY_PROMPT_HEADER
 Lead in information before the query is sent to ChatGPT.  Use this to fill out info if you want it to know basic info about users. E.g. "Joe hates IPA beer"

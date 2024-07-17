@@ -1,5 +1,4 @@
 .env
-.vscode
 .vs
 bin
 obj
@@ -8,4 +7,6 @@ node_modules
 BottyMcBotFace.code-workspace
 logs
 temp-images
-
+build
+deploy
+deploy-logs

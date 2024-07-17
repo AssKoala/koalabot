@@ -1,0 +1,93 @@
+[
+  {
+    "name": "_opus13",
+    "weatherSettings": {
+      "location": "Longmont ",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "asskoala",
+    "weatherSettings": {
+      "location": "32801",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "cowonmars",
+    "weatherSettings": {
+      "location": "75206",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "gigatexal",
+    "weatherSettings": {
+      "location": "Berlin",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "Henrik",
+    "weatherSettings": {
+      "location": "Atlanta",
+      "preferredUnits": "celsius"
+    }
+  },
+  {
+    "name": "henrikwa",
+    "weatherSettings": {
+      "location": "Atlanta",
+      "preferredUnits": "Rankine"
+    }
+  },
+  {
+    "name": "jim2cpu",
+    "weatherSettings": {
+      "location": "Halifax ",
+      "preferredUnits": "Rankine"
+    }
+  },
+  {
+    "name": "jludka",
+    "weatherSettings": {
+      "location": "Dallas ",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "quink",
+    "weatherSettings": {
+      "location": "Agoura Hills",
+      "preferredUnits": "Rankine"
+    }
+  },
+  {
+    "name": "quink__",
+    "weatherSettings": {
+      "location": "91301",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "Swank",
+    "weatherSettings": {
+      "location": "Gainesville, FL ",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "swankfu",
+    "weatherSettings": {
+      "location": "32608",
+      "preferredUnits": "fahrenheit"
+    }
+  },
+  {
+    "name": "Ziptar",
+    "weatherSettings": {
+      "location": "Kingston, NH ",
+      "preferredUnits": "Rankine"
+    }
+  }
+]

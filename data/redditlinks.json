@@ -1,0 +1,109 @@
+[
+	{
+		"name": "sfwboob",
+		"count": 50,
+		"description": "Retrieve a sfw boob for all to enjoy!",
+		"subreddits": [
+			"bigtitsinbikinis",
+			"2busty2hide",
+			"cosplaygirls",
+			"festivalsluts",
+			"gentlemansbonersgifs",
+			"whyevenwearanything",
+			"yogapants" 
+		],
+		"whitelistedChannels": [
+			"science"
+		],
+		"blacklistedChannels": [
+		]
+	},
+	{
+		"name": "nsfwboob",
+		"count": 75,
+		"description": "Retrieve a nsfw boob for all to enjoy!",
+		"subreddits": [
+			"boobs",
+			"boobies",
+			"breastenvy",
+			"fortyfivefiftyfive",
+			"slimandstacked",
+			"bustynaturals",
+			"homegrowntits",
+			"onoff",
+			"titsonastick",
+			"perfecttits",
+			"tittydrop",
+			"b_cups",
+			"bustypetite",
+			"biggerthanyouthought",
+			"metart" 
+		],
+		"whitelistedChannels": [
+			"science"
+		],
+		"blacklistedChannels": [
+		]
+	},
+	{
+		"name": "topredditlink",
+		"count": 75,
+		"description": "Retrieve a random top reddit link",
+		"subreddits": [
+			"AskReddit",
+			"announcements",
+			"funny",
+			"pics",
+			"todayilearned",
+			"science",
+			"IAmA",
+			"blog",
+			"videos",
+			"worldnews",
+			"gaming",
+			"movies",
+			"Music",
+			"aww",
+			"news",
+			"gifs",
+			"askscience",
+			"explainlikeimfive",
+			"EarthPorn",
+			"books",
+			"tel",
+			"vision",
+			"LifeProTips",
+			"sports",
+			"DIY",
+			"Showerthoughts",
+			"space",
+			"Jokes",
+			"tifu",
+			"food",
+			"photoshopbattles",
+			"Art",
+			"InternetIsBeautiful",
+			"mildlyinteresting",
+			"GetMotivated",
+			"history",
+			"nottheonion",
+			"gadgets",
+			"dataisbeautiful",
+			"Futurology",
+			"Documentaries",
+			"listentothis",
+			"personalfinance",
+			"philosophy",
+			"nosleep",
+			"creepy",
+			"OldSchoolCool",
+			"UpliftingNews",
+			"WritingPrompts",
+			"TwoXChromosomes"
+		],
+		"whitelistedChannels": [
+		],
+		"blacklistedChannels": [
+		]
+	}
+]
