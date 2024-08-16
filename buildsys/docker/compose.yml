@@ -1,8 +1,7 @@
 services:
   boobs:
-    image: asskoala/bottymcbotface
+    image: asskoala/koalabot
     user: node
-    working_dir:  /bottymcbotface/bot
     environment:
       - NODE_ENV=production
     volumes:
@@ -10,5 +9,4 @@ services:
       - ../data:/data
       - ./environment/dotenv-prod.txt:/boobs/bot/.env
       - ../temp:/temp
-    command: "npm run prodstart"
     restart: always
