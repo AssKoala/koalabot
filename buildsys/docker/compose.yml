@@ -7,6 +7,6 @@ services:
     volumes:
       - ../logs:/logs
       - ../data:/data
-      - ./environment/dotenv-prod.txt:/boobs/bot/.env
+      - ./environment/dotenv-prod.txt:/bot/.env
       - ../temp:/temp
     restart: always
