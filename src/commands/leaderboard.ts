@@ -12,6 +12,7 @@ import { Global } from '../global.js';
 import { Logger } from '../logging/logger.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js'
 import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
 const profanities = await Global.readJsonFile(`${Global.settings().get("DATA_PATH")}/profanity.json`);
 
@@ -309,104 +310,82 @@ async function handleDisplayCustomLeaderboardCommand(interaction, options, ignor
     }
 }
 
-async function handleLeaderboardCommand(interaction)
-{
-    using perfCounter = Global.getPerformanceCounter("handleLeaderboardCommand(): ");
-
-    try {
-        await interaction.deferReply();
-
-        for (let i = 0; i < interaction.options.data.length; i++) {
-            const name = interaction.options.data[i].name;
-
-            switch (name) {
-                case 'display':
-                    await handleDisplayLeaderboardCommand(interaction, interaction.options.data[i].options);
-                    break;
-                case 'custom':
-                    await handleDisplayCustomLeaderboardCommand(interaction, interaction.options.data[i].options, ["BOOBS", "BOOBS (Test)"]);
-                    break;
-                default:
-                    break;
-            }
-        }
-    } catch (e) {
-        await Global.logger().logError(`Top level exception during vision, got error ${e}`, interaction, true);
-    }
-
-    
-}
-
-function getLeaderboardCommand() {
-    const leaderboardCommand = new SlashCommandBuilder()
-        .setName('leaderboard')
-        .setDescription(`Leaderboard commands`)
-        // Display leaderboard
-        .addSubcommandGroup((group) =>
-            group
-                .setName('display')
-                .setDescription('Display a leaderboard')
-                .addSubcommand((subcommand) =>
-                    subcommand
-                        .setName('leaderboard_name')
-                        .setDescription('Leaderboard to display')
-                        .addStringOption((option) =>
-                            option
-                                .setName('leaderboard')
-                                .setDescription('Leaderboard to report')
-                                .addChoices(
-                                    { name: 'profanity', value: 'profanity' },
-                                    { name: 'profanity per capita', value: 'profanity-per-capita' },
-                                )
-                                .setRequired(true),
-                        )
-
-                )
-        
-        )
-        // Display custom leaderboard
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('custom')
-                .setDescription('Display a custom leaderboard')
-                .addStringOption((option) =>
-                    option
-                        .setName('profanity')
-                        .setDescription('Profanity to display a leaderboard for (can be a regex)')
-                        .setRequired(true),
-                )
-                .addBooleanOption((option) =>
-                    option
-                        .setName('per_capita')
-                        .setDescription(`Generate a leaderboard relative to messages not raw totals`)
-                        .setRequired(false)
-                )
-        )
-        ;
-
-    return leaderboardCommand;
-}
-
-function getLeaderboardJSON() {
-    return getLeaderboardCommand().toJSON();
-}
-
-function registerLeaderboardCommand(client) {
-    const leaderboard =
+class LeaderboardCommand extends DiscordBotCommand {
+    async handle(interaction)
     {
-        data: getLeaderboardCommand(),
-        async execute(interaction) {
-            await handleLeaderboardCommand(interaction);
-        }
+        using perfCounter = Global.getPerformanceCounter("handleLeaderboardCommand(): ");
+
+        try {
+            await interaction.deferReply();
+
+            for (let i = 0; i < interaction.options.data.length; i++) {
+                const name = interaction.options.data[i].name;
+
+                switch (name) {
+                    case 'display':
+                        await handleDisplayLeaderboardCommand(interaction, interaction.options.data[i].options);
+                        break;
+                    case 'custom':
+                        await handleDisplayCustomLeaderboardCommand(interaction, interaction.options.data[i].options, ["BOOBS", "BOOBS (Test)"]);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        } catch (e) {
+            await Global.logger().logError(`Top level exception during vision, got error ${e}`, interaction, true);
+        }        
     }
 
-    client.commands.set(leaderboard.data.name, leaderboard);
+    get() {
+        const leaderboardCommand = new SlashCommandBuilder()
+            .setName(this.name())
+            .setDescription(`Leaderboard commands`)
+            // Display leaderboard
+            .addSubcommandGroup((group) =>
+                group
+                    .setName('display')
+                    .setDescription('Display a leaderboard')
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('leaderboard_name')
+                            .setDescription('Leaderboard to display')
+                            .addStringOption((option) =>
+                                option
+                                    .setName('leaderboard')
+                                    .setDescription('Leaderboard to report')
+                                    .addChoices(
+                                        { name: 'profanity', value: 'profanity' },
+                                        { name: 'profanity per capita', value: 'profanity-per-capita' },
+                                    )
+                                    .setRequired(true),
+                            )
 
-    // Initial calculation for profanity leaderboard
-    recalculateProfanityLeaders();
+                    )
+            
+            )
+            // Display custom leaderboard
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('custom')
+                    .setDescription('Display a custom leaderboard')
+                    .addStringOption((option) =>
+                        option
+                            .setName('profanity')
+                            .setDescription('Profanity to display a leaderboard for (can be a regex)')
+                            .setRequired(true),
+                    )
+                    .addBooleanOption((option) =>
+                        option
+                            .setName('per_capita')
+                            .setDescription(`Generate a leaderboard relative to messages not raw totals`)
+                            .setRequired(false)
+                    )
+            )
+            ;
 
-    // Register for messages so we can update on the fly
-    Global.bot().registerMessageListener(updateProfanityLeaderboard);
+        return leaderboardCommand;
+    }
 }
 
-Global.registerCommandModule(registerLeaderboardCommand, getLeaderboardJSON);
+registerDiscordBotCommand(new LeaderboardCommand('leaderboard'), false);

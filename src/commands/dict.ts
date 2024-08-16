@@ -13,10 +13,12 @@
     When new entries are added, the data is also immediately sorted.  This is done
     to make lookups O(logn) rather than devolving into O(n).
 */
-
+// TODO: Remove Global here -- legacy issues
 import { Global } from '../global.js';
 import fs from 'fs'
 import { SlashCommandBuilder } from 'discord.js';
+import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
 const dictDataPath = `${Global.settings().get("DATA_PATH")}/dictdata.json`
 const dictData = await Global.readJsonFile(dictDataPath);
@@ -150,12 +152,14 @@ class Dict {
         try {
             await interaction.deferReply();
 
+            const slashCommandRequest = KoalaSlashCommandRequest.fromDiscordInteraction(interaction);
+
             if (interaction.options.data.length < 1) {
                 await Global.logger().logError(`Invalid interaction object sent to dict, data length 0!`, interaction, true);
                 return;
             }
 
-            const dictRequested = interaction.options.data[0].value.trim();
+            const dictRequested = slashCommandRequest.getOptionValueString('phrase').trim();
 
             if (dictRequested == '') {
                 await interaction.editReply("DICT entry for what, /dict WHAT");
@@ -259,111 +263,79 @@ class Dict {
     }
 }
 
-// discord dict command
-const dictCommand = new SlashCommandBuilder()
-        .setName('dict')
-        .setDescription('Retrieve a definition')
-        .addStringOption((option) =>
-            option
-                .setName('phrase')
-                .setDescription('Phrase to look up')
-                .setRequired(true),
-        )    
-;
-
-// discord define command
-const defineCommand = new SlashCommandBuilder()
-        .setName('define')
-        .setDescription('Define a phrase')
-        .addStringOption((option) =>
-            option
-                .setName('phrase')
-                .setDescription('Phrase to define')
-                .setRequired(true),
-        )
-        .addStringOption((option) =>
-            option
-                .setName('definition')
-                .setDescription('Definition of the phrase')
-                .setRequired(true),
-        )
-;
-
-// discord index command
-const indexCommand = new SlashCommandBuilder()
-        .setName('index')
-        .setDescription("Search dict entries")
-        .addStringOption((option) =>
-            option
-                .setName('search_string')
-                .setDescription('String to look for (case insensitive)')
-                .setRequired(true),
-        )
-;
-
-// register the dict command
-function registerDictCommand(client)
-{
-    const dict = 
-    {
-        data: dictCommand,
-        async execute(interaction) {
-            await Dict.handleDictCommand(interaction);
-        }
+class DictCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        return Dict.handleDictCommand(interaction);
     }
 
-    client.commands.set(dict.data.name, dict);
+    get() {
+        const dictCommand = new SlashCommandBuilder()
+                        .setName(this.name())
+                        .setDescription('Retrieve a definition')
+                        .addStringOption((option) =>
+                            option
+                                .setName('phrase')
+                                .setDescription('Phrase to look up')
+                                .setRequired(true),
+                        );
+
+        return dictCommand;
+    }
 }
 
-// retrieve the dict command as JSON
-function getDictJSON()
-{
-    return dictCommand.toJSON();
-}
-
-// register the define command
-function registerDefineCommand(client)
-{
-    const define = 
-    {
-        data: defineCommand,
-        async execute(interaction) {
-            await Dict.handleDefineCommand(interaction);
-        }
+class DefineCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        return Dict.handleDefineCommand(interaction);
     }
 
-    client.commands.set(define.data.name, define);
+    get() {
+        // discord define command
+        const defineCommand = new SlashCommandBuilder()
+                .setName(this.name())
+                .setDescription('Define a phrase')
+                .addStringOption((option) =>
+                    option
+                        .setName('phrase')
+                        .setDescription('Phrase to define')
+                        .setRequired(true),
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName('definition')
+                        .setDescription('Definition of the phrase')
+                        .setRequired(true),
+                )
+        ;
+
+        return defineCommand
+    }
 }
 
-// retrieve the define command as JSON
-function getDefineJSON()
-{
-    return defineCommand.toJSON();
-}
-
-// register the index command
-function registerIndexCommand(client)
-{
-    const index = 
-    {
-        data: indexCommand,
-        async execute(interaction) {
-            await Dict.handleIndexCommand(interaction);
-        }
+class IndexCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        return Dict.handleIndexCommand(interaction);
     }
 
-    client.commands.set(index.data.name, index);
-}
+    get() {
+        // discord index command
+        const indexCommand = new SlashCommandBuilder()
+                .setName(this.name())
+                .setDescription("Search dict entries")
+                .addStringOption((option) =>
+                    option
+                        .setName('search_string')
+                        .setDescription('String to look for (case insensitive)')
+                        .setRequired(true),
+                )
+        ;
 
-// retrieve the index command as JSON
-function getIndexJSON()
-{
-    return indexCommand.toJSON();
+        return indexCommand;
+    }
 }
 
 Dict.init();
-Global.registerCommandModule(registerDictCommand, getDictJSON);
-Global.registerCommandModule(registerDefineCommand, getDefineJSON);
-Global.registerCommandModule(registerIndexCommand, getIndexJSON);
+registerDiscordBotCommand(new DictCommand('dict'), false);
+registerDiscordBotCommand(new DefineCommand('define'), false);
+registerDiscordBotCommand(new IndexCommand('index'), false);
 
 export { Dict }//sortDictData, getDictDataEntryCount }

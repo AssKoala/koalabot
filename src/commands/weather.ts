@@ -18,6 +18,8 @@ import { Global } from './../global.js';
 import validator from 'validator';
 import { SlashCommandBuilder } from "discord.js";
 
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
+
 /**
  * Map for type to excludes and print function
  */
@@ -571,77 +573,55 @@ async function handleForecastCommand(interaction)
     
 }
 
-const weatherCommand = new SlashCommandBuilder()
-        .setName('weather')
-        .setDescription('Get the current weather')
-        .addStringOption((option) =>
-            option
-                .setName('location')
-                .setDescription("Location to get the weather for")
-                .setRequired(false)
-        )
-;
+class WeatherCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        return handleWeatherCommand(interaction);
+    }
 
-const forecastCommand = new SlashCommandBuilder()
-        .setName('forecast')
-        .setDescription('Get the forecast')
-        .addStringOption((option) =>
-            option
-                .setName('forecasttype')
-                .setDescription("The type of forecast")
-                .addChoices(
-                    { name: 'Daily', value: 'daily' },
-                    { name: 'Hourly', value: 'hourly' },
-                    { name: 'Minutely', value: 'minutely' },
-                    { name: 'Alerts', value: 'alerts' },
+    get() {
+        const weatherCommand = new SlashCommandBuilder()
+                .setName(this.name())
+                .setDescription('Get the current weather')
+                .addStringOption((option) =>
+                    option
+                        .setName('location')
+                        .setDescription("Location to get the weather for")
+                        .setRequired(false)
+                );
+        return weatherCommand;
+    }
+}
+
+class ForecastCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        return handleForecastCommand(interaction);
+    }
+
+    get() {
+        const forecastCommand = new SlashCommandBuilder()
+                .setName(this.name())
+                .setDescription('Get the forecast')
+                .addStringOption((option) =>
+                    option
+                        .setName('forecasttype')
+                        .setDescription("The type of forecast")
+                        .addChoices(
+                            { name: 'Daily', value: 'daily' },
+                            { name: 'Hourly', value: 'hourly' },
+                            { name: 'Minutely', value: 'minutely' },
+                            { name: 'Alerts', value: 'alerts' },
+                        )
+                        .setRequired(true)
                 )
-                .setRequired(true)
-        )
-        .addStringOption((option) =>
-            option
-                .setName('location')
-                .setDescription('Location for the forecast')
-                .setRequired(false),
-        )
-;
-
-function registerWeatherCommand(client)
-{
-    const weather = 
-    {
-        data: weatherCommand,
-        async execute(interaction) {
-            await handleWeatherCommand(interaction);
-        }
+                .addStringOption((option) =>
+                    option
+                        .setName('location')
+                        .setDescription('Location for the forecast')
+                        .setRequired(false),
+                );
+        return forecastCommand;
     }
-
-    client.commands.set(weather.data.name, weather);
 }
 
-function getWeatherJSON()
-{
-    return weatherCommand.toJSON();
-}
-
-function registerForecastCommand(client)
-{
-    const forecast = 
-    {
-        data: forecastCommand,
-        async execute(interaction) {
-            await handleForecastCommand(interaction);
-        }
-    }
-
-    client.commands.set(forecast.data.name, forecast);
-}
-
-function getForecastJSON()
-{
-    return forecastCommand.toJSON();
-}
-
- Global.registerCommandModule(registerWeatherCommand, getWeatherJSON);
- Global.registerCommandModule(registerForecastCommand, getForecastJSON);
-
-export { registerWeatherCommand, getWeatherJSON, registerForecastCommand, getForecastJSON }
+registerDiscordBotCommand(new WeatherCommand('weather'), false);
+registerDiscordBotCommand(new ForecastCommand('forecast'), false);

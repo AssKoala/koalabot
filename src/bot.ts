@@ -22,15 +22,15 @@ import fs from 'fs'
 import { CommandManager } from "./commandmanager.js";
 
 export class Bot {
-	#client: Client;
-	client() { return this.#client; }
+	private _client: Client;
+	client() { return this._client; }
 
 	constructor() {
-		this.#client = null;
+		this._client = null;
 	}
 
 	async init(discordKey: string) {
-		this.#client = new Client({
+		this._client = new Client({
 			intents: [
 				GatewayIntentBits.Guilds,
 				GatewayIntentBits.GuildMessages,
@@ -57,7 +57,7 @@ export class Bot {
 		}
 
 		// Register all the event listeners
-		this.#registerDiscordListeners();
+		this.registerDiscordListeners();
 
 		// Create commands collection based on convention
 		this.client().commands = new Collection<any,any>();
@@ -75,7 +75,7 @@ export class Bot {
 		this.client().login(discordKey);
 	}
 
-	#registerDiscordListeners() {
+	private registerDiscordListeners() {
 		this.client().on(Events.ClientReady, () => this.onClientReady());
 		this.client().on(Events.InteractionCreate, (intr: Interaction) => this.onInteractionCreate(intr));
 		this.client().on(Events.MessageCreate, (message: Message) => this.onMessageCreate(message));
@@ -108,9 +108,9 @@ export class Bot {
 		Global.logger().logInfo(`Logged in as ${this.client().user.tag}!`);
 
 		try {
-			const rebooted = this.#checkRebooted();
+			const rebooted = this.hasRebooted();
 			if (rebooted != null) {
-				const textChannel = this.#client.channels.cache.get(rebooted.channelId) as TextChannel;
+				const textChannel = this._client.channels.cache.get(rebooted.channelId) as TextChannel;
 				if (textChannel != null) {
 					textChannel.send(`<@${rebooted.memberId}>: https://www.asskoala.duckdns.org/bot/resurrection.gif`);
 				}
@@ -120,7 +120,24 @@ export class Bot {
 		}
 	}
 
+	private swankSwitchEnabled: boolean = false;
+
 	async onMessageCreate(message: Message) {
+		/ * Swank switch */
+		if (message.content.includes("TOGGLE SWANK SWITCH")) {
+			if (message.author.id != "914567674602856508") {
+				this.swankSwitchEnabled = !this.swankSwitchEnabled;
+				message.reply(`Swank switch is now ${this.swankSwitchEnabled}`);
+			} else {
+				message.reply(`Only literally every other user can toggle the switch`);
+			}
+		}
+
+		if (this.swankSwitchEnabled && message.author.id == "914567674602856508" && message.channelId == "1172663840215945278") {
+			await message.reply("This user's messages have been flagged as highly likely to be incorrect and/or false.");
+		}
+		/ * Swank switch */
+
 		if (message.content.includes('@slimeline'))
 		{
 			// slimeline, skullone thing.  Refactor into its own file.
@@ -129,7 +146,7 @@ export class Bot {
 		}
 		else 
 		{
-			this.#sendMessageToListeners(message);
+			this.sendMessageToListeners(message);
 		}
 	
 		if (message.author.bot && message.content.length == 0) return;
@@ -163,35 +180,36 @@ export class Bot {
 		}
 	}
 
-	#checkRebooted(clearStatus: boolean = true): { memberId: string, channelId: string} {
-		let toRet = null;
+	private hasRebooted(clearStatus: boolean = true): { hasRebooted: boolean, memberId: string, channelId: string} {
+		let hasRebooted = false;
 
 		try {
 			const data = fs.readFileSync(Global.settings().get("REBOOT_FILE"), 'utf8');
 			const memberId = data.split(':')[0];
 			const channelId = data.split(':')[1];
-
-			toRet = { memberId, channelId };
+			hasRebooted = true;
 
 			if (clearStatus) {
 				fs.unlinkSync(Global.settings().get("REBOOT_FILE"));
 			}
+
+			return { hasRebooted, memberId, channelId };
 		}
 		catch (e) {
 			Global.logger().logError(`Failed to check for reboot, got ${e}`);
 		}
 
-		return toRet;
+		return { hasRebooted, memberId: "", channelId: "" };
 	}
 
-	#listenerList = [];
+	private listenerList = [];
 
 	registerMessageListener(listen_func) {
-        this.#listenerList.push(listen_func);
+        this.listenerList.push(listen_func);
     }
 
-	#sendMessageToListeners(message: Message) {
-        this.#listenerList.forEach(listener_func => {
+	private sendMessageToListeners(message: Message) {
+        this.listenerList.forEach(listener_func => {
             try {
                 listener_func(message);
             } catch (e) {

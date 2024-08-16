@@ -5,31 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "node",
-            "request": "launch",
-            "name": "[Test] UptimeServer",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/tests/testuptimeserver.js",
-            "outputCapture": "std"
-        },
-        {
             "type": "PowerShell",
             "request": "launch",
             "name": "[PROD] Deploy to Production",
-            "script": "${workspaceFolder}/deploy.ps1",
+            "script": "${workspaceFolder}/buildsys/deploy.ps1",
             "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "[Test] Stenographer",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/tests/testdiscordstenographer.js",
-            "outputCapture": "std"
         },
         {
             "type": "node",
@@ -41,59 +21,6 @@
             "preLaunchTask": "tsc: build - tsconfig.json",
             "program": "${workspaceFolder}/src/main.ts",
             "outputCapture": "std",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"]
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Clear (guild-prod) bot commands",
-            "args": ["prod", "guild", "clear"],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "outputCapture": "std",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "program": "${workspaceFolder}/src/deploy-commands.ts",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"]
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Clear (global-prod) bot commands",
-            "args": ["prod", "global", "clear"],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "outputCapture": "std",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "program": "${workspaceFolder}/src/deploy-commands.ts",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"]
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Deploy to test guild(s)",
-            "args": ["test"],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "outputCapture": "std",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "program": "${workspaceFolder}/src/deploy-commands.ts",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"]
-        }
-        ,
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Deploy to prod guild(s)",
-            "args": ["prod"],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "outputCapture": "std",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "program": "${workspaceFolder}/src/deploy-commands.ts",
             "outFiles": ["${workspaceFolder}/build/**/*.js"]
         }
     ]

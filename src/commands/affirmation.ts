@@ -8,62 +8,52 @@
     Daily affirmations module
 */
 
-import { Global } from '../global.js';
-import { SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
 
-const affirmationData = await Global.readJsonFile(`${Global.settings().get("DATA_PATH")}/affirmations.json`);
-
-function getAffirmationCount()
-{
-    try {
-        return affirmationData.affirmations.length;
-    } catch (e) {
-        Global.logger().logError(`Failed to retrieve affirmation count, got ${e}`);
-        return 0;
-    }
-}
-
-/**
- * Retrieves a random affirmation from the affirmations.json file and replies it to the interaction
- * @param {*} interaction - Discord interaction
- */
-async function handleAffirmationCommand(interaction) {
-    using perfCounter = Global.getPerformanceCounter("handleAffirmationCommand(): ");
-
-    try {
-        const index = Math.floor(Math.random() * affirmationData.affirmations.length);
-        await interaction.reply(`${affirmationData.affirmations[index].entry} by **${affirmationData.affirmations[index].author}**`);
-    } catch (e) {
-        Global.logger().logError(`Failed to get affirmation, got exception ${e}`, interaction);
-    }
-
+class AffirmationCommand extends DiscordBotCommand  {
+    private affirmationData = null;
     
-}
+    async loadData(affirmationFilePath: string) {
+        this.affirmationData = await this.runtimeData().helpers().readJsonFile(affirmationFilePath);
+    }
 
-// discord affirmation command
-const affirmationCommand = new SlashCommandBuilder()
-        .setName('affirmation')
-        .setDescription('Affirmations to get you through the day')
-;
-
-function registerAffirmationCommand(client)
-{
-    const affirmation = 
-    {
-        data: affirmationCommand,
-        async execute(interaction) {
-            await handleAffirmationCommand(interaction);
+    getAffirmationCount(): number {
+        try {
+            return this.affirmationData.affirmations.length;
+        } catch (e) {
+            this.runtimeData().logger().logError(`Failed to retrieve affirmation count, got ${e}`);
+            return 0;
         }
     }
 
-    client.commands.set(affirmation.data.name, affirmation);
+    async handle(interaction: ChatInputCommandInteraction): Promise<void> {
+        using perfCounter = this.runtimeData().getPerformanceCounter("handleAffirmationCommand(): ");
+
+        try {
+            const index = Math.floor(Math.random() * this.affirmationData.affirmations.length);
+            await interaction.reply(`${this.affirmationData.affirmations[index].entry} by **${this.affirmationData.affirmations[index].author}**`);
+        } catch (e) {
+            this.runtimeData().logger().logError(`Failed to get affirmation, got exception ${e}`, interaction);
+        }
+    }
+
+    get(): SlashCommandOptionsOnlyBuilder {
+        const affirmationCommand = new SlashCommandBuilder()
+                                            .setName(this.name())
+                                            .setDescription('Affirmations to get you through the day');
+
+        return affirmationCommand;
+    }
 }
 
-function getAffirmationJSON()
-{
-    return affirmationCommand.toJSON();
-}
+const affirmationCommand = new AffirmationCommand('affirmation');
+registerDiscordBotCommand(affirmationCommand, false);
+affirmationCommand.loadData(`${affirmationCommand.runtimeData().settings().get("DATA_PATH")}/affirmations.json`);
 
-Global.registerCommandModule(registerAffirmationCommand, getAffirmationJSON);
+// Used by system command
+function getAffirmationCount() {
+    return affirmationCommand.getAffirmationCount();
+}
 
 export { getAffirmationCount };

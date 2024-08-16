@@ -67,4 +67,55 @@ export class SettingsManager {
     {
         return this.get("DISCORD_GUILD_ID").split(',');
     }
+
+    #getSettingDocs(setting: Setting): string[] {
+        let toRet = [];
+        
+        toRet.push(`##### ${setting.name}`);
+        toRet.push(`Default Value: ${setting.defaultValue}`);
+        toRet.push(`${setting.description}`);
+
+        return toRet;
+    }
+
+    #getReadmeSettingsString(map): string {
+        let toRet: string = "";
+
+        map.forEach(([key, setting]) => {
+            const docs = this.#getSettingDocs(setting as Setting);
+            docs.forEach(entry => {
+                toRet += entry + "\n";
+            });
+            toRet += "\n";
+        });
+
+        return toRet;
+    }
+
+    getReadmeSettingsDocs(): string {
+        let moduleSorted = [];
+        let toRet: string = "";
+
+        Object.entries(this.#registeredSettings).forEach(([key, setting]) => {
+            if (!(setting.moduleName in moduleSorted)) {
+                moduleSorted[setting.moduleName] = [];
+            }
+
+            moduleSorted[setting.moduleName].push(setting);
+        });
+
+        // First output for all the global settings
+        toRet += "#### global settings" + "\n\n";
+        toRet += this.#getReadmeSettingsString(Object.entries(moduleSorted["global"]));
+
+        // Then the rest of the settings in whatever order
+        Object.entries(moduleSorted).forEach(([key, settings]) => {
+            if (!(key === "global")) {
+                toRet += `#### ${key} settings` + "\n\n";
+                toRet += this.#getReadmeSettingsString(Object.entries(settings));
+            }
+        });
+
+        return toRet;
+    }
 }

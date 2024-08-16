@@ -11,6 +11,7 @@
 import dotenv from "dotenv"
 import { Global } from './../global.js'
 import { SlashCommandBuilder } from 'discord.js';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from "../api/DiscordBotCommand.js";
 
 /**
  * Sets the user's location and saves it off
@@ -123,114 +124,83 @@ async function setUserSettings(interaction)
     }
 }
 
-/**
- * Handles the /settings command
- * @returns nothing
- */
-async function handleSettingsCommand(interaction) {
-    using perfCounter = Global.getPerformanceCounter("handleSettingsCommand(): ");
+class SettingsCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        using perfCounter = Global.getPerformanceCounter("handleSettingsCommand(): ");
 
-    try {
-        await interaction.deferReply();
+        try {
+            await interaction.deferReply();
 
-        if (interaction.options.data.length < 1) {
-            const str = `Interaction data missing, got length: ${interaction.options.data.length}`;
-            Global.logger().logError(str);
-            await interaction.editReply(str);
+            if (interaction.options.data.length < 1) {
+                const str = `Interaction data missing, got length: ${interaction.options.data.length}`;
+                Global.logger().logError(str);
+                await interaction.editReply(str);
+            }
+
+            switch (interaction.options.data[0].name) {
+                case 'get':
+                    await getUserSettings(interaction);
+                    break;
+                case 'set':
+                    await setUserSettings(interaction);
+                    break;
+                default:
+                    Global.logger().logError(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
+                    break;
+            }
+        } catch (e) {
+            await Global.logger().logError(`Failed to handle settings command, got error: ${e}`, interaction);
         }
-
-        switch (interaction.options.data[0].name) {
-            case 'get':
-                await getUserSettings(interaction);
-                break;
-            case 'set':
-                await setUserSettings(interaction);
-                break;
-            default:
-                Global.logger().logError(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
-                break;
-        }
-    } catch (e) {
-        await Global.logger().logError(`Failed to handle settings command, got error: ${e}`, interaction);
     }
 
-    
-}
-
-/**
- * settings command object
- */
-const settingsCommand = new SlashCommandBuilder()
-        .setName('settings')
-        .setDescription('Set/view user bot settings')
-        // Set group
-        .addSubcommandGroup((group) =>
-            group
-                .setName('set')
-                .setDescription('Set user options')
-                .addSubcommand((subcommand) =>
-                    subcommand
-                        .setName('location')
-                        .setDescription('User location to use (e.g. Weston,FL or 33326')
-                        .addStringOption((option) =>
-                            option
+    get() {
+        const settingsCommand = new SlashCommandBuilder()
+                .setName(this.name())
+                .setDescription('Set/view user bot settings')
+                // Set group
+                .addSubcommandGroup((group) =>
+                    group
+                        .setName('set')
+                        .setDescription('Set user options')
+                        .addSubcommand((subcommand) =>
+                            subcommand
                                 .setName('location')
-                                .setDescription('Location to set')
-                                .setRequired(true),
-                        )
-                )
-                .addSubcommand((subcommand) =>
-                    subcommand
-                        .setName('preferred_units')
-                        .setDescription('Preferred temperature units')
-                        .addStringOption((option) =>
-                            option
-                                .setName('units')
-                                .setDescription('Units to use')
-                                .addChoices(
-                                    { name: 'Kelvin', value: 'kelvin' },
-                                    { name: 'Rankine', value: 'rankine' },
-                                    { name: 'Fahrenheit', value: 'fahrenheit' },
-                                    { name: 'Celsius', value: 'celsius' },
+                                .setDescription('User location to use (e.g. Weston,FL or 33326')
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('location')
+                                        .setDescription('Location to set')
+                                        .setRequired(true),
                                 )
-                                .setRequired(true),
                         )
-                    )
-        )
-        // get command
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('get')
-                .setDescription('Retrieve your settings')
-        )
-;
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('preferred_units')
+                                .setDescription('Preferred temperature units')
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('units')
+                                        .setDescription('Units to use')
+                                        .addChoices(
+                                            { name: 'Kelvin', value: 'kelvin' },
+                                            { name: 'Rankine', value: 'rankine' },
+                                            { name: 'Fahrenheit', value: 'fahrenheit' },
+                                            { name: 'Celsius', value: 'celsius' },
+                                        )
+                                        .setRequired(true),
+                                )
+                            )
+                )
+                // get command
+                .addSubcommand(subcommand =>
+                    subcommand
+                        .setName('get')
+                        .setDescription('Retrieve your settings')
+                )
+        ;
 
-/**
- * 
- * @param {Discord.Client} client 
- */
-function registerSettingsCommand(client)
-{
-    const settings = 
-    {
-        data: settingsCommand,
-        async execute(interaction) {
-            await handleSettingsCommand(interaction);
-        }
+        return settingsCommand;
     }
-
-    client.commands.set(settings.data.name, settings);
 }
 
-/**
- * 
- * @returns Retrieve the settings command as JSON
- */
-function getSettingsJSON()
-{
-    return settingsCommand.toJSON();
-}
-
- Global.registerCommandModule(registerSettingsCommand, getSettingsJSON);
-
-export { registerSettingsCommand, getSettingsJSON }
+registerDiscordBotCommand(new SettingsCommand('settings'), false);

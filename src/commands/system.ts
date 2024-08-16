@@ -14,6 +14,7 @@ import { Stenographer } from '../helpers/discordstenographer.js'
 import { getAffirmationCount } from './affirmation.js'
 import { Dict } from './dict.js'
 import fs from 'fs'
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
 async function showMemoryStats(interaction)
 {
@@ -115,75 +116,58 @@ async function reboot(interaction) {
     }
 }
 
-async function handleSystemCommand(interaction) {
-    using perfCounter = Global.getPerformanceCounter("handleSystemCommand(): ");
+class SystemCommand extends DiscordBotCommand {
 
-    try {
-        await interaction.deferReply();
+    async handle(interaction) {
+        using perfCounter = Global.getPerformanceCounter("handleSystemCommand(): ");
 
-        for (let i = 0; i < interaction.options.data.length; i++)
-        {
-            const name = interaction.options.data[i].value;
+        try {
+            await interaction.deferReply();
 
-            switch (name)
+            for (let i = 0; i < interaction.options.data.length; i++)
             {
-                case 'memory':
-                    await showMemoryStats(interaction);
-                    break;
-                case 'cpu':
-                    await showCpuStats(interaction);
-                    break;
-                case 'reboot':
-                    await reboot(interaction);
-                    break;
-                default:
-                    break;
-            }
-        }        
-    } catch (e) {   
-        await Global.logger().logError(`Top level exception during system command, got error ${e}`, interaction, true);
-    }
+                const name = interaction.options.data[i].value;
 
-    
-}
-
-function getSystemCommand()
-{
-    const systemCommand = new SlashCommandBuilder()
-        .setName('system')
-        .setDescription(`System commands`)
-        .addStringOption((option) =>
-            option
-                .setName('command')
-                .setDescription('System command to execute')
-                .addChoices(
-                    { name: 'memory', value: 'memory' },
-                    { name: 'cpu', value: 'cpu' },
-                    { name: 'reboob', value: 'reboot'}
-                )
-                .setRequired(true),
-        )
-    ;
-
-    return systemCommand;
-}
-
-function getSystemJSON()
-{
-    return getSystemCommand().toJSON();
-}
-
-function registerSystemCommand(client)
-{
-    const system = 
-    {
-        data: getSystemCommand(),
-        async execute(interaction) {
-            await handleSystemCommand(interaction);
+                switch (name)
+                {
+                    case 'memory':
+                        await showMemoryStats(interaction);
+                        break;
+                    case 'cpu':
+                        await showCpuStats(interaction);
+                        break;
+                    case 'reboot':
+                        await reboot(interaction);
+                        break;
+                    default:
+                        break;
+                }
+            }        
+        } catch (e) {   
+            await Global.logger().logError(`Top level exception during system command, got error ${e}`, interaction, true);
         }
     }
 
-    client.commands.set(system.data.name, system);
+    get()
+    {
+        const systemCommand = new SlashCommandBuilder()
+            .setName(this.name())
+            .setDescription(`System commands`)
+            .addStringOption((option) =>
+                option
+                    .setName('command')
+                    .setDescription('System command to execute')
+                    .addChoices(
+                        { name: 'memory', value: 'memory' },
+                        { name: 'cpu', value: 'cpu' },
+                        { name: 'reboob', value: 'reboot'}
+                    )
+                    .setRequired(true),
+            )
+        ;
+
+        return systemCommand;
+    }
 }
 
-Global.registerCommandModule(registerSystemCommand, getSystemJSON);
+registerDiscordBotCommand(new SystemCommand('system'), false);

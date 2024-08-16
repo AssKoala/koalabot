@@ -8,8 +8,10 @@
     AI Image Generation
 */
 
+import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
+
 import { Global } from '../global.js';
-import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
+import { SlashCommandBuilder, AttachmentBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { DownloaderHelper } from 'node-downloader-helper';
 import { mkdir, rm } from 'node:fs/promises';
@@ -17,16 +19,22 @@ import { got } from 'got';
 import fs from 'node:fs';
 import crypto from 'crypto';
 
-class ImageGenerationData {
-    #prompt = '';
-    #size = '1024x1024';
-    #quality = 'standard';
-    #forcePrompt = false;
-    #promptPrepend = "I NEED to test how the tool works with extremely simple prompts. DO NOT add any detail, just use it AS-IS:";
-    #model = "dalle";
-    #sd_model_checkpoint = 'Deliberate_v6.safetensors';
+// For getimg.ai
+import fetch from 'node-fetch';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
-    #isSizeValid(image_size) {
+class ImageGenerationData {
+    readonly prompt: string = '';
+    readonly size: string = '1024x1024';
+    readonly quality: string = 'standard';
+    readonly forcePrompt: boolean = false;
+    readonly promptPrepend: string = "I NEED to test how the tool works with extremely simple prompts. DO NOT add any detail, just use it AS-IS:";
+    readonly model: string = "dalle";
+    readonly sd_model_checkpoint: string = 'Deliberate_v6.safetensors';
+    readonly seed: number = 0;
+    readonly steps: number = 4;
+
+    private isSizeValid(image_size: string): boolean {
         try {
             const width = parseInt(image_size.split('x')[0]);
             const height = parseInt(image_size.split('x')[1]);
@@ -37,81 +45,50 @@ class ImageGenerationData {
         }
     }
 
-    constructor(interaction) {
-        this.#model = interaction.options.data[0].name;
-
-        for (let i = 0; i < interaction.options.data[0].options[0].options.length; i++) {
-            const name = interaction.options.data[0].options[0].options[i].name;
-            const value = interaction.options.data[0].options[0].options[i].value;
-
-            switch (name) {
-                case 'image_details':
-                    this.#prompt = value;
-                    break;
-                case 'image_size':
-                    if (this.#isSizeValid(value)) {
-                        this.#size = value;
-                    }
-                    break;
-                case 'image_quality':
-                    this.#quality = value;
-                    break;
-                case 'force_prompt':
-                    this.#forcePrompt = (value == 'true');
-                    break;
-                case 'sd_model_checkpoint':
-                    this.#sd_model_checkpoint = value;
-                    break;
-                default:
-                    break;
-            }
-        }
+    constructor(request: KoalaSlashCommandRequest) {
+        this.model = request.getSubcommand().getGroup();
+        this.prompt = request.getSubcommand().getOptionValueString('image_details');
+        this.size = request.getSubcommand().getOptionValueString('image_size', this.size);
+        this.quality = request.getSubcommand().getOptionValueString('image_quality', this.quality);
+        this.forcePrompt = request.getSubcommand().getOptionValueBoolean('force_prompt', this.forcePrompt);
+        this.sd_model_checkpoint = request.getSubcommand().getOptionValueString('sd_model_checkpoint', this.sd_model_checkpoint);
+        this.steps = Math.min(6, Math.max(1, request.getSubcommand().getOptionValueNumber('steps', this.steps)));
+        this.seed = Math.min(2147483647, Math.max(0, request.getSubcommand().getOptionValueNumber('seed', this.seed)));
     }
 
-    model() {
-        return this.#model;
+    getSteps(): number {
+        return this.steps;
     }
 
-    prompt() {
-        if (this.#forcePrompt) {
-            return this.#promptPrepend + this.#prompt;
+    getSeed(): number {
+        return this.seed;
+    }
+
+    getGeneratedPrompt() {
+        if (this.forcePrompt) {
+            return this.promptPrepend + this.prompt;
         }
         else {
-            return this.#prompt;
+            return this.prompt;
         }        
     }
 
-    size() {
-        return this.#size;
+    getWidth() {
+        return this.size.split('x')[0];
     }
 
-    width() {
-        return this.#size.split('x')[0];
-    }
-
-    height() {
-        return this.#size.split('x')[1];
-    }
-
-    sd_model_checkpoint() {
-        return this.#sd_model_checkpoint;
-    }
-
-    quality() {
-        return this.#quality;
-    }
-
-    forcedPrompt() {
-        return this.#forcePrompt;
-    }
-
-    promptPrepend() {
-        return this.#promptPrepend;
+    getHeight() {
+        return this.size.split('x')[1];
     }
 }
 
+interface ImageDownloadedFileInfo {
+    fullpath: string;
+    filename: string;
+}
+
 class OpenAI {
-    static async #getImageUrl(imageGenData, interaction) {
+    private static async getImageUrl(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction) {
         using perfCounter = Global.getPerformanceCounter("image::getImageUrl(): ");
         let image_url = null;
         let error = null;
@@ -121,28 +98,26 @@ class OpenAI {
             // Create the image with OpenAI
             const response = await OpenAIHelper.getInterface().images.generate({
                 model: "dall-e-3",
-                prompt: `${imageGenData.prompt()}`,
+                prompt: `${imageGenData.getGeneratedPrompt()}`,
                 n: 1,
-                size: `${imageGenData.size()}`,
-                quality: `${imageGenData.quality()}`,
+                size: `${imageGenData.size}`,
+                quality: `${imageGenData.quality}`,
             });
 
             image_url = response.data[0].url;
 
-            Global.logger().logInfo(`Asked: ${imageGenData.prompt()}, got ${image_url}`);
+            Global.logger().logInfo(`Asked: ${imageGenData.getGeneratedPrompt()}, got ${image_url}`);
         } catch (e) {
             error = e;
-            await Global.logger().logError(`Exception occurred during image gen, asked: ${imageGenData.prompt()}, got ${e}`, interaction, true);
+            await Global.logger().logError(`Exception occurred during image gen, asked: ${imageGenData.getGeneratedPrompt()}, got ${e}`, interaction, true);
         }
-
-        
 
         return {
             image_url: image_url, error: error
         };
-    }
+    } // getImageUrl
 
-    static async #downloadUrlToFile(url, download_dir = Global.settings().get("TEMP_PATH")) {
+    private static async downloadUrlToFile(url: string, download_dir: string = Global.settings().get("TEMP_PATH")) {
         // Download the image temporarily
         await mkdir(download_dir, { recursive: true });
 
@@ -157,16 +132,16 @@ class OpenAI {
             "fullpath": downloaded_fullpath,
             "filename": downloaded_filename,
         }
-    }
+    } // downloadUrlToFile
 
-    static async download(imageGenData, interaction) {
+    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
         try {
-            const result = await OpenAI.#getImageUrl(imageGenData, interaction);
+            const result = await OpenAI.getImageUrl(imageGenData, interaction);
 
             if (result.error != null) {
                 Global.logger().logError(`Error getting image URL, got error ${result.error}`);
             } else {
-                const downloadedFileinfo = await OpenAI.#downloadUrlToFile(result.image_url);
+                const downloadedFileinfo = await OpenAI.downloadUrlToFile(result.image_url);
                 return downloadedFileinfo;
             }
         } catch (e) {
@@ -174,19 +149,19 @@ class OpenAI {
         }
 
         return null;
-    }
-}
+    } // download
+} // class OpenAI
 
 class StableDiffusion {
-    static async download(imageGenData, interaction) {
+    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
         try {
             const payload = {
-                "prompt": imageGenData.prompt(),
+                "prompt": imageGenData.getGeneratedPrompt(),
                 "steps": 25,
-                "width": imageGenData.width(),
-                "height": imageGenData.height(),
+                "width": imageGenData.getWidth(),
+                "height": imageGenData.getHeight(),
                 "override_settings": {
-                    "sd_model_checkpoint": imageGenData.sd_model_checkpoint()
+                    "sd_model_checkpoint": imageGenData.sd_model_checkpoint
                 }
             };
 
@@ -215,175 +190,244 @@ class StableDiffusion {
         }
 
         return null;
-    }
-}
+    } // download
+} // class StableDiffusion
 
-/**
- * Handles a GPT image command (generate an image using DALL-E 3)
- * @param {Discord.interaction} interaction
- */
-async function handleImageCommand(interaction) {
-    using perfCounter = Global.getPerformanceCounter("handleImageCommand(): ");
+class GetimgAi {
+    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
+        try {
+            const url = 'https://api.getimg.ai/v1/flux-schnell/text-to-image';
+            const options = {
+                method: 'POST',
+                headers: {
+                    accept: 'application/json',
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${Global.settings().get("GETIMG_AI_API_KEY")}`
+                },
+                body: JSON.stringify(
+                    {
+                        prompt: imageGenData.getGeneratedPrompt(), 
+                        width: imageGenData.getWidth(), 
+                        height: imageGenData.getHeight(),
+                        steps: imageGenData.getSteps(),
+                        ...(imageGenData.getSeed() != 0) && {seed: imageGenData.getSeed() },
+                        output_format: "png",
+                    })
+            };
 
-    try {
-        await interaction.deferReply();
+            const fetchResult = await fetch(url, options);
+            const responseData = <any> await fetchResult.json();
 
-        const imageGenData = new ImageGenerationData(interaction);
+            const hash = crypto.createHash('md5').update(responseData.image).digest('hex');
+            const filename = hash + '.png';
+            const fullpath = `${Global.settings().get("TEMP_PATH")}/${filename}`;
 
-        let downloadedFileInfo = null;
-
-        switch (imageGenData.model()) {
-            case 'dalle':
-                downloadedFileInfo = await OpenAI.download(imageGenData, interaction);
-                break;
-            case 'stablediffusion':
-                downloadedFileInfo = await StableDiffusion.download(imageGenData, interaction);
-                break;
-            default:
-                await Global.logger().logError(`Unexpected model ${imageGenData.model()}`, interaction, true);
-                return;
-        }
-
-        if (downloadedFileInfo != null) {
-            // Create the attachment
+            const decoded = Buffer.from(responseData.image, "base64");
             try {
-                const file = new AttachmentBuilder(downloadedFileInfo.fullpath);
-                const embed = {
-                    title: imageGenData.prompt().substring(0, 256),
-                    image: {
-                        url: `attachment://${downloadedFileInfo.filename}`,
-                    }
-                }
-
-                await interaction.editReply({ embeds: [embed], files: [file] });
+                fs.writeFileSync(fullpath, decoded);
+                Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
             } catch (e) {
-                await Global.logger().logError(`Failed to generate/post images, got ${e}`, interaction, true);
+                await Global.logger().logError(`Failed to write temp-image file, got ${e}`, interaction, true);
             }
-
-            try {
-                // Delete the file
-                await rm(downloadedFileInfo.fullpath);
-            } catch (e) {
-                Global.logger().logError(`Failed to delete image file, might need manual cleanup, got ${e}`);
-            }   
+            
+            return {
+                "fullpath": fullpath,
+                "filename": filename,
+            }
+        } catch (e) {
+            await Global.logger().logError(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
         }
-    } catch (e) {
-        await Global.logger().logError(`Top level exception during image, got error ${e}`, interaction, false);
+        return null;
     }
+}
 
+class ImageCommand extends DiscordBotCommand {
+    async handle(interaction) {
+        using perfCounter = Global.getPerformanceCounter("handleImageCommand(): ");
     
-}
-
-function getImageCommand() {
-    const imageCommand = new SlashCommandBuilder()
-        .setName('image')
-        .setDescription(`Ask ${Global.settings().get("BOT_NAME")} to generate an image`)
-        // Dall-E command group
-        .addSubcommandGroup((group) =>
-            group
-                .setName('dalle')
-                .setDescription('Generate an image using Dall-E')
-                .addSubcommand((subcommand) =>
-                    subcommand
-                        .setName('generate')
-                        .setDescription('Generate an image using Dall-E')
-                        .addStringOption((option) =>
-                            option
-                                .setName('image_details')
-                                .setDescription('Details of what to generate')
-                                .setRequired(true),
-                        )
-                        .addStringOption((option) =>
-                            option
-                                .setName('image_size')
-                                .setDescription('Image size to generate')
-                                .addChoices(
-                                    { name: 'square', value: '1024x1024' },
-                                    { name: 'tall', value: '1024x1792' },
-                                    { name: 'wide', value: '1792x1024' },
-                                )
-                                .setRequired(false),
-                        )
-                        .addStringOption((option) =>
-                            option
-                                .setName('image_quality')
-                                .setDescription('Image quality to use')
-                                .addChoices(
-                                    { name: 'standard', value: 'standard' },
-                                    { name: 'hd', value: 'hd' },
-                                )
-                                .setRequired(false),
-                        )
-                        .addStringOption((option) =>
-                            option
-                                .setName('force_prompt')
-                                .setDescription('Attempt to disable additional details and execute prompt as-is')
-                                .addChoices(
-                                    { name: 'enable', value: 'true' },
-                                    { name: 'disable', value: 'false' },
-                                )
-                                .setRequired(false),
-                        )
-                )
-        )
-        // Stable Diffusion
-        .addSubcommandGroup((group) =>
-            group
-                .setName('stablediffusion')
-                .setDescription('Generate an image using Stable Diffusion')
-                .addSubcommand((subcommand) =>
-                    subcommand
-                        .setName('generate')
-                        .setDescription('Generate an image using Stable Diffusion')
-                        .addStringOption((option) =>
-                            option
-                                .setName('image_details')
-                                .setDescription('Details of what to generate')
-                                .setRequired(true)
-                        )
-                        .addStringOption((option) =>
-                            option
-                                .setName('image_size')
-                                .setDescription('Image size to generate (1024x1024 default)')
-                                .setRequired(false)
-                        )
-                        .addStringOption((option) =>
-                            option
-                                .setName('sd_model_checkpoint')
-                                .setDescription('Stable Diffusion Model (deliberate default)')
-                                .setRequired(false)
-                                .addChoices(
-                                    { name: 'deliberate', value: 'Deliberate_v6.safetensors' },
-                                    { name: 'dreamshaper', value: 'dreamshaper_8.safetensors' },
-                                    { name: 'nsfw', value: 'newrealityxl-global-nsfw.safetensors' },
-                                    { name: 'lofi', value: 'lofi_v4.safetensors' },
-                                    { name: 'anime', value: 'storeBoughtGyozaMix_winterholiday2023edi.safetensors' },
-                                    { name: 'illustrated', value: '2dn_2.safetensors' },
-                                )
-                        )
-                )
-        )
-        ;
-
-    return imageCommand;
-}
-
-function registerImageCommand(client) {
-    const image =
-    {
-        data: getImageCommand(),
-        async execute(interaction) {
-            await handleImageCommand(interaction);
+        try {
+            await interaction.deferReply();
+    
+            const slashCommandInfo = KoalaSlashCommandRequest.fromDiscordInteraction(interaction);
+            const imageGenData = new ImageGenerationData(slashCommandInfo);
+    
+            let downloadedFileInfo: ImageDownloadedFileInfo = null;
+    
+            switch (imageGenData.model) {
+                case 'dalle':
+                    downloadedFileInfo = await OpenAI.download(imageGenData, interaction);
+                    break;
+                case 'stablediffusion':
+                    downloadedFileInfo = await StableDiffusion.download(imageGenData, interaction);
+                    break;
+                case 'getimgai':
+                    downloadedFileInfo = await GetimgAi.download(imageGenData, interaction);
+                    break;
+                default:
+                    await Global.logger().logError(`Unexpected model ${imageGenData.model}`, interaction, true);
+                    return;
+            }
+    
+            if (downloadedFileInfo != null) {
+                // Create the attachment
+                try {
+                    const file = new AttachmentBuilder(downloadedFileInfo.fullpath);
+                    const embed = {
+                        title: imageGenData.getGeneratedPrompt().substring(0, 256),
+                        image: {
+                            url: `attachment://${downloadedFileInfo.filename}`,
+                        }
+                    }
+    
+                    await interaction.editReply({ embeds: [embed], files: [file] });
+                } catch (e) {
+                    await Global.logger().logError(`Failed to generate/post images, got ${e}`, interaction, true);
+                }
+    
+                try {
+                    // Delete the file
+                    await rm(downloadedFileInfo.fullpath);
+                } catch (e) {
+                    Global.logger().logError(`Failed to delete image file, might need manual cleanup, got ${e}`);
+                }   
+            } else {
+                await interaction.editReply("Failed to download image, got null result.");
+            }
+        } catch (e) {
+            await Global.logger().logError(`Top level exception during image, got error ${e}`, interaction, false);
         }
-    }
+    } // handleImageCommand
 
-    client.commands.set(image.data.name, image);
+    get() {
+        const imageCommand = new SlashCommandBuilder()
+            .setName(this.name())
+            .setDescription(`Ask ${Global.settings().get("BOT_NAME")} to generate an image`)
+            // Dall-E command group
+            .addSubcommandGroup((group) =>
+                group
+                    .setName('dalle')
+                    .setDescription('Generate an image using Dall-E')
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('generate')
+                            .setDescription('Generate an image using Dall-E')
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_details')
+                                    .setDescription('Details of what to generate')
+                                    .setRequired(true),
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_size')
+                                    .setDescription('Image size to generate')
+                                    .addChoices(
+                                        { name: 'square', value: '1024x1024' },
+                                        { name: 'tall', value: '1024x1792' },
+                                        { name: 'wide', value: '1792x1024' },
+                                    )
+                                    .setRequired(false),
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_quality')
+                                    .setDescription('Image quality to use')
+                                    .addChoices(
+                                        { name: 'standard', value: 'standard' },
+                                        { name: 'hd', value: 'hd' },
+                                    )
+                                    .setRequired(false),
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('force_prompt')
+                                    .setDescription('Attempt to disable additional details and execute prompt as-is')
+                                    .addChoices(
+                                        { name: 'enable', value: 'true' },
+                                        { name: 'disable', value: 'false' },
+                                    )
+                                    .setRequired(false),
+                            )
+                    )
+            )
+            // Stable Diffusion
+            .addSubcommandGroup((group) =>
+                group
+                    .setName('stablediffusion')
+                    .setDescription('Generate an image using Stable Diffusion')
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('generate')
+                            .setDescription('Generate an image using Stable Diffusion')
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_details')
+                                    .setDescription('Details of what to generate')
+                                    .setRequired(true)
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_size')
+                                    .setDescription('Image size to generate (1024x1024 default)')
+                                    .setRequired(false)
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('sd_model_checkpoint')
+                                    .setDescription('Stable Diffusion Model (deliberate default)')
+                                    .setRequired(false)
+                                    .addChoices(
+                                        { name: 'deliberate', value: 'Deliberate_v6.safetensors' },
+                                        { name: 'dreamshaper', value: 'dreamshaper_8.safetensors' },
+                                        { name: 'nsfw', value: 'newrealityxl-global-nsfw.safetensors' },
+                                        { name: 'lofi', value: 'lofi_v4.safetensors' },
+                                        { name: 'anime', value: 'storeBoughtGyozaMix_winterholiday2023edi.safetensors' },
+                                        { name: 'illustrated', value: '2dn_2.safetensors' },
+                                    )
+                            )
+                    )
+            )
+            // getimg.ai
+            .addSubcommandGroup((group) =>
+                group
+                    .setName('getimgai')
+                    .setDescription('Generate an image using getimg.ai')
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('generate_flux')
+                            .setDescription('Generate an image using getimg.ai')
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_details')
+                                    .setDescription('Details of what to generate')
+                                    .setRequired(true)
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('image_size')
+                                    .setDescription('Image size to generate (1024x1024 default)')
+                                    .setRequired(false)
+                            )
+                            .addIntegerOption((option) =>
+                                option
+                                    .setName("steps")
+                                    .setDescription("Number of steps to take (4 is default)")
+                                    .setRequired(false)
+                            )
+                            .addIntegerOption((option) =>
+                                option
+                                    .setName("seed")
+                                    .setDescription("Set seed for deterministic generation")
+                                    .setRequired(false)
+                            )
+                    )
+            )
+            ;
+    
+        return imageCommand;
+    } // getImageCommand()
 }
 
-function getImageJSON() {
-    return getImageCommand().toJSON();
-}
-
-Global.registerCommandModule(registerImageCommand, getImageJSON);
+registerDiscordBotCommand(new ImageCommand('image'), false);
 
 export { ImageGenerationData }

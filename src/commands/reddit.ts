@@ -10,8 +10,9 @@
 import { Global } from '../global.js';
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { replyRandomLink } from '../command_impl/reddit.js'
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
-class RedditLinkCommand {
+class RedditLinkCommand extends DiscordBotCommand{
     #command;
     slashCommand() {
         return this.#command;
@@ -26,7 +27,9 @@ class RedditLinkCommand {
     #subreddits: string[] = [];
     #lookupCount: number = 0;
 
-    async execute(interaction: ChatInputCommandInteraction) {
+    private readonly description;
+
+    async handle(interaction: ChatInputCommandInteraction) {
         try {
             await interaction.deferReply();
 
@@ -68,39 +71,37 @@ class RedditLinkCommand {
         }
     }
 
-    #registerCommand(client) {
-        const command = {
-            data: this.slashCommand(),
-            execute: this.execute.bind(this)
-        }
-        client.commands.set(command.data.name, command);
-    }
-
     constructor(linkData) {
+        super(linkData.name);
+
         this.#blacklist = linkData.blacklistedChannels;
         this.#whitelist = linkData.whitelistedChannels;
         this.#subreddits = linkData.subreddits;
         this.#lookupCount = linkData.count;
+        this.description = linkData.description;
 
-        this.#command = new SlashCommandBuilder()
-            .setName(linkData.name)
-            .setDescription(linkData.description)
-            .addStringOption((option) =>
-                option
-                    .setName('filter')
-                    .setDescription('Time filter to use in search')
-                    .addChoices(
-                        { name: 'All time', value: 'all' },
-                        { name: 'Past 24 hours', value: 'day' },
-                        { name: 'Last hour', value: 'hour' },
-                        { name: 'Last week', value: 'week' },
-                        { name: 'Last Year', value: 'year' },
-                    )
-                    .setRequired(false),
-            )
-        ;
+        registerDiscordBotCommand(this, false);
+    }
 
-        Global.registerCommandModule(this.#registerCommand.bind(this), this.slashCommandJSON.bind(this));
+    get() {
+        const command = new SlashCommandBuilder()
+        .setName(this.name())
+        .setDescription(this.description)
+        .addStringOption((option) =>
+            option
+                .setName('filter')
+                .setDescription('Time filter to use in search')
+                .addChoices(
+                    { name: 'All time', value: 'all' },
+                    { name: 'Past 24 hours', value: 'day' },
+                    { name: 'Last hour', value: 'hour' },
+                    { name: 'Last week', value: 'week' },
+                    { name: 'Last Year', value: 'year' },
+                )
+                .setRequired(false),
+        );
+
+        return command;
     }
 }
 

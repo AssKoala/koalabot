@@ -2,22 +2,32 @@ import { Global } from './global.js';
 import { Client, REST, Routes } from 'discord.js';
 
 export abstract class CommandManager {
-    static #registrationList = [];
+
+    
+
+    static async importNewStyleCommands() {
+        try {
+           
+        } catch (e) {
+            Global.logger().logError(`Failed to import new style commands, got error ${e}`);
+        }
+        
+    }
 
     static async importCommands() {
         try {
             // Load the dynamically defined commands from the .env file
             const autoCommands = Global.settings().get("COMMAND_LIST").split(",");
-    
+
             for (const command of autoCommands) 
             {
                 using perfCounter = Global.getPerformanceCounter(`importCommands::import(${command})`);
     
                 const modulePath = `./commands/${command}.js`;
-    
+
                 try {
                     await import(modulePath);
-                    Global.logger().logInfo(`Successfully Loaded ${modulePath}`);
+                    Global.logger().logInfo(`Successfully Loaded ${modulePath}, registering command`);
                 }
                 catch (e) {
                     Global.logger().logError(`Failed to load module ${modulePath}, got error ${e}`);
@@ -36,11 +46,7 @@ export abstract class CommandManager {
         }
     
         try {
-            await this.importCommands();
-    
-            // Register all the dynamic commands
-            this.#registrationList.forEach(entry => entry['registrationFunc'](client));
-    
+            await this.importCommands();    
         } catch (e) {
             Global.logger().logError("Error registering commands, got: " + e);
         }
@@ -48,16 +54,11 @@ export abstract class CommandManager {
 
     static getCommandsJSON(): string[] {
         let commands: string[] = [];
-        CommandManager.#registrationList.forEach(entry => commands.push(entry['jsonFunc']()));
+        Global.bot().client().commands.forEach(entry => {
+            commands.push(entry.data.toJSON());
+        })
         return commands;
     }
-
-	static registerCommandModule(registrationFunc, jsonDataFunc) {
-		var newEntry = {};
-        newEntry['registrationFunc'] = registrationFunc;
-        newEntry['jsonFunc'] = jsonDataFunc;
-        CommandManager.#registrationList.push(newEntry);
-	}
 
     static async deployDiscordSlashCommands(clearExisting:boolean = false, deployGuild:boolean = false, deployGlobal:boolean = false) {
         using perfCounter = Global.getPerformanceCounter(`CommandManager::deployDiscordSlashCommands(${clearExisting}, ${deployGuild}, ${deployGlobal})`);

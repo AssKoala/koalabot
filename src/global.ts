@@ -72,10 +72,6 @@ export abstract class Global {
         return new PerformanceCounter(description);
     }
 
-    static registerCommandModule(registrationFunc, jsonDataFunc) {
-        CommandManager.registerCommandModule(registrationFunc, jsonDataFunc);
-    }
-
     static #splitMessage(message, size = 2000)
     {
         if (message.length <= size)

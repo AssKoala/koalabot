@@ -16,83 +16,127 @@ Written in a rather verbose way to make it easy for a beginner to read.  There m
 
 ### Discord Bot Settings
 
-#### BOT_NAME
-What the bot will refer to itself as when replying/reporting errors
+#### global settings
 
-#### DISCORD_TOKEN_PROD
-Discord "production" token.  You only need a single token if you don't want to setup a test environment for the bot (i.e. you just wanna use this with what it comes with)
+##### BOT_NAME
+Default Value: BottyMcBotFace
+Name for the bot to use when referencing self
 
-#### DISCORD_TOKEN_TEST
-Discord "test" token -- if you have a test environment for bot development, you can use this so it has different tokens / instances
+##### DEBUG_ENABLE
+Default Value: false
+Set to true to enable debug functionality
 
-#### DISCORD_APP_ID_PROD
-Discord app id for "production" bot, see discord docs, but you only need to fill this one out unless you're setting up a test environment
-
-#### DISCORD_APP_ID_TEST
-Discord app id for the test environment.
-
-#### DISCORD_GUILD_ID
-Comma separate list of guilds the bot will go to.  e.g.
-
-DISCORD_GUILD_ID="12345" is a single server.  
-DISCORD_GUILD_ID="12345,67891" for two servers and so on.
-
-#### COMMAND_LIST
+##### COMMAND_LIST
+Default Value: settings,coinflip,diceroll,leaderboard
 Comma separate list of commands to load.  All commands are expected to be in the ./commands folder.  Commands are dynamically imported so long as they register themselves in .env and the command file itself has a registerCommandModule call to generate the Discord command structures.
 
-e.g. COMMAND_LIST="weather,settings,affirmation"
+##### DATA_PATH
+Default Value: ./data
+Path to JSON data to be loaded by commands
 
-#### DEBUG_ENABLE
-Set to true to enable debug logging from discord in addition to normal logging messages
+##### TEMP_PATH
+Default Value: ./temp
+Path to write temporary files
 
-#### LOG_PATH
+##### REBOOT_FILE
+Default Value: $TEMP_PATH/reboot
+Path to file to write to signal a reboot to the OS
+
+##### LOG_MAX_ENTRIES
+Default Value: 2048
+Maximum number of log entries to keep in memory
+
+##### LOG_PATH
+Default Value: ./logs
 Folder to write logs to
 
-#### MESSAGE_LOG_FILENAME
+##### FULL_LOG_FILENAME
+Default Value: bot.log
+Log file to write ALL logs to
+
+##### MESSAGE_LOG_FILENAME
+Default Value: discord_messages.log
 Log file to write discord messages to
 
-#### FULL_LOG_FILENAME
-Log file to write logs to
+##### LOG_LEVEL
+Default Value: debug
+Logging level.  See logger.ts enum LogLevel for available levels.
 
-#### LOG_TO_CONSOLE
-Whether to write output to stdout as well
+#### reddit settings
 
-#### LOG_MAX_ENTRIES
-Maximum number of entries to keep in memory
+##### PYTHON_BINARY
+Default Value: python
+Path to python binary
 
-### Weather command settings
+##### REDDIT_READER_PATH
+Default Value: ../../scripts/reddit_reader.py
+Path to reddit reader python program
 
-#### OPEN_WEATHER_KEY
-Open weather API key for the weather module.  See https://openweathermap.org/appid to get yourself going.
+##### REDDIT_CLIENT_ID
+Default Value: 
+Reddit app client id: https://www.reddit.com/prefs/apps
 
-#### GOOGLE_MAPS_API_KEY
-Google maps API key.  See https://developers.google.com/maps/documentation/javascript/get-api-key
+##### REDDIT_CLIENT_SECRET
+Default Value: 
+Reddit app client secret: https://www.reddit.com/prefs/apps
 
-### Redit link command settings
+##### REDDIT_USER_AGENT
+Default Value: 
+Reddit custom user agent for use in praw
 
-See https://www.reddit.com/dev/api/oauth/
+#### openai settings
 
-#### REDDIT_REFRESH_TOKEN
-#### REDDIT_ACCESS_TOKEN
-#### REDDIT_CLIENT_ID
-#### REDDIT_CLIENT_SECRET
-#### REDDIT_USER_AGENT
-#### REDDIT_LINK_SUBREDDITS
-Comma separated list of subreddits to use when using the link command.  e.g. REDDIT_LINK_SUBREDDITS="pics,news,worldnews"
-
-#### PYTHON_BINARY
-Name/location of python binary, e.g. python3  Needs PRAW installed to work with reddit.
-
-### ChatGPT command settings
-
-#### OPENAI_API_KEY
+##### OPENAI_API_KEY
+Default Value: 
 OpenAI API key to access data
 
-#### OPENAI_MODEL
-OpenAI model to use, e.g. 'text-davinci-003'
+#### chat settings
 
-#### QUERY_PROMPT_HEADER
-Lead in information before the query is sent to ChatGPT.  Use this to fill out info if you want it to know basic info about users. E.g. "Joe hates IPA beer"
+##### GPT_TOKEN_COUNT
+Default Value: 8192
+Max number of tokens to send during chat command
+
+##### GPT_MAX_MESSAGES
+Default Value: 2048
+Max number of message history to send during chat command
+
+#### weather settings
+
+##### GOOGLE_MAPS_API_KEY
+Default Value: 
+Google maps API key.  See https://developers.google.com/maps/documentation/javascript/get-api-key
+
+##### OPEN_WEATHER_KEY
+Default Value: 
+Open weather API key for the weather module.  See https://openweathermap.org/appid to get yourself going.
+
+#### discord settings
+
+##### DISCORD_TOKEN
+Default Value: 
+Discord bot token.  You only need a single token if you don't want to setup a test environment for the bot (i.e. you just wanna use this with what it comes with)
+
+##### DISCORD_APP_ID
+Default Value: 
+Discord app id for bot, see discord docs
+
+##### DISCORD_GUILD_ID
+Default Value: 
+Comma separate list of guilds the bot will join.  e.g.
+	DISCORD_GUILD_ID="12345" is a single server.
+DISCORD_GUILD_ID="12345,67891" for two servers and so on.
+
+##### DISCORD_CLEAR_SLASH_COMMANDS
+Default Value: 
+Clear slash commands on startup, recommend true for production use.
+
+##### DISCORD_DEPLOY_GUILD_SLASH_COMMANDS
+Default Value: 
+Deploy slash commands to guilds, recommend true for production use
+
+##### DISCORD_DEPLOY_GLOBAL_SLASH_COMMANDS
+Default Value: false
+Deploy slash commands globally for bot, recommend to always be false
 
 ## Running the bot as a systemd service in Linux
 Super easy to run the bot in a VM or a raspberry pi or something.

@@ -4,7 +4,7 @@ export function registerEnvironmentSettings() {
     // global settings
     Global.settings().register('global', "BOT_NAME", "BottyMcBotFace", "Name for the bot to use when referencing self", false);
     Global.settings().register('global', "DEBUG_ENABLE", "false", "Set to true to enable debug functionality", false);
-    Global.settings().register('global', "COMMAND_LIST", "settings,coinflip,diceroll,leaderboard", "Comma separate list of commands to load.  All commands are expected to be in the ./commands folder.  Commands are dynamically imported so long as they register themselves in .env and the command file itself has a registerCommandModule call to generate the Discord command structures.", false);
+    Global.settings().register('global', "COMMAND_LIST", "settings,coinflip,diceroll,leaderboard", "Comma separate list of commands to load.  All commands are expected to be in the ./commands folder and implement the DiscordBotCommand interface.  Commands are dynamically imported so long as they register their name in .env and the command file itself has a registerDiscordBotCommand call to assign an instance to a given command.", false);
     Global.settings().register('global', "DATA_PATH", "./data", "Path to JSON data to be loaded by commands", true);
     Global.settings().register('global', "TEMP_PATH", "./temp", "Path to write temporary files", true);
     Global.settings().register('global', "REBOOT_FILE", "$TEMP_PATH/reboot", "Path to file to write to signal a reboot to the OS", false);
@@ -16,13 +16,16 @@ export function registerEnvironmentSettings() {
 
     // module: reddit
     Global.settings().register('reddit', "PYTHON_BINARY", "python", "Path to python binary", true);
-    Global.settings().register('reddit', "REDDIT_READER_PATH", "../../reddit_reader/main.py", "Path to reddit reader python program", true);
+    Global.settings().register('reddit', "REDDIT_READER_PATH", "../../scripts/reddit_reader.py", "Path to reddit reader python program", true);
     Global.settings().register('reddit', "REDDIT_CLIENT_ID", "", "Reddit app client id: https://www.reddit.com/prefs/apps", true);
     Global.settings().register('reddit', "REDDIT_CLIENT_SECRET", "", "Reddit app client secret: https://www.reddit.com/prefs/apps", true);
     Global.settings().register('reddit', "REDDIT_USER_AGENT", "", "Reddit custom user agent for use in praw", true);
 
     // module: openai (chat, vision, query, image)
     Global.settings().register('openai', "OPENAI_API_KEY", "", "OpenAI API key to access data", true);
+
+    // module: getimg.ai (image)
+    Global.settings().register('getimgai', "GETIMG_AI_API_KEY", "", "getimg.ai API key to access data", true);
 
     // module: chat
     Global.settings().register('chat', "GPT_TOKEN_COUNT", "8192", "Max number of tokens to send during chat command", false);

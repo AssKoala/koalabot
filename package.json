@@ -20,8 +20,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prodstart": "node /boobs/bot/main.js",
-    "teststart": "node /boobs/bot/main.js"
+    "prodstart": "node /bottymcbotface/bot/main.js",
+    "teststart": "node /bottymcbotface/bot/main.js"
   },
   "keywords": [],
   "license": "ISC",
