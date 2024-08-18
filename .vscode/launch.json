@@ -15,6 +15,18 @@
             "program": "${workspaceFolder}/src/main.ts",
             "outputCapture": "std",
             "outFiles": ["${workspaceFolder}/build/**/*.js"]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Generate docs",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "tsc: build - tsconfig.json",
+            "program": "${workspaceFolder}/src/doc/generatedocs.ts",
+            "outputCapture": "std",
+            "outFiles": ["${workspaceFolder}/build/**/*.js"]
         }
     ]
 }

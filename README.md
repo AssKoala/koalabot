@@ -4,16 +4,20 @@ Simple discord bot to do various stuff that was once handled by IRC bots but als
 
 Written in a rather verbose way to make it easy for a beginner to read.  There may be better ways to do things, but this is extremely simple to follow.
 
-## Basic instructions
-- Clone repo
-- Copy example env file to .env
-- Fill out .env with the stuff
-- npm install
-- node ./deploy-commands.js prod
-- node ./bot.js prod
+## Running using Docker
 
-## .env configuration details
 
+## .env configuration
+All bot features can be enabled and setup through the .env file, no code necessary unless adding custom commands or listeners (see api folder).
+
+Every user-configurable setting used by the bot is listed at the end.
+
+<details>
+### Minimally required settings for the bot to work
+
+</details>
+
+<details>
 ### Discord Bot Settings
 
 #### global settings
@@ -28,7 +32,7 @@ Set to true to enable debug functionality
 
 ##### COMMAND_LIST
 Default Value: settings,coinflip,diceroll,leaderboard
-Comma separate list of commands to load.  All commands are expected to be in the ./commands folder.  Commands are dynamically imported so long as they register themselves in .env and the command file itself has a registerCommandModule call to generate the Discord command structures.
+Comma separate list of commands to load.  All commands are expected to be in the ./commands folder and implement the DiscordBotCommand interface.  Commands are dynamically imported so long as they register their name in .env and the command file itself has a registerDiscordBotCommand call to assign an instance to a given command.
 
 ##### DATA_PATH
 Default Value: ./data
@@ -37,6 +41,10 @@ Path to JSON data to be loaded by commands
 ##### TEMP_PATH
 Default Value: ./temp
 Path to write temporary files
+
+##### SCRIPT_PATH
+Default Value: ./scripts
+Path to load external scripts from
 
 ##### REBOOT_FILE
 Default Value: $TEMP_PATH/reboot
@@ -62,15 +70,19 @@ Log file to write discord messages to
 Default Value: debug
 Logging level.  See logger.ts enum LogLevel for available levels.
 
+##### LISTENER_LIST
+Default Value: 
+List of listener modules to load
+
 #### reddit settings
 
 ##### PYTHON_BINARY
 Default Value: python
 Path to python binary
 
-##### REDDIT_READER_PATH
-Default Value: ../../scripts/reddit_reader.py
-Path to reddit reader python program
+##### REDDIT_READER_SCRIPT_NAME
+Default Value: reddit_reader.py
+Path to reddit reader python program (relative to SCRIPTS_PATH)
 
 ##### REDDIT_CLIENT_ID
 Default Value: 
@@ -89,6 +101,12 @@ Reddit custom user agent for use in praw
 ##### OPENAI_API_KEY
 Default Value: 
 OpenAI API key to access data
+
+#### getimgai settings
+
+##### GETIMG_AI_API_KEY
+Default Value: 
+getimg.ai API key to access data
 
 #### chat settings
 
@@ -137,32 +155,14 @@ Deploy slash commands to guilds, recommend true for production use
 ##### DISCORD_DEPLOY_GLOBAL_SLASH_COMMANDS
 Default Value: false
 Deploy slash commands globally for bot, recommend to always be false
+</details>
 
-## Running the bot as a systemd service in Linux
-Super easy to run the bot in a VM or a raspberry pi or something.
+## Run via Docker
+Supported way to run without building yourself is with docker.
 
-Here's an example systemd configuration:
-```
-[Unit]
-Description=BOOBSbot
-After=multi-user.target
-After=network-online.target
-Wants=network-online.target
+The simplest instructions follow.
 
-[Service]
-WorkingDirectory=/home/user/dev/BottyMcBotFace
-ExecStart=/usr/bin/node /home/user/dev/BottyMcBotFace/bot.js prod
-StandardOutput=append:/var/log/bottymcbotface.log
-StandardError=append:/var/log/bottymcbotface.log
-Type=idle
-Restart=always
-RestartSec=15
-RestartPreventExitStatus=0
-TimeoutStopSec=10
 
-[Install]
-WantedBy=multi-user.target
-```
 
 ## High level program flow
 

@@ -51,7 +51,7 @@ export abstract class Global {
 
     static init() {
         Global.initSettings();
-        registerEnvironmentSettings();
+        registerEnvironmentSettings(Global.#settingsManager);
 
         Global.initLogger(
             process.env["LOG_PATH"] || './logs', 
