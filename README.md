@@ -1,8 +1,6 @@
-# BottyMcBotFace
+# KoalaBot
 
 Simple discord bot to do various stuff that was once handled by IRC bots but also does other, new things good too.
-
-Written in a rather verbose way to make it easy for a beginner to read.  There may be better ways to do things, but this is extremely simple to follow.
 
 ## Running using Docker
 
@@ -13,14 +11,15 @@ All bot features can be enabled and setup through the .env file, no code necessa
 Every user-configurable setting used by the bot is listed at the end.
 
 <details>
-### Minimally required settings for the bot to work
+<summary>Minimally required settings for the bot to work</summary>
 
 </details>
 
 <details>
-### Discord Bot Settings
+<summary>All Discord Bot Settings</summary
 
-#### global settings
+###
+#### Global settings
 
 ##### BOT_NAME
 Default Value: BottyMcBotFace
