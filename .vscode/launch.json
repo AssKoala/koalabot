@@ -5,13 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "PowerShell",
-            "request": "launch",
-            "name": "[PROD] Deploy to Production",
-            "script": "${workspaceFolder}/buildsys/deploy.ps1",
-            "cwd": "${workspaceFolder}"
-        },
-        {
             "type": "node",
             "request": "launch",
             "name": "Run Bot",

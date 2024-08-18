@@ -10,16 +10,19 @@
 
 // Imports
 import { Global } from './global.js';
-import { Logger } from './logging/logger.js';
 import { 
-	Client, Collection, Events, EmbedBuilder, 
+	Client, Collection, Events, 
 	GatewayIntentBits, Message, Interaction, PartialMessageReaction, 
 	MessageReaction, TextChannel, User, PartialUser 
 } from 'discord.js';
+
 import fs from 'fs'
 
 // Command setup
 import { CommandManager } from "./commandmanager.js";
+
+// Listener setup
+import { ListenerManager } from "./listenermanager.js";
 
 export class Bot {
 	private _client: Client;
@@ -70,6 +73,9 @@ export class Bot {
 			Global.settings().get("DISCORD_CLEAR_SLASH_COMMANDS").toLowerCase() == "true", 
 			Global.settings().get("DISCORD_DEPLOY_GUILD_SLASH_COMMANDS").toLowerCase() == "true", 
 			Global.settings().get("DISCORD_DEPLOY_GLOBAL_SLASH_COMMANDS").toLowerCase() == "true");
+
+		// Import all listeners
+		await ListenerManager.importListeners();
 
 		// Make the connection to Discord
 		this.client().login(discordKey);
@@ -123,61 +129,11 @@ export class Bot {
 	private swankSwitchEnabled: boolean = false;
 
 	async onMessageCreate(message: Message) {
-		/ * Swank switch */
-		if (message.content.includes("TOGGLE SWANK SWITCH")) {
-			if (message.author.id != "914567674602856508") {
-				this.swankSwitchEnabled = !this.swankSwitchEnabled;
-				message.reply(`Swank switch is now ${this.swankSwitchEnabled}`);
-			} else {
-				message.reply(`Only literally every other user can toggle the switch`);
-			}
-		}
-
-		if (this.swankSwitchEnabled && message.author.id == "914567674602856508" && message.channelId == "1172663840215945278") {
-			await message.reply("This user's messages have been flagged as highly likely to be incorrect and/or false.");
-		}
-		/ * Swank switch */
-
-		if (message.content.includes('@slimeline'))
-		{
-			// slimeline, skullone thing.  Refactor into its own file.
-				//346696662619521026
-				message.reply(`Hey <@346696662619521026>, ${message.author.username} wants you!`);
-		}
-		else 
-		{
-			this.sendMessageToListeners(message);
-		}
-	
-		if (message.author.bot && message.content.length == 0) return;
-	
-		Global.logger().logDiscordMessage(Logger.getStandardDiscordMessageFormat(message));
+		ListenerManager.processMessageCreateListeners(message);
 	}
 
 	async onMessageReactionAdd(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) {
-		// Ignore bot's reactions
-		if (user.bot) return;
-
-		// Check if the reaction is '❌' emoji and it's the bot's message
-		if (reaction.emoji.name === '❌' && reaction.message.author.id === this.client().user.id) {
-			let username = '';
-
-			try {
-				const reactedUser = reaction.users.cache.every((entry) => {
-					username = entry.globalName;
-					return false;
-				});
-			} catch (e) {
-				Global.logger().logError(`Failed to react to user, got ${e}`);
-			}
-
-			try {
-				// Delete the message
-				await reaction.message.edit({ files: [], embeds: [new EmbedBuilder().setTitle(`Deleted by ${username}.`)] });
-			} catch (e) {
-				Global.logger().logError(`Failed to delete the message, got ${e}`);
-			}
-		}
+		ListenerManager.processMessageReactionAddListeners(reaction, user);
 	}
 
 	private hasRebooted(clearStatus: boolean = true): { hasRebooted: boolean, memberId: string, channelId: string} {

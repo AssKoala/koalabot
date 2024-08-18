@@ -405,19 +405,19 @@ class ImageCommand extends DiscordBotCommand {
                             .addStringOption((option) =>
                                 option
                                     .setName('image_size')
-                                    .setDescription('Image size to generate (1024x1024 default)')
+                                    .setDescription('Image size to generate (1024x1024 default, range 256-1280x256-1280)')
                                     .setRequired(false)
                             )
                             .addIntegerOption((option) =>
                                 option
                                     .setName("steps")
-                                    .setDescription("Number of steps to take (4 is default)")
+                                    .setDescription("Number of steps to take (default 4, range 1-4)")
                                     .setRequired(false)
                             )
                             .addIntegerOption((option) =>
                                 option
                                     .setName("seed")
-                                    .setDescription("Set seed for deterministic generation")
+                                    .setDescription("Set seed for deterministic generation (default random, range 1-2147483647")
                                     .setRequired(false)
                             )
                     )

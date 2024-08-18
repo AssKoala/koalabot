@@ -3,17 +3,6 @@ import { Client, REST, Routes } from 'discord.js';
 
 export abstract class CommandManager {
 
-    
-
-    static async importNewStyleCommands() {
-        try {
-           
-        } catch (e) {
-            Global.logger().logError(`Failed to import new style commands, got error ${e}`);
-        }
-        
-    }
-
     static async importCommands() {
         try {
             // Load the dynamically defined commands from the .env file
@@ -21,6 +10,11 @@ export abstract class CommandManager {
 
             for (const command of autoCommands) 
             {
+                if (!command) {
+                    Global.logger().logInfo("Skipping empty command definition");
+                    continue;
+                }
+
                 using perfCounter = Global.getPerformanceCounter(`importCommands::import(${command})`);
     
                 const modulePath = `./commands/${command}.js`;

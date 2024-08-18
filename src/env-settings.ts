@@ -13,6 +13,7 @@ export function registerEnvironmentSettings() {
     Global.settings().register('global', "FULL_LOG_FILENAME", "bot.log", "Log file to write ALL logs to", false);
     Global.settings().register('global', "MESSAGE_LOG_FILENAME", "discord_messages.log", "Log file to write discord messages to", false);
     Global.settings().register('global', "LOG_LEVEL", "debug", "Logging level.  See logger.ts enum LogLevel for available levels.", false);
+    Global.settings().register('global', 'LISTENER_LIST', '', 'List of listener modules to load', false);
 
     // module: reddit
     Global.settings().register('reddit', "PYTHON_BINARY", "python", "Path to python binary", true);
