@@ -7,6 +7,7 @@ export function registerEnvironmentSettings() {
     Global.settings().register('global', "COMMAND_LIST", "settings,coinflip,diceroll,leaderboard", "Comma separate list of commands to load.  All commands are expected to be in the ./commands folder and implement the DiscordBotCommand interface.  Commands are dynamically imported so long as they register their name in .env and the command file itself has a registerDiscordBotCommand call to assign an instance to a given command.", false);
     Global.settings().register('global', "DATA_PATH", "./data", "Path to JSON data to be loaded by commands", true);
     Global.settings().register('global', "TEMP_PATH", "./temp", "Path to write temporary files", true);
+    Global.settings().register('global', "SCRIPT_PATH", "./scripts", "Path to load external scripts from", false);
     Global.settings().register('global', "REBOOT_FILE", "$TEMP_PATH/reboot", "Path to file to write to signal a reboot to the OS", false);
     Global.settings().register('global', "LOG_MAX_ENTRIES", "2048", "Maximum number of log entries to keep in memory", false);
     Global.settings().register('global', "LOG_PATH", "./logs", "Folder to write logs to", false);
@@ -16,8 +17,8 @@ export function registerEnvironmentSettings() {
     Global.settings().register('global', 'LISTENER_LIST', '', 'List of listener modules to load', false);
 
     // module: reddit
-    Global.settings().register('reddit', "PYTHON_BINARY", "python", "Path to python binary", true);
-    Global.settings().register('reddit', "REDDIT_READER_PATH", "../../scripts/reddit_reader.py", "Path to reddit reader python program", true);
+    Global.settings().register('reddit', "PYTHON_BINARY", "python", "Path to python binary", false);
+    Global.settings().register('reddit', "REDDIT_READER_SCRIPT_NAME", "reddit_reader.py", "Path to reddit reader python program (relative to SCRIPTS_PATH)", false);
     Global.settings().register('reddit', "REDDIT_CLIENT_ID", "", "Reddit app client id: https://www.reddit.com/prefs/apps", true);
     Global.settings().register('reddit', "REDDIT_CLIENT_SECRET", "", "Reddit app client secret: https://www.reddit.com/prefs/apps", true);
     Global.settings().register('reddit', "REDDIT_USER_AGENT", "", "Reddit custom user agent for use in praw", true);

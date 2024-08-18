@@ -41,11 +41,12 @@ export class SettingsManager {
             return process.env[settingName];
         }
 
-        const errorMsg = `${settingName} missing.  ${this.#registeredSettings[settingName].description}`;
         if (this.#registeredSettings[settingName].required) {
-            throw Error(errorMsg);
+            throw Error(`${settingName} missing. Description: ${this.#registeredSettings[settingName].description}`);
         } else {
-            console.log(errorMsg);
+            if (process.env["DEBUG_ENABLE"] == 'true') {
+                console.log(`${settingName} missing, using default: ${this.#registeredSettings[settingName].defaultValue}`);
+            }
         }
 
         return undefined || this.#registeredSettings[settingName].defaultValue;
