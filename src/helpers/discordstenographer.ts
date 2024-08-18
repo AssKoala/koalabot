@@ -1,6 +1,8 @@
 import { Logger } from '../logging/logger.js';
 import { Global } from '../global.js';
 import fs from 'fs';
+import { DiscordMessageCreateListener } from '../api/DiscordMessageListener.js'
+import { ListenerManager } from "../listenermanager.js"
 
 /**
  * Discord Stenographer internally keeps messages using this data structure
@@ -68,18 +70,18 @@ class DiscordStenographerMessage
 /**
  * Caches discord messages in memory for use in bot processing
  */
-class DiscordStenographer
+class DiscordStenographer implements DiscordMessageCreateListener
 {
-    #messages = [];
-    #maxEntries = Number.MAX_VALUE;
-    #messageCount = [];
+    private messages = [];
+    private maxEntries = Number.MAX_VALUE;
+    private messageCount = [];
 
     constructor(filename, max)
     {
         if (max != null)
         {
             try {
-                this.#maxEntries = parseInt(max);
+                this.maxEntries = parseInt(max);
             } catch (e) {
                 Global.logger().logError(`Failed to set max entries, got ${e}`);
             }
@@ -97,14 +99,14 @@ class DiscordStenographer
 
     getMessages()
     {
-        return this.#messages;
+        return this.messages;
     }
 
     getMessageCount(author)
     {
-        if (author in this.#messageCount)
+        if (author in this.messageCount)
         {
-            return this.#messageCount[author];
+            return this.messageCount[author];
         }
 
         return 0;
@@ -112,18 +114,18 @@ class DiscordStenographer
 
     getMaxEntries()
     {
-        return this.#maxEntries;
+        return this.maxEntries;
     }
 
     setMaxEntries(max)
     {
-        this.#maxEntries = max;
+        this.maxEntries = max;
     }
 
-    #trimEntries()
+    private trimEntries()
     {
         try {
-            while (this.#messages.length > this.#maxEntries) {
+            while (this.messages.length > this.maxEntries) {
                 this.popMessage();
             }
         } catch (e) {
@@ -134,11 +136,11 @@ class DiscordStenographer
     pushMessage(discordStenographerMsg)
     {
         try {
-            if (!(discordStenographerMsg.author in this.#messageCount)) this.#messageCount[discordStenographerMsg.author] = 0;
+            if (!(discordStenographerMsg.author in this.messageCount)) this.messageCount[discordStenographerMsg.author] = 0;
 
-            this.#messages.push(discordStenographerMsg);
-            this.#messageCount[discordStenographerMsg.author]++;
-            this.#trimEntries();
+            this.messages.push(discordStenographerMsg);
+            this.messageCount[discordStenographerMsg.author]++;
+            this.trimEntries();
         } catch (e) {
             Global.logger().logError(`Failed to push message ${discordStenographerMsg}, got ${e}`);
         }
@@ -147,11 +149,11 @@ class DiscordStenographer
     popMessage()
     {
         try {
-            if (this.#messages.length > 0) {
-                var toRet = this.#messages[0];
+            if (this.messages.length > 0) {
+                var toRet = this.messages[0];
 
-                this.#messageCount[toRet.author]--;
-                this.#messages.shift();
+                this.messageCount[toRet.author]--;
+                this.messages.shift();
 
                 return toRet;
             }
@@ -200,20 +202,31 @@ class DiscordStenographer
         }
 
         // It's in JSON, extract runtime variant
-        this.#messages = DiscordStenographerMessage.createFromJsonLog(messageJson);
+        this.messages = DiscordStenographerMessage.createFromJsonLog(messageJson);
 
         // Refresh counts
-        this.#messages.forEach((msg) => {
-            if (!(msg.author in this.#messageCount)) this.#messageCount[msg.author] = 0;
-            this.#messageCount[msg.author]++;
+        this.messages.forEach((msg) => {
+            if (!(msg.author in this.messageCount)) this.messageCount[msg.author] = 0;
+            this.messageCount[msg.author]++;
         });
 
         // Trim excess
-        this.#trimEntries();
+        this.trimEntries();
 
-        Global.logger().logInfo(`Loaded ${this.#messages.length} messages`);
+        Global.logger().logInfo(`Loaded ${this.messages.length} messages`);
 
         
+    }
+
+    async onMessageCreate(runtimeData, message) {
+        try {
+            if (!message.author.bot || message.content.length > 0) {
+                const storedString = Logger.getStandardDiscordMessageFormat(message);
+                this.pushMessage(DiscordStenographerMessage.parseFromStandardMessageFormat(storedString));
+            }
+        } catch (e) {
+            Global.logger().logError(`Failed to log ${message} to stenographer, got ${e}`);
+        }
     }
 }
 
@@ -221,27 +234,16 @@ class DiscordStenographer
  * Stenographer singleton
  */
 class Stenographer {
-    static #stenographer = null;
+    private static stenographer = null;
 
-    static init = (function () {
-        this.#stenographer = new DiscordStenographer(Global.logManager().getGlobalDiscordLogFullPath(), Global.settings().get("LOG_MAX_ENTRIES"));
-        Global.bot().registerMessageListener((message) => this.#stenographerListener(message));
-    });
-
-    static #stenographerListener(message) {
-        try {
-            if (!message.author.bot || message.content.length > 0) {
-                const storedString = Logger.getStandardDiscordMessageFormat(message);
-                this.#stenographer.pushMessage(DiscordStenographerMessage.parseFromStandardMessageFormat(storedString), Date.now);
-            }
-        } catch (e) {
-            Global.logger().logError(`Failed to log ${message} to stenographer, got ${e}`);
-        }
+    static init() {
+        Stenographer.stenographer = new DiscordStenographer(Global.logManager().getGlobalDiscordLogFullPath(), Global.settings().get("LOG_MAX_ENTRIES"));
+        ListenerManager.registerMessageCreateListener(Stenographer.stenographer);
     }
 
     static getMessages() {
         try {
-            return this.#stenographer.getMessages();
+            return Stenographer.stenographer.getMessages();
         } catch (e) {
             Global.logger().logError(`Failed to get messages, got ${e}`);
         }
@@ -250,12 +252,12 @@ class Stenographer {
     }
 
     static getMessageCount(author) {
-        return this.#stenographer.getMessageCount(author);
+        return Stenographer.stenographer.getMessageCount(author);
     }
 
     static pushMessage(msg) {
         try {
-            this.#stenographer.pushMessage(msg);
+            Stenographer.stenographer.pushMessage(msg);
         } catch (e) {
             Global.logger().logError(`Failed to push message, got ${e}`);
         }
@@ -263,7 +265,7 @@ class Stenographer {
 
     static getInMemoryMessageCount() {
         try {
-            return { "count": this.#stenographer.getMessages().length, "max": this.#stenographer.getMaxEntries() };
+            return { "count": Stenographer.stenographer.getMessages().length, "max": Stenographer.stenographer.getMaxEntries() };
         } catch (e) {
             Global.logger().logError(`Failed to get in memory message count, got ${e}`);
             return { "count": 0, "max": 0 };

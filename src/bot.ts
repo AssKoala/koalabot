@@ -126,8 +126,6 @@ export class Bot {
 		}
 	}
 
-	private swankSwitchEnabled: boolean = false;
-
 	async onMessageCreate(message: Message) {
 		ListenerManager.processMessageCreateListeners(message);
 	}
@@ -157,20 +155,4 @@ export class Bot {
 
 		return { hasRebooted, memberId: "", channelId: "" };
 	}
-
-	private listenerList = [];
-
-	registerMessageListener(listen_func) {
-        this.listenerList.push(listen_func);
-    }
-
-	private sendMessageToListeners(message: Message) {
-        this.listenerList.forEach(listener_func => {
-            try {
-                listener_func(message);
-            } catch (e) {
-                Global.logger().logError(`Failed to send message to ${listener_func}, got ${e}`);
-            }
-        });
-    }    
 }

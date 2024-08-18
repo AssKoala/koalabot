@@ -25,7 +25,7 @@ class RedditLinkCommand extends DiscordBotCommand {
 
             if (!fs.existsSync(script)) {
                 this.runtimeData().logger().logError(`Cannot load reddit link script: ${script}`);
-                return;
+                return new RedditLinks([], `Cannot load reddit link script: ${script}`);
             }
     
             const args = [ 
@@ -59,7 +59,6 @@ class RedditLinkCommand extends DiscordBotCommand {
                 return new RedditLinks(filtered);
             }                    
         } catch (e) {
-            this.runtimeData().logger().logError(`Failed to get reddit links, got ${e}`);
             return new RedditLinks([], `Failed to get reddit links, got ${e}`);
         }
     }
