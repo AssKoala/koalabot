@@ -1,6 +1,8 @@
 # KoalaBot
 
-Simple discord bot to do various stuff that was once handled by IRC bots but also does other, new things good too.
+Simple, turnkey discord bot to do various stuff that was once handled by IRC bots but also does other, new things good too.
+
+The bot is made to be extensible by using the API functionality to do pretty much whatever you want for slash commands.  There's probably a lot of stuff you can't do, but what you _can_ do can be done really well.
 
 ## Running using Docker
 - Install Docker Engine: https://docs.docker.com/engine/install/
@@ -8,6 +10,14 @@ Simple discord bot to do various stuff that was once handled by IRC bots but als
 - Copy [Example compose.yml](buildsys/docker/compose.yml) somewhere locally.
 - Modify the compose.yml to meet your specific needs.  See docker compose documentation: https://docs.docker.com/compose/
 - Run bot: ```docker compose -f compose.yml up -d```
+
+### Adding custom commands
+- Choose a release number you like (semantic versioning is api.major.patch, all releases with the same api guarantee api compatibility)
+- Modify your docker compose with the new file, e.g. 
+```
+volumes:
+  - ./myCommands/myNewCommand.js:./bot/build/commands/myNewCommand.js
+```
 
 ## .env configuration
 All bot features can be enabled and setup through the .env file, no code necessary unless adding custom commands or listeners (see api folder).
