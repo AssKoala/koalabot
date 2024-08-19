@@ -88,8 +88,8 @@ export class DiscordBotHelpers {
   readJsonFile(path: string): Promise<any>;
 
   // Get a performance counter.
-  //   Should just have to do const var = helper.getPerformanceCounter(); to get counters.
-  //   Performance counters automically cleanup at the end of scope, so store in a variabl
+  //   Should just have to do const myvar = helper.getPerformanceCounter(); to get counters.
+  //   Performance counters automically cleanup at the end of scope, so store in a variable
   //   and keep alive as long as you need to time something.
   getPerformanceCounter(): PerformanceCounter;
 }
