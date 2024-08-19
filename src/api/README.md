@@ -33,7 +33,7 @@ class MyCommand extends DiscrdBotCommand {
 
 From there you can do whatever you want.  If you add dependencies that aren't in the package.json, you'll need to create your own docker image, but, at that point, you should be able to figure that out since the [Dockerfile](../../buildsys/docker/Dockerfile) is in the [buildsys](../../buildsys) directory.
 
-## DiscordMessageListener
+### DiscordMessageListener
 Simple interface to get called in the chain of message callbacks.
 
 ```javascript
@@ -60,7 +60,7 @@ class SimpleListener implements DiscordMessageCreateListener, DiscordReactionAdd
 ListenerManager.registerMessageCreateListener(new SimpleListener());
 ```
 
-## DiscordBotRuntimeData
+### DiscordBotRuntimeData
 Provides a container for all instance information for a given command.  Currently doesn't do anything but detach commands from the bot instance itself, but, long term, can be used to segment servers in the Stenographer and such.
 
 Interface below:
