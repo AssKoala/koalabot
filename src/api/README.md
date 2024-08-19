@@ -57,7 +57,9 @@ class SimpleListener implements DiscordMessageCreateListener, DiscordReactionAdd
         console.log('Got a message reaction!\n');
     }
 }
-ListenerManager.registerMessageCreateListener(new SimpleListener());
+const simpleListener = new SimpleListener();
+ListenerManager.registerMessageCreateListener(simpleListener);
+ListenerManager.registerMessageReactionAddListener(simpleListener);
 ```
 
 ### DiscordBotRuntimeData
