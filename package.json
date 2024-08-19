@@ -1,0 +1,31 @@
+{
+  "name": "bottymcbotface",
+  "version": "0.0.1",
+  "description": "Simple Discord bot",
+  "main": "./src/bot.ts",
+  "author": "AssKoala",
+  "type": "module",
+  "dependencies": {
+    "@types/node": "^20.14.1",
+    "discord.js": "^14.12.1",
+    "dotenv": "^16.4.5",
+    "got": "^14.2.1",
+    "node-downloader-helper": "^2.1.9",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.37.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "validator": "^13.11.0",
+    "winston": "^3.13.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prodstart": "node /bottymcbotface/bot/main.js",
+    "teststart": "node /bottymcbotface/bot/main.js"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^9.1.0"
+  }
+}

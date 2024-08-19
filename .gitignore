@@ -1,0 +1,13 @@
+.env
+.vs
+bin
+obj
+*.user
+node_modules
+BottyMcBotFace.code-workspace
+logs
+temp-images
+build
+deploy
+deploy-logs
+data
