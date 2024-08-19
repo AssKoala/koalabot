@@ -32,3 +32,30 @@ class MyCommand extends DiscrdBotCommand {
 ```
 
 From there you can do whatever you want.  If you add dependencies that aren't in the package.json, you'll need to create your own docker image, but, at that point, you should be able to figure that out since the [Dockerfile](../../buildsys/docker/Dockerfile) is in the [buildsys](../../buildsys) directory.
+
+## DiscordMessageListener
+Simple interface to get called in the chain of message callbacks.
+
+```javascript
+export interface DiscordMessageCreateListener {
+    onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void>;
+}
+
+export interface DiscordReactionAddListener {
+    onMessageReactionAdd(runtimeData: DiscordBotRuntimeData, reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void>;
+}
+```
+
+As an example of a simple listener:
+```javascript
+class SimpleListener implements DiscordMessageCreateListener, DiscordReactionAddListener {
+    async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
+        message.reply(`I listened!`);
+    }
+
+    async onMessageReactionAdd(runtimeData, reaction): {
+        console.log('Got a message reaction!\n');
+    }
+}
+ListenerManager.registerMessageCreateListener(new SimpleListener());
+```
