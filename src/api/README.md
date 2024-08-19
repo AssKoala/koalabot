@@ -75,3 +75,22 @@ export class DiscordBotRuntimeData {
     getPerformanceCounter(description: string);
 }
 ```
+
+### DiscordBotHelpers
+Helper functions for api users.
+
+```javascript
+export class DiscordBotHelpers {
+  // Edit a reply and automatically split it into multiple if its too long
+  editAndSplitReply(interaction: ChatInputCommandInteraction, message: string): Promise<void>;
+
+  // Read a JSON file and return the data that was loaded
+  readJsonFile(path: string): Promise<any>;
+
+  // Get a performance counter.
+  //   Should just have to do const var = helper.getPerformanceCounter(); to get counters.
+  //   Performance counters automically cleanup at the end of scope, so store in a variabl
+  //   and keep alive as long as you need to time something.
+  getPerformanceCounter(): PerformanceCounter;
+}
+```
