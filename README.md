@@ -12,7 +12,7 @@ The bot is made to be extensible by using the API functionality to do pretty muc
 - Run bot: ```docker compose -f compose.yml up -d```
 
 ### Adding custom commands
-See api folder for API documentation.
+See [api folder](src/api) for API documentation.
 
 - Choose a release number you like (semantic versioning is api.major.patch, all releases with the same api guarantee api compatibility)
 - Modify your docker compose with the new file, e.g. 
