@@ -26,7 +26,7 @@ class MyCommand extends DiscrdBotCommand {
   get(): SlashCommandOptionsOnlyBuilder {
         return new SlashCommandBuilder()
                       .setName(this.name())
-                      .setDescription('Affirmations to get you through the day');
+                      .setDescription('My Command is amazing');
   }
 }
 ```
