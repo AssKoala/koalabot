@@ -53,9 +53,23 @@ class SimpleListener implements DiscordMessageCreateListener, DiscordReactionAdd
         message.reply(`I listened!`);
     }
 
-    async onMessageReactionAdd(runtimeData, reaction): {
+    async onMessageReactionAdd(runtimeData: DiscordBotRuntimeData, reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): {
         console.log('Got a message reaction!\n');
     }
 }
 ListenerManager.registerMessageCreateListener(new SimpleListener());
+```
+
+## DiscordBotRuntimeData
+Provides a container for all instance information for a given command.  Currently doesn't do anything but detach commands from the bot instance itself, but, long term, can be used to segment servers in the Stenographer and such.
+
+Interface below:
+```javascript
+export class DiscordBotRuntimeData {
+    logger(): Logger;
+    bot(): Bot; 
+    helpers(): DiscordBotHelpers;
+    settings(): SettingsManager;
+    getPerformanceCounter(description: string);
+}
 ```
