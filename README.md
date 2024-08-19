@@ -103,7 +103,9 @@ E.g. to enable the affirmation and chat commands only in the .env:
 
 <details>
 <summary>Affirmation</summary>
-  
+
+![Affirmation sample output](src/doc/commands/affirmation.png)
+
 Return the user a random affirmation when calling the /affirmation slash command.  
   
 Affirmations must be in $DATA_PATH/affirmations.json
@@ -124,6 +126,8 @@ JSON is formatted as an array as follows:
 </details>
 <details>
 <summary>Chat</summary>
+
+![Chat sample output](src/doc/commands/chat.png)
   
 Query ChatGPT using conversation history using /chat slash command.  This requires an [OpenAI API Key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key).
 
@@ -133,16 +137,22 @@ There's nothing special to setup other than adding the API key and enabling the 
 </details>
 <details>
 <summary>Coinflip</summary>
-  
+
+![Coinflip sample output](src/doc/commands/coinflip.png)
+ 
 Adds /coinflip slash command
 </details>
 <details>
 <summary>Diceroll</summary>
+
+![Diceroll sample output](src/doc/commands/diceroll.png)
   
 Adds /diceroll slash command
 </details>
 <details>
 <summary>Dict</summary>
+
+![Dict sample output](src/doc/commands/dict.png)
   
 Adds /dict, /define, and /index slash commands.
 
@@ -166,6 +176,8 @@ Example JSON:
 </details>
 <details>
 <summary>Image</summary>
+
+![Image sample output](src/doc/commands/image.png)
   
 Adds /image slash command
 
@@ -175,6 +187,8 @@ Currently, the bot supports OpenAI's DALL-E API, Stable Diffusion through [stabl
 </details>
 <details>
 <summary>Leaderboard</summary>
+
+![Leaderboard sample output](src/doc/commands/leaderboard.png)
   
 Adds /leaderboard slash command.
 
@@ -203,6 +217,8 @@ JSON is array of entries, e.g.
 </details>
 <details>
 <summary>Query</summary>
+
+![Query sample output](src/doc/commands/query.png)
   
 Adds /query slash command.  Sends a query to ChatGPT _without_ also sending chat logs.  Use this for random questions like "what is the meaning of life" or "where's waldo".
 
@@ -210,6 +226,8 @@ This requires an OpenAI API key.
 </details>
 <details>
 <summary>Reddit</summary>
+
+![Reddit sample output](src/doc/commands/reddit.png)
   
 Adds slash commands based on the JSON in $DATA_PATH/redditlinks.json allowing pulling of top reddit links from subreddits defined in the channel. 
 
@@ -242,6 +260,8 @@ If "spam" was instead in the blacklist, it would be allowed in all channels _exc
 </details>
 <details>
 <summary>Settings</summary>
+
+![Settings sample output](src/doc/commands/settings.png)
   
 Adds /settings slash command.  This allows users to set preferred temperature unit preferences and location for use with other commands.
 
@@ -249,6 +269,8 @@ The file is saved in $DATA_PATH/settings.json
 </details>
 <details>
 <summary>Vision</summary>
+
+![Vision sample output](src/doc/commands/vision.png)
   
 Adds /vision slash command that sends images to OpenAI ChatGPT vision processing allowing querying of what's in the image or other such stuff.
 
@@ -256,6 +278,8 @@ This requires OpenAI .env settings.
 </details>
 <details>
 <summary>Weather</summary>
+
+![Weather sample output](src/doc/commands/weather.png)
 
 Adds /forecast and /weather slash commands to tell the weather based on location.  Requires .env API keys for location services and weather services as defined in the .env section.
 </details>
