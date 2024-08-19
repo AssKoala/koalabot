@@ -13,7 +13,8 @@ This is base class to use to create a command.  All you need to do is create a n
 Implementing the command is pretty straight forward and just requires extending and implementing the DiscordBotRuntime abstract class.
 
 ```javascript
-import { DiscordBotCommand } from '../api/DiscordBotCommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
+
 class MyCommand extends DiscrdBotCommand {
   async handle(interaction: ChatInputCommandInteraction) {
     try {
@@ -29,6 +30,8 @@ class MyCommand extends DiscrdBotCommand {
                       .setDescription('My Command is amazing');
   }
 }
+
+registerDiscordBotCommand(new MyCommand('myslashcommand')); // Register for processing
 ```
 
 From there you can do whatever you want.  If you add dependencies that aren't in the package.json, you'll need to create your own docker image, but, at that point, you should be able to figure that out since the [Dockerfile](../../buildsys/docker/Dockerfile) is in the [buildsys](../../buildsys) directory.
