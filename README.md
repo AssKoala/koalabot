@@ -76,7 +76,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | ---- | ------------ | -------- | ----------- |
 | SD_WEBUI_ADDRESS | 127.0.0.0:7860 | true | host:port needed to access the SD webui |
 
-**Note**: Stable Diffusion is currently hard-coded to use a few checkpoints (you'll see them listed in the /image stablediffusion command).  This will be configurable in a future release.  If you want to use a different checkpoint, you can just rename it on disk (on the webui host) and it'll get picked up.
+**Note**: Stable Diffusion is currently hard-coded to use a few checkpoints (you'll see them listed in the /image stablediffusion command).  This will be configurable in a future release.  If you want to use a different checkpoint, you can just rename it on disk (on the webui host) and it'll get picked up.  Current default is Deliberate (Deliberate_v6.safetensors).
 
 #### chat settings
 
