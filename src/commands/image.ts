@@ -15,7 +15,7 @@ import crypto from 'crypto';
 
 // For getimg.ai
 import fetch from 'node-fetch';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
 class ImageGenerationData {
     readonly prompt: string = '';
@@ -292,131 +292,179 @@ class ImageCommand extends DiscordBotCommand {
         }
     } // handleImageCommand
 
-    get() {
-        const imageCommand = new SlashCommandBuilder()
-            .setName(this.name())
-            .setDescription(`Ask ${Global.settings().get("BOT_NAME")} to generate an image`)
-            // Dall-E command group
-            .addSubcommandGroup((group) =>
-                group
-                    .setName('dalle')
-                    .setDescription('Generate an image using Dall-E')
-                    .addSubcommand((subcommand) =>
-                        subcommand
-                            .setName('generate')
+    private appendDalleSubCommand(imageCommand) {
+        return imageCommand
+                    .addSubcommandGroup((group) =>
+                        group
+                            .setName('dalle')
                             .setDescription('Generate an image using Dall-E')
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_details')
-                                    .setDescription('Details of what to generate')
-                                    .setRequired(true),
-                            )
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_size')
-                                    .setDescription('Image size to generate')
-                                    .addChoices(
-                                        { name: 'square', value: '1024x1024' },
-                                        { name: 'tall', value: '1024x1792' },
-                                        { name: 'wide', value: '1792x1024' },
+                            .addSubcommand((subcommand) =>
+                                subcommand
+                                    .setName('generate')
+                                    .setDescription('Generate an image using Dall-E')
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_details')
+                                            .setDescription('Details of what to generate')
+                                            .setRequired(true),
                                     )
-                                    .setRequired(false),
-                            )
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_quality')
-                                    .setDescription('Image quality to use')
-                                    .addChoices(
-                                        { name: 'standard', value: 'standard' },
-                                        { name: 'hd', value: 'hd' },
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_size')
+                                            .setDescription('Image size to generate')
+                                            .addChoices(
+                                                { name: 'square', value: '1024x1024' },
+                                                { name: 'tall', value: '1024x1792' },
+                                                { name: 'wide', value: '1792x1024' },
+                                            )
+                                            .setRequired(false),
                                     )
-                                    .setRequired(false),
-                            )
-                            .addStringOption((option) =>
-                                option
-                                    .setName('force_prompt')
-                                    .setDescription('Attempt to disable additional details and execute prompt as-is')
-                                    .addChoices(
-                                        { name: 'enable', value: 'true' },
-                                        { name: 'disable', value: 'false' },
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_quality')
+                                            .setDescription('Image quality to use')
+                                            .addChoices(
+                                                { name: 'standard', value: 'standard' },
+                                                { name: 'hd', value: 'hd' },
+                                            )
+                                            .setRequired(false),
                                     )
-                                    .setRequired(false),
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('force_prompt')
+                                            .setDescription('Attempt to disable additional details and execute prompt as-is')
+                                            .addChoices(
+                                                { name: 'enable', value: 'true' },
+                                                { name: 'disable', value: 'false' },
+                                            )
+                                            .setRequired(false),
+                                    )
                             )
-                    )
-            )
-            // Stable Diffusion
-            .addSubcommandGroup((group) =>
-                group
-                    .setName('stablediffusion')
-                    .setDescription('Generate an image using Stable Diffusion')
-                    .addSubcommand((subcommand) =>
-                        subcommand
-                            .setName('generate')
+                    );
+    }
+
+    private appendStableDiffusionSubCommand(imageCommand) {
+        // Pull in checkpoints dynamically for use in the slash command we send to discord
+        const checkpoints = this.runtimeData().settings().get("SD_CHECKPOINTS").split(',');
+
+        let choices = [];
+
+        const getEntry = function (checkpointString) {
+            let split = checkpointString.split('(');
+            let name = ''
+            let value = '';
+            
+            if (split.length > 1) 
+            {
+                name = split[0];
+                value = split[1].slice(0,-1);
+            } else {
+                name = split[0];
+                value = name + ".safetensors"
+            }
+
+            return { name, value };
+        };
+
+        checkpoints.forEach((checkpoint) => {
+            choices.push(getEntry(checkpoint));
+        });
+
+        return imageCommand
+                    .addSubcommandGroup((group) =>
+                        group
+                            .setName('stablediffusion')
                             .setDescription('Generate an image using Stable Diffusion')
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_details')
-                                    .setDescription('Details of what to generate')
-                                    .setRequired(true)
-                            )
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_size')
-                                    .setDescription('Image size to generate (1024x1024 default)')
-                                    .setRequired(false)
-                            )
-                            .addStringOption((option) =>
-                                option
-                                    .setName('sd_model_checkpoint')
-                                    .setDescription('Stable Diffusion Model (deliberate default)')
-                                    .setRequired(false)
-                                    .addChoices(
-                                        { name: 'deliberate', value: 'Deliberate_v6.safetensors' },
-                                        { name: 'dreamshaper', value: 'dreamshaper_8.safetensors' },
-                                        { name: 'nsfw', value: 'newrealityxl-global-nsfw.safetensors' },
-                                        { name: 'lofi', value: 'lofi_v4.safetensors' },
-                                        { name: 'anime', value: 'storeBoughtGyozaMix_winterholiday2023edi.safetensors' },
-                                        { name: 'illustrated', value: '2dn_2.safetensors' },
+                            .addSubcommand((subcommand) =>
+                                subcommand
+                                    .setName('generate')
+                                    .setDescription('Generate an image using Stable Diffusion')
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_details')
+                                            .setDescription('Details of what to generate')
+                                            .setRequired(true)
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_size')
+                                            .setDescription('Image size to generate (1024x1024 default)')
+                                            .setRequired(false)
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('sd_model_checkpoint')
+                                            .setDescription('Stable Diffusion Model (deliberate default)')
+                                            .setRequired(false)
+                                            .addChoices(
+                                                choices
+                                            )
                                     )
                             )
-                    )
-            )
-            // getimg.ai
-            .addSubcommandGroup((group) =>
-                group
-                    .setName('getimgai')
-                    .setDescription('Generate an image using getimg.ai')
-                    .addSubcommand((subcommand) =>
-                        subcommand
-                            .setName('generate_flux')
+                    );
+    }
+
+    private appendGetimgAiFluxSubCommand(imageCommand) {
+        return imageCommand
+                    .addSubcommandGroup((group) =>
+                        group
+                            .setName('getimgai')
                             .setDescription('Generate an image using getimg.ai')
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_details')
-                                    .setDescription('Details of what to generate')
-                                    .setRequired(true)
+                            .addSubcommand((subcommand) =>
+                                subcommand
+                                    .setName('generate_flux')
+                                    .setDescription('Generate an image using getimg.ai')
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_details')
+                                            .setDescription('Details of what to generate')
+                                            .setRequired(true)
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_size')
+                                            .setDescription('Image size to generate (1024x1024 default, range 256-1280x256-1280)')
+                                            .setRequired(false)
+                                    )
+                                    .addIntegerOption((option) =>
+                                        option
+                                            .setName("steps")
+                                            .setDescription("Number of steps to take (default 4, range 1-4)")
+                                            .setRequired(false)
+                                    )
+                                    .addIntegerOption((option) =>
+                                        option
+                                            .setName("seed")
+                                            .setDescription("Set seed for deterministic generation (default random, range 1-2147483647")
+                                            .setRequired(false)
+                                    )
                             )
-                            .addStringOption((option) =>
-                                option
-                                    .setName('image_size')
-                                    .setDescription('Image size to generate (1024x1024 default, range 256-1280x256-1280)')
-                                    .setRequired(false)
-                            )
-                            .addIntegerOption((option) =>
-                                option
-                                    .setName("steps")
-                                    .setDescription("Number of steps to take (default 4, range 1-4)")
-                                    .setRequired(false)
-                            )
-                            .addIntegerOption((option) =>
-                                option
-                                    .setName("seed")
-                                    .setDescription("Set seed for deterministic generation (default random, range 1-2147483647")
-                                    .setRequired(false)
-                            )
-                    )
-            )
-            ;
+                    );
+    }
+
+    get() {
+        let imageCommand = new SlashCommandBuilder()
+            .setName(this.name())
+            .setDescription(`Ask ${Global.settings().get("BOT_NAME")} to generate an image`);
+
+        const enabledSubCommands = this.runtimeData().settings().get("IMAGE_ENABLED_AI_LIST").split(',');
+
+        enabledSubCommands.forEach((subcommand) => {
+            switch (subcommand) {
+                case 'dalle':
+                    imageCommand = this.appendDalleSubCommand(imageCommand);
+                    break;
+                case 'stablediffusion':
+                    imageCommand = this.appendStableDiffusionSubCommand(imageCommand);
+                    break;
+                case 'getimg.ai-flux': 
+                    imageCommand = this.appendGetimgAiFluxSubCommand(imageCommand);
+                    break;
+                default:
+                    this.runtimeData().logger().logError(`Unexpected option in IMAGE_ENABLED_AI_LIST: ${subcommand}`);
+                    break;
+            }
+        });
     
         return imageCommand;
     } // getImageCommand()

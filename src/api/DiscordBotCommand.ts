@@ -84,8 +84,6 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
             // Add the command to the command list
             Global.bot().client().commands.set(newCommand.data.name, newCommand);
             
-            
-
             return true;
         }
     } catch (e) {
