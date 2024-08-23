@@ -7,6 +7,8 @@ class SwankSwitchListener implements DiscordMessageCreateListener {
     private swankSwitchEnabled: boolean = false;
 
     async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
+		if (message.author.bot) return;
+
         if (message.content.includes("TOGGLE SWANK SWITCH")) {
 			if (message.author.id != process.env["SWANK_USER_ID"]) {
 				this.swankSwitchEnabled = !this.swankSwitchEnabled;

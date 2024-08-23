@@ -6,12 +6,18 @@ import { PerformanceCounter } from "../performancecounter.js";
 export class DiscordBotHelpers
 {
     private logger: Logger;
-    constructor(logger: Logger) {
+    constructor(logger: Logger, enableTiming: boolean) {
         if (logger == null) {
             throw new Error("DiscordHelperFunctions class requires a valid Logger instance");
         }
 
         this.logger = logger;        
+
+        if (enableTiming) {
+            this._perfCounterFunction = this.getPerformanceCounterReal;
+        } else {
+            this._perfCounterFunction = function (){};
+        }
     }
 
     private splitMessage(message: string, size = 2000): string | string[]
@@ -62,6 +68,11 @@ export class DiscordBotHelpers
         }
     }
 
+    private _perfCounterFunction;
+    private getPerformanceCounterReal(description: string) {
+        return new PerformanceCounter(description);
+    }
+
     /**
      * Returns a disposable Performance Counter.
      * 
@@ -77,6 +88,6 @@ export class DiscordBotHelpers
      * @returns 
      */
     getPerformanceCounter(description: string): PerformanceCounter {
-        return new PerformanceCounter(description);
+        return this._perfCounterFunction(description);
     }
 }

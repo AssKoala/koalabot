@@ -73,6 +73,10 @@ export class KoalaSlashCommandRequest {
 
     private options: Map<string, string | number | boolean>;
 
+    public setOptionValue(key: string, newValue: string | number | boolean = "") {
+        this.options[key] = newValue;
+    }
+
     public getOptionValue(key: string, defaultValue: string | number | boolean = "") {
         if (this.options.has(key)) {
             return this.options.get(key);

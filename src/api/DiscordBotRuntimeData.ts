@@ -38,6 +38,6 @@ export class DiscordBotRuntimeData {
         this._logger = logger;
         this._bot = bot;
         this._settings = settings;
-        this._helpers = new DiscordBotHelpers(this.logger());
+        this._helpers = new DiscordBotHelpers(this.logger(), settings.get("TIMING_ENABLE") == 'true');
     }
 }

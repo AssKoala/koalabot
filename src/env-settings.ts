@@ -16,6 +16,7 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('global', "MESSAGE_LOG_FILENAME", "discord_messages.log", "Log file to write discord messages to", false);
     settingsManager.register('global', "LOG_LEVEL", "debug", "Logging level.  See logger.ts enum LogLevel for available levels.", false);
     settingsManager.register('global', 'LISTENER_LIST', 'loglistener,deletebotmessagereactionlistener', 'List of listener modules to load', false);
+    settingsManager.register('global', "TIMING_ENABLE", 'false', "If true, enable timing markers to output call timings to TTY and logs", false);
 
     // module: reddit
     settingsManager.register('reddit', "PYTHON_BINARY", "python", "Path to python binary", false);
@@ -25,7 +26,7 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('reddit', "REDDIT_USER_AGENT", "", "Reddit custom user agent for use in praw", true);
 
     // module: image general
-    settingsManager.register('image', "IMAGE_ENABLED_AI_LIST", 'stablediffusion,dalle,getimg.ai-flux', 'Comma separate list of AI image generation models to use slash commands with (requires reloading guild commands)', false);
+    settingsManager.register('image', "IMAGE_ENABLED_AI_LIST", 'stablediffusion,dalle,getimg.ai-flux', 'Comma separate list of AI image generation models to use slash commands with (requires reloading guild commands when changing this value). Default is all available, so remove any AI services you dont have an API key for (or just dont want to use).', false);
 
     // module: stablediffusion web-ui
     settingsManager.register('stablediffusion', "SD_WEBUI_ADDRESS", '127.0.0.1:7860', 'host:port of stable diffusion host', false);
@@ -40,6 +41,9 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     // module: chat
     settingsManager.register('chat', "GPT_TOKEN_COUNT", "8192", "Max number of tokens to send during chat command", false);
     settingsManager.register('chat', "GPT_MAX_MESSAGES", "2048", "Max number of message history to send during chat command", false);
+    settingsManager.register('chat', "CHAT_PROMPT_INSTRUCTIONS", "You are a helpul assistant.", "Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant)", false);
+    settingsManager.register('chat', "CHAT_DEFAULT_MODEL", "gpt-4o", "OpenAI LLM model to use.", false);
+    settingsManager.register('chat', "CHAT_ENABLE_AT_REPLIES", 'true', "If enabled, bot will automatically treat an @ mention as a chat command with the body of the message as the prompt itself.", false);
 
     // module: weather
     settingsManager.register('weather', "GOOGLE_MAPS_API_KEY", "", "Google maps API key.  See https://developers.google.com/maps/documentation/javascript/get-api-key", true);
