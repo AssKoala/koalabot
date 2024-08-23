@@ -40,6 +40,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | ---- | ------------ | -------- | ----------- |
 | BOT_NAME | KoalaBot | false | Name for the bot to use when referencing self |
 | DEBUG_ENABLE | false | false | Set to true to enable debug functionality |
+| TIMING_ENABLE | false | false | If true, enable timing markers to output call timings to TTY and logs |
 | COMMAND_PATH | ./commands | false | Path to commands folder allowing override. Don't mess with this if you don't know what you're doing. |
 | COMMAND_LIST | settings,coinflip,diceroll,leaderboard | false | Comma separate list of commands to load.  All commands are expected to be in the COMMAND_PATH folder and implement the DiscordBotCommand interface.  DEVELOPER DETAILS: Commands are dynamically imported so long as they register their name in .env and the command file itself has a registerDiscordBotCommand call to assign an instance to a given command. |
 | DATA_PATH | ./data | true | Path to JSON data to be loaded by commands |
@@ -88,6 +89,10 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | ---- | ------------ | -------- | ----------- |
 | GPT_TOKEN_COUNT | 8192 | false | Max number of tokens to send during chat command |
 | GPT_MAX_MESSAGES | 2048 | false | Max number of message history to send during chat command |
+| CHAT_PROMPT_INSTRUCTIONS | You are a helpul assistant. | false | Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant) |
+| CHAT_DEFAULT_MODEL | gpt-4o | false | OpenAI LLM model to use. |
+| CHAT_ENABLE_AT_REPLIES | true | false | If enabled, bot will automatically treat an @ mention as a chat command with the body of the message as the prompt itself so it will respond naturally. |
+
 #### weather settings
 
 | Name | DefaultValue | Required | Description |
