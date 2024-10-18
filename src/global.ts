@@ -61,6 +61,11 @@ export abstract class Global {
         );
         Global.initUserSettings(`${Global.settings().get("DATA_PATH")}/settings.json`);
         Global.initBot();
+
+        // Once bot is initialized, disable performance counters if timing not enabled
+        if (Global.settings().get("TIMING_ENABLE") != 'true') {
+            this._getPerformanceCounter = function(descr:string): PerformanceCounter { return null; };
+        }
     }
 
     static async initDiscord() {
@@ -68,8 +73,15 @@ export abstract class Global {
         await Global.#bot.init(Global.settings().getDiscordKey());
     }
 
-    static getPerformanceCounter(description: string) {
+    private static getPerformanceCounterInternal(description: string) {
         return new PerformanceCounter(description);
+    }
+
+    // Timing is enabled by default to get initialization timings always since counter overhead is nominal during init
+    private static _getPerformanceCounter = this.getPerformanceCounterInternal;
+
+    static getPerformanceCounter(description: string) {
+        return this._getPerformanceCounter(description);
     }
 
     static #splitMessage(message, size = 2000)

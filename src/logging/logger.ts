@@ -110,7 +110,7 @@ export class Logger {
     logWarning(message)
     {
         try {
-            this.#logger.warn(message);
+            this.#logger.warning(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log warning ${message}!!`);
         }

@@ -112,7 +112,7 @@ export class Bot {
 			if (rebooted != null) {
 				const textChannel = this._client.channels.cache.get(rebooted.channelId) as TextChannel;
 				if (textChannel != null) {
-					textChannel.send(`<@${rebooted.memberId}>: I haz rebooted via system`);
+					textChannel.send(`<@${rebooted.memberId}>: It is by your hand that I am once again given flesh.  What is a man? A miserable pile of secrets!`);
 				}
 			}
 		} catch (e) {
