@@ -21,6 +21,7 @@ abstract class ChatResponse {
     ai_model: string;
     maxMessages: number;
     responsePrepend: string = '';
+    stripBotNameFromResponse: boolean = false;
 
     protected abstract replyInternal(runtimeData: DiscordBotRuntimeData, message: string): Promise<void>;
     
@@ -118,7 +119,8 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                     messages: messageData
                 });
     
-                const responseText = completion.choices[0].message.content;
+                let responseText = completion.choices[0].message.content;
+                this.runtimeData().logger().logInfo(`Asked: ${requestData.question}, got: ${responseText}`);
     
                 // Add the response to our list of stuff
                 Stenographer.pushMessage(new DiscordStenographerMessage(
@@ -127,8 +129,12 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                     responseText,
                     Date.now
                 ));
-    
-                this.runtimeData().logger().logInfo(`Asked: ${requestData.question}, got: ${responseText}`);
+                
+                if (requestData.stripBotNameFromResponse) {
+                    this.runtimeData().logger().logInfo(`Stripping bot name from response.`);
+                    responseText = responseText.replace(`${requestData.botName}<@${requestData.botId}>:`,'');
+                }
+
                 await requestData.reply(this.runtimeData(), `${requestData.responsePrepend} ${responseText}`);
             } catch (e) {
                 const errorMsg = `Exception getting chat reply to ${requestData.question}, got error ${e}`;
@@ -179,10 +185,11 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 requestData.userId = message.author.id;
                 requestData.userName = message.author.username;
                 requestData.prompt = this.runtimeData().settings().get("CHAT_PROMPT_INSTRUCTIONS");
-                requestData.question = message.content;
+                requestData.question = message.content.replace(`<@${requestData.botId}>`,'');
                 requestData.maxTokens = parseInt(this.runtimeData().settings().get("GPT_TOKEN_COUNT"));
                 requestData.ai_model = this.runtimeData().settings().get("CHAT_DEFAULT_MODEL");
                 requestData.maxMessages = parseInt(this.runtimeData().settings().get("GPT_MAX_MESSAGES")) || 2048;
+                requestData.stripBotNameFromResponse = true;
 
                 await this.handleInternal(requestData);
             }

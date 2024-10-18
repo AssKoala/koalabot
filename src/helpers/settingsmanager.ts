@@ -34,7 +34,11 @@ export class SettingsManager {
 
     get(settingName: string): string {
         if (!(settingName in this.registeredSettings)) {
-            throw Error(`SettingsManager.get ${settingName} is not registered!`);
+            if (this.has(settingName)) {
+                throw Error(`SettingsManager.get: ${settingName} is not registered, but has value ${process.env[settingName]} in .env!`)
+            } else {
+                throw Error(`SettingsManager.get: ${settingName} is not registered and doesn't exist!`);
+            }
         }
 
         if (this.has(settingName)) {
@@ -49,7 +53,7 @@ export class SettingsManager {
             }
         }
 
-        return undefined || this.registeredSettings[settingName].defaultValue;
+        return this.registeredSettings[settingName].defaultValue;
     }
 
     has(settingName): boolean {

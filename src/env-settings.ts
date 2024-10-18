@@ -17,6 +17,7 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('global', "LOG_LEVEL", "debug", "Logging level.  See logger.ts enum LogLevel for available levels.", false);
     settingsManager.register('global', 'LISTENER_LIST', 'loglistener,deletebotmessagereactionlistener', 'List of listener modules to load', false);
     settingsManager.register('global', "TIMING_ENABLE", 'false', "If true, enable timing markers to output call timings to TTY and logs", false);
+    settingsManager.register('global', "SUDO_LIST", "", "List of discord user id's that have sudo access to bot.", false);
 
     // module: reddit
     settingsManager.register('reddit', "PYTHON_BINARY", "python", "Path to python binary", false);

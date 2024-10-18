@@ -6,6 +6,7 @@ export class LogManager {
     #globalLogger: Logger;
     logBaseDir: string;
     discordLogFileName: string;
+    globalLogFileName: string;
 
     getLogBasePath(channelId: string): string {
         return `${this.logBaseDir}/${channelId}`;
@@ -13,6 +14,10 @@ export class LogManager {
 
     getGlobalDiscordLogFullPath()  {
         return `${this.logBaseDir}/${this.discordLogFileName}`;
+    }
+
+    getGlobalLogFullPath() {
+        return `${this.logBaseDir}/${this.globalLogFileName}`;
     }
 
     constructor(
@@ -26,6 +31,7 @@ export class LogManager {
 
         this.logBaseDir = logBasePath;
         this.discordLogFileName = discordLogFileName;
+        this.globalLogFileName = globalLogFileName;
 
         this.#globalLogger = new Logger(logBasePath, globalLogFileName, globalLogLevel, outputGlobalToConsole);
 

@@ -17,6 +17,8 @@ import crypto from 'crypto';
 import fetch from 'node-fetch';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 
+const INVALID_SEED = -1;
+
 class ImageGenerationData {
     readonly prompt: string = '';
     readonly size: string = '1024x1024';
@@ -25,7 +27,7 @@ class ImageGenerationData {
     readonly promptPrepend: string = "I NEED to test how the tool works with extremely simple prompts. DO NOT add any detail, just use it AS-IS:";
     readonly model: string = "dalle";
     readonly sd_model_checkpoint: string = 'Deliberate_v6.safetensors';
-    readonly seed: number = 0;
+    readonly seed: number = INVALID_SEED;
     readonly steps: number = 4;
 
     private isSizeValid(image_size: string): boolean {
@@ -46,8 +48,8 @@ class ImageGenerationData {
         this.quality = request.getSubcommand().getOptionValueString('image_quality', this.quality);
         this.forcePrompt = request.getSubcommand().getOptionValueBoolean('force_prompt', this.forcePrompt);
         this.sd_model_checkpoint = request.getSubcommand().getOptionValueString('sd_model_checkpoint', this.sd_model_checkpoint);
-        this.steps = Math.min(6, Math.max(1, request.getSubcommand().getOptionValueNumber('steps', this.steps)));
-        this.seed = Math.min(2147483647, Math.max(0, request.getSubcommand().getOptionValueNumber('seed', this.seed)));
+        this.steps = request.getSubcommand().getOptionValueNumber('steps', this.steps);
+        this.seed = request.getSubcommand().getOptionValueNumber('seed', this.seed);
     }
 
     getSteps(): number {
@@ -76,9 +78,16 @@ class ImageGenerationData {
     }
 }
 
-interface ImageDownloadedFileInfo {
+class ImageDownloadedFileInfo {
     fullpath: string;
     filename: string;
+    seed: number;
+
+    constructor(fullpath: string, filename: string, seed: number = INVALID_SEED) {
+        this.fullpath = fullpath;
+        this.filename = filename;
+        this.seed = seed;
+    }
 }
 
 class OpenAI {
@@ -100,7 +109,7 @@ class OpenAI {
 
             image_url = response.data[0].url;
 
-            Global.logger().logInfo(`Asked: ${imageGenData.getGeneratedPrompt()}, got ${image_url}`);
+            Global.logger().logInfo(`image::getImageUrl(): [Asked] ${imageGenData.getGeneratedPrompt()} [Used] ${response.data[0].revised_prompt} [Got] ${image_url}`);
         } catch (e) {
             error = e;
             await Global.logger().logError(`Exception occurred during image gen, asked: ${imageGenData.getGeneratedPrompt()}, got ${e}`, interaction, true);
@@ -122,10 +131,7 @@ class OpenAI {
         const downloaded_fullpath = dl.getDownloadPath();
         const downloaded_filename = downloaded_fullpath.split("/").at(-1).split(`\\`).at(-1);
 
-        return {
-            "fullpath": downloaded_fullpath,
-            "filename": downloaded_filename,
-        }
+        return new ImageDownloadedFileInfo(downloaded_fullpath, downloaded_filename);
     } // downloadUrlToFile
 
     static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
@@ -133,7 +139,7 @@ class OpenAI {
             const result = await OpenAI.getImageUrl(imageGenData, interaction);
 
             if (result.error != null) {
-                Global.logger().logError(`Error getting image URL, got error ${result.error}`);
+                Global.logger().logError(`Error getting image URL, got error ${result.error}`, interaction, true);
             } else {
                 const downloadedFileinfo = await OpenAI.downloadUrlToFile(result.image_url);
                 return downloadedFileinfo;
@@ -175,10 +181,7 @@ class StableDiffusion {
             }
             
 
-            return {
-                "fullpath": fullpath,
-                "filename": filename,
-            }
+            return new ImageDownloadedFileInfo(fullpath, filename);
         } catch (e) {
             await Global.logger().logError(`Got error calling stable diffusion api: ${e}`, interaction, true);
         }
@@ -204,29 +207,31 @@ class GetimgAi {
                         width: imageGenData.getWidth(), 
                         height: imageGenData.getHeight(),
                         steps: imageGenData.getSteps(),
-                        ...(imageGenData.getSeed() != 0) && {seed: imageGenData.getSeed() },
+                        ...(imageGenData.getSeed() != INVALID_SEED) && {seed: imageGenData.getSeed() },
                         output_format: "png",
                     })
             };
 
             const fetchResult = await fetch(url, options);
-            const responseData = <any> await fetchResult.json();
 
-            const hash = crypto.createHash('md5').update(responseData.image).digest('hex');
-            const filename = hash + '.png';
-            const fullpath = `${Global.settings().get("TEMP_PATH")}/${filename}`;
+            if (fetchResult.ok) {
+                const responseData = <any> await fetchResult.json();
 
-            const decoded = Buffer.from(responseData.image, "base64");
-            try {
-                fs.writeFileSync(fullpath, decoded);
-                Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
-            } catch (e) {
-                await Global.logger().logError(`Failed to write temp-image file, got ${e}`, interaction, true);
-            }
-            
-            return {
-                "fullpath": fullpath,
-                "filename": filename,
+                const hash = crypto.createHash('md5').update(responseData.image).digest('hex');
+                const filename = hash + '.png';
+                const fullpath = `${Global.settings().get("TEMP_PATH")}/${filename}`;
+
+                const decoded = Buffer.from(responseData.image, "base64");
+                try {
+                    fs.writeFileSync(fullpath, decoded);
+                    Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
+                } catch (e) {
+                    await Global.logger().logError(`Failed to write temp-image file, got ${e}`, interaction, true);
+                }
+                
+                return new ImageDownloadedFileInfo(fullpath, filename, responseData.seed);
+            } else {
+                await Global.logger().logError(`Failed to download image from Getimg.Ai, got error code ${fetchResult.status}, see here: https://docs.getimg.ai/reference/errors`, interaction, true);
             }
         } catch (e) {
             await Global.logger().logError(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
@@ -266,8 +271,12 @@ class ImageCommand extends DiscordBotCommand {
                 // Create the attachment
                 try {
                     const file = new AttachmentBuilder(downloadedFileInfo.fullpath);
+
+                    let title = downloadedFileInfo.seed != INVALID_SEED ? `${downloadedFileInfo.seed.toString(36)} ` : "";
+                    title += imageGenData.getGeneratedPrompt();
+
                     const embed = {
-                        title: imageGenData.getGeneratedPrompt().substring(0, 256),
+                        title: title.substring(0, 256),
                         image: {
                             url: `attachment://${downloadedFileInfo.filename}`,
                         }
@@ -283,10 +292,8 @@ class ImageCommand extends DiscordBotCommand {
                     await rm(downloadedFileInfo.fullpath);
                 } catch (e) {
                     Global.logger().logError(`Failed to delete image file, might need manual cleanup, got ${e}`);
-                }   
-            } else {
-                await interaction.editReply("Failed to download image, got null result.");
-            }
+                }
+            } 
         } catch (e) {
             await Global.logger().logError(`Top level exception during image, got error ${e}`, interaction, false);
         }
@@ -431,12 +438,16 @@ class ImageCommand extends DiscordBotCommand {
                                             .setName("steps")
                                             .setDescription("Number of steps to take (default 4, range 1-4)")
                                             .setRequired(false)
+                                            .setMinValue(1)
+                                            .setMaxValue(4)
                                     )
                                     .addIntegerOption((option) =>
                                         option
                                             .setName("seed")
                                             .setDescription("Set seed for deterministic generation (default random, range 1-2147483647")
                                             .setRequired(false)
+                                            .setMinValue(1)
+                                            .setMaxValue(2147483647)
                                     )
                             )
                     );
