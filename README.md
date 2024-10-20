@@ -53,6 +53,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | MESSAGE_LOG_FILENAME | discord_messages.log | false | Log file to write discord messages to |
 | LOG_LEVEL | debug | false | Logging level.  See logger.ts enum LogLevel for available levels. |
 | LISTENER_LIST | loglistener,deletebotmessagereactionlistener | false | List of listener modules to load |
+| SUDO_LIST | | false | List of discord user id's that have sudo access to bot (reboot or some system commands) |
 #### reddit settings
 
 | Name | DefaultValue | Required | Description |
