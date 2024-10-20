@@ -89,7 +89,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 
 | Name | DefaultValue | Required | Description |
 | ---- | ------------ | -------- | ----------- |
-| GETIMG_AI_API_KEY |  | true | getimg.ai API key to access data |
+| GETIMG_AI_API_KEY |  | true | getimg.ai API key to access getimg.ai |
 #### StableDiffusion web-ui settings
 | Name | DefaultValue | Required | Description |
 | ---- | ------------ | -------- | ----------- |
