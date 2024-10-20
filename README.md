@@ -173,7 +173,7 @@ Query ChatGPT, Claude, or Ollama using conversation history using /chat slash co
 
 Use this to ask the bot to summarize the channel conversation or that sort of thing.
 
-There's nothing special to setup other than adding the API key and enabling the command via the env command list.  The bot will load logs on startup to repopulate the chat in-memory log that's sent to ChatGPT.
+There's nothing special to setup other than adding the API key and enabling the command via the env command list.  The bot will load logs on startup to repopulate the chat in-memory log that's sent to the LLM robot.
 </details>
 <details>
 <summary>Coinflip</summary>
