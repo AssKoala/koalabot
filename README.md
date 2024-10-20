@@ -169,7 +169,7 @@ JSON is formatted as an array as follows:
 
 ![Chat sample output](src/doc/commands/chat.png)
   
-Query ChatGPT using conversation history using /chat slash command.  This requires an [OpenAI API Key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key).
+Query ChatGPT, Claude, or Ollama using conversation history using /chat slash command.  This requires an [OpenAI API Key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key), [Anthropic API Key](https://console.anthropic.com/settings/keys), or Ollama instance.
 
 Use this to ask the bot to summarize the channel conversation or that sort of thing.
 
