@@ -39,6 +39,10 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     // module: anthropic (chat)
 	settingsManager.register('anthropic', "ANTHROPIC_API_KEY", "", "Anthropic API key to access Claude", true);
 
+    // module: ollama (chat)
+    settingsManager.register('ollama', "OLLAMA_SERVER_ADDRESS", "http://127.0.0.1:11434", "Ollama server address", false);
+    
+
     // module: getimg.ai (image)
     settingsManager.register('getimgai', "GETIMG_AI_API_KEY", "", "getimg.ai API key to access data", true);
 
