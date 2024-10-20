@@ -67,6 +67,18 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | ---- | ------------ | -------- | ----------- |
 | IMAGE_ENABLED_AI_LIST | stablediffusion,dalle,getimg.ai-flux | false | Comma separate list of AI image generation models to use slash commands with (requires reloading guild commands when changing this value). Default is all available, so remove any AI services you don't have an API key for (or just don't want to use). |
 
+#### anthropic settings
+
+| Name | DefaultValue | Required | Description |
+| ---- | ------------ | -------- | ----------- |
+| ANTHROPIC_API_KEY | | true | Anthropic API key to access Claude |
+
+#### ollama settings
+
+| Name | DefaultValue | Required | Description |
+| ---- | ------------ | -------- | ----------- |
+| OLLAMA_SERVER_ADDRESS | http://127.0.0.1:11434 | false | Ollama server address |
+
 #### openai settings
 
 | Name | DefaultValue | Required | Description |
@@ -90,7 +102,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | GPT_TOKEN_COUNT | 8192 | false | Max number of tokens to send during chat command |
 | GPT_MAX_MESSAGES | 2048 | false | Max number of message history to send during chat command |
 | CHAT_PROMPT_INSTRUCTIONS | You are a helpul assistant. | false | Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant) |
-| CHAT_DEFAULT_MODEL | gpt-4o | false | OpenAI LLM model to use. |
+| CHAT_DEFAULT_MODEL | gpt-4o | false | LLM model to use: gpt-4o, gpt-4-turbo, claude-3.5-sonnet, or ollama |
 | CHAT_ENABLE_AT_REPLIES | true | false | If enabled, bot will automatically treat an @ mention as a chat command with the body of the message as the prompt itself so it will respond naturally. |
 
 #### weather settings
