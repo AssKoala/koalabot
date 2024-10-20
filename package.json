@@ -6,6 +6,7 @@
   "author": "AssKoala",
   "type": "module",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.29.2",
     "@types/node": "^20.14.1",
     "discord.js": "^14.12.1",
     "dotenv": "^16.4.5",

@@ -35,6 +35,9 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
 
     // module: openai (chat, vision, query, image)
     settingsManager.register('openai', "OPENAI_API_KEY", "", "OpenAI API key to access data", true);
+	
+    // module: anthropic (chat)
+	settingsManager.register('anthropic', "ANTHROPIC_API_KEY", "", "Anthropic API key to access Claude", true);
 
     // module: getimg.ai (image)
     settingsManager.register('getimgai', "GETIMG_AI_API_KEY", "", "getimg.ai API key to access data", true);

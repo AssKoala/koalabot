@@ -6,6 +6,7 @@ import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-com
 
 import { SlashCommandOptionsOnlyBuilder, SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
+import { AnthropicHelper } from '../helpers/anthropichelper.js';
 import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
 import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
@@ -64,20 +65,25 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
         return msg.length / 4;
     }
 
-    private async handleInternal(requestData: ChatResponse) {
+    private async handleInternal(requestData: ChatResponse, isClaude: boolean) {
         try {    
             try {
                 let messageData = [];
     
-                messageData.push({
-                    "role": "system",
-                    "content": `You are named ${requestData.botName}<@${requestData.botId}> in a chat room where users talk to each other in a username: text format. ${requestData.prompt}}`
-                });
+                const systemPrompt = `You are named ${requestData.botName}<@${requestData.botId}> in a chat room where users talk to each other in a username: text format. ${requestData.prompt}}`;
+
+                if (!isClaude) {
+                    messageData.push({
+                        "role": "system",
+                        "content": systemPrompt
+                    });
+                }
     
                 const userQuestion = { "role": "user", "content": requestData.question };
     
                 // start with the header and footer accounted for
-                let tokens = ChatCommand.getTokens(messageData[0].content) + ChatCommand.getTokens(userQuestion.content);
+                let tokens = ChatCommand.getTokens(userQuestion.content);
+                if (!isClaude) tokens += ChatCommand.getTokens(messageData[0].content);
     
                 Stenographer.getMessages().slice().reverse().every(entry => {
                     const msg = entry.getStandardDiscordMessageFormat();
@@ -114,12 +120,25 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 //  call to the completion.
                 while (messageData.length > requestData.maxMessages) messageData.shift();
     
-                const completion = await OpenAIHelper.getInterface().chat.completions.create({
-                    model: requestData.ai_model,
-                    messages: messageData
-                });
-    
-                let responseText = completion.choices[0].message.content;
+                let responseText = "";
+                if (!isClaude) {
+                    const completion = await OpenAIHelper.getInterface().chat.completions.create({
+                        model: requestData.ai_model,
+                        messages: messageData
+                    });
+        
+                    responseText = completion.choices[0].message.content;
+                } else {
+                    const completion = await AnthropicHelper.getInterface().messages.create({
+                        model: "claude-3-5-sonnet-20240620",
+                        max_tokens: requestData.maxTokens,
+                        system: systemPrompt,
+                        messages: messageData,
+                      });
+
+                    responseText = completion.content[0].text;
+                }
+                
                 this.runtimeData().logger().logInfo(`Asked: ${requestData.question}, got: ${responseText}`);
     
                 // Add the response to our list of stuff
@@ -166,10 +185,23 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
             requestData.maxMessages = parseInt(this.runtimeData().settings().get("GPT_MAX_MESSAGES")) || 2048;
             requestData.responsePrepend = `Query \"${requestData.question}\":`;
 
-            await this.handleInternal(requestData);
+            let isClaude = false;
+
+            // Throw error if anthropic key isn't defined and trying to use claude
+            if (requestData.ai_model.includes('claude'))
+            {
+                isClaude = true;
+
+                if (!this.runtimeData().settings().has("ANTHROPIC_API_KEY")) {
+                    await this.runtimeData().logger().logError(`Cannot use Claude without ANTHROPIC_API_KEY`, interaction, true);
+                }
+            } else if (!this.runtimeData().settings().has("OPENAI_API_KEY")) {  // Same for ChatGPT
+                await this.runtimeData().logger().logError(`Cannot use ChatGPT without OPENAI_API_KEY`, interaction, true);
+            }
+
+            await this.handleInternal(requestData, isClaude);
         } catch (e) {
             await this.runtimeData().logger().logError(`ChatCommand::handle() exception getting chat reply, got error ${e}`, interaction, true);
-        
         }
     }
 
@@ -191,7 +223,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 requestData.maxMessages = parseInt(this.runtimeData().settings().get("GPT_MAX_MESSAGES")) || 2048;
                 requestData.stripBotNameFromResponse = true;
 
-                await this.handleInternal(requestData);
+                await this.handleInternal(requestData, false);
             }
         } catch (e) {
             this.runtimeData().logger().logError(`Chat::onMessageCreate() error, got ${e}`);
@@ -227,6 +259,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                                 .addChoices(
                                     { name: 'gpt-4o', value: 'gpt-4o' },
                                     { name: 'gpt-4-turbo', value: 'gpt-4-turbo' },
+                                    { name: 'claude-3.5-sonnet', value: 'claude-3.5-sonnet'},
                                 )
                                 .setRequired(false),
                         )
