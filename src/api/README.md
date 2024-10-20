@@ -20,7 +20,7 @@ class MyCommand extends DiscrdBotCommand {
     try {
       interaction.reply('Example Reply!!');
     } catch (e) {
-      this.runtimeData().logger().logError(`Failed to do myCommand, got error: ${e}`, interaction, true);
+      await this.runtimeData().logger().logError(`Failed to do myCommand, got error: ${e}`, interaction, true);
     }
   }
 
