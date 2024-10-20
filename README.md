@@ -84,7 +84,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 
 | Name | DefaultValue | Required | Description |
 | ---- | ------------ | -------- | ----------- |
-| OPENAI_API_KEY |  | true | OpenAI API key to access data |
+| OPENAI_API_KEY |  | true | OpenAI API key to access ChatGPT |
 #### getimgai settings
 
 | Name | DefaultValue | Required | Description |
