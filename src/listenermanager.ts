@@ -64,14 +64,33 @@ export abstract class ListenerManager {
 	}
 
     static processMessageCreateListeners(message: Message) {
+		const logManager = Global.logManager();
+
+		if (!logManager.hasChannelLogger(message.channelId)) {
+			const created = logManager.createLogger(message.guildId, message.channelId);
+
+			if (!created) {
+				Global.logger().logError(`Failed to create logger for channel ${message.channelId}`);
+			}
+		}
+
+		const guildLogger = Global.logManager().getGuildLogger(message.guildId);
+		const channelLogger = Global.logManager().getChannelLogger(message.channelId);
+
         ListenerManager.messageCreateHandlers.forEach(handler => {
-			handler.onMessageCreate(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings()), message);
+			const runtimeData = new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings());
+
+			handler.onMessageCreate(runtimeData, message);
 		});
     }
 
-    static processMessageReactionAddListeners(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) {
+    static processMessageReactionAddListeners(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) 
+	{
+		const guildLogger = Global.logManager().getGuildLogger(reaction.message.guildId);
+		const channelLogger = Global.logManager().getChannelLogger(reaction.message.channelId);
+
         ListenerManager.messageReactionAddHandlers.forEach(handler => {
-			handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings()), reaction, user);
+			handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings()), reaction, user);
 		});
     }
 }

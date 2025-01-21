@@ -64,7 +64,7 @@ export class UserSettingsManager {
      */
     set(userSettingsData: UserSettingsData, flush: boolean = false) : boolean {
         try {
-            this.#userSettings[userSettingsData.name] = userSettingsData;
+            this.#userSettings.set(userSettingsData.name, userSettingsData);
 
             if (flush) {
                 this.flush();

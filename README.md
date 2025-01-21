@@ -53,7 +53,6 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | MESSAGE_LOG_FILENAME | discord_messages.log | false | Log file to write discord messages to |
 | LOG_LEVEL | debug | false | Logging level.  See logger.ts enum LogLevel for available levels. |
 | LISTENER_LIST | loglistener,deletebotmessagereactionlistener | false | List of listener modules to load |
-| SUDO_LIST | | false | List of discord user id's that have sudo access to bot (reboot or some system commands) |
 #### reddit settings
 
 | Name | DefaultValue | Required | Description |
@@ -68,28 +67,16 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | ---- | ------------ | -------- | ----------- |
 | IMAGE_ENABLED_AI_LIST | stablediffusion,dalle,getimg.ai-flux | false | Comma separate list of AI image generation models to use slash commands with (requires reloading guild commands when changing this value). Default is all available, so remove any AI services you don't have an API key for (or just don't want to use). |
 
-#### anthropic settings
-
-| Name | DefaultValue | Required | Description |
-| ---- | ------------ | -------- | ----------- |
-| ANTHROPIC_API_KEY | | true | Anthropic API key to access Claude |
-
-#### ollama settings
-
-| Name | DefaultValue | Required | Description |
-| ---- | ------------ | -------- | ----------- |
-| OLLAMA_SERVER_ADDRESS | http://127.0.0.1:11434 | false | Ollama server address |
-
 #### openai settings
 
 | Name | DefaultValue | Required | Description |
 | ---- | ------------ | -------- | ----------- |
-| OPENAI_API_KEY |  | true | OpenAI API key to access ChatGPT |
+| OPENAI_API_KEY |  | true | OpenAI API key to access data |
 #### getimgai settings
 
 | Name | DefaultValue | Required | Description |
 | ---- | ------------ | -------- | ----------- |
-| GETIMG_AI_API_KEY |  | true | getimg.ai API key to access getimg.ai |
+| GETIMG_AI_API_KEY |  | true | getimg.ai API key to access data |
 #### StableDiffusion web-ui settings
 | Name | DefaultValue | Required | Description |
 | ---- | ------------ | -------- | ----------- |
@@ -103,7 +90,7 @@ Additionally, you **must** attain a bot token and place it in the appropriate va
 | GPT_TOKEN_COUNT | 8192 | false | Max number of tokens to send during chat command |
 | GPT_MAX_MESSAGES | 2048 | false | Max number of message history to send during chat command |
 | CHAT_PROMPT_INSTRUCTIONS | You are a helpul assistant. | false | Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant) |
-| CHAT_DEFAULT_MODEL | gpt-4o | false | LLM model to use: gpt-4o, gpt-4-turbo, claude-3.5-sonnet, or ollama |
+| CHAT_DEFAULT_MODEL | gpt-4o | false | OpenAI LLM model to use. |
 | CHAT_ENABLE_AT_REPLIES | true | false | If enabled, bot will automatically treat an @ mention as a chat command with the body of the message as the prompt itself so it will respond naturally. |
 
 #### weather settings
@@ -170,11 +157,11 @@ JSON is formatted as an array as follows:
 
 ![Chat sample output](src/doc/commands/chat.png)
   
-Query ChatGPT, Claude, or Ollama using conversation history using /chat slash command.  This requires an [OpenAI API Key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key), [Anthropic API Key](https://console.anthropic.com/settings/keys), or Ollama instance.
+Query ChatGPT using conversation history using /chat slash command.  This requires an [OpenAI API Key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key).
 
 Use this to ask the bot to summarize the channel conversation or that sort of thing.
 
-There's nothing special to setup other than adding the API key and enabling the command via the env command list.  The bot will load logs on startup to repopulate the chat in-memory log that's sent to the LLM robot.
+There's nothing special to setup other than adding the API key and enabling the command via the env command list.  The bot will load logs on startup to repopulate the chat in-memory log that's sent to ChatGPT.
 </details>
 <details>
 <summary>Coinflip</summary>

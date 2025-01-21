@@ -32,6 +32,22 @@ export class SettingsManager {
         }
     }
 
+    getAllSettings() {
+        return Object.keys(this.registeredSettings);
+    }
+
+    search(searchString: string) {
+        return this.getAllSettings().filter(setting => setting.toLowerCase().includes(searchString.toLowerCase()));
+    }
+
+    set(settingName: string, value: string): boolean {
+        if (settingName in this.registeredSettings) {
+            process.env[settingName] = value;
+            return true;
+        }
+        return false;
+    }
+
     get(settingName: string): string {
         if (!(settingName in this.registeredSettings)) {
             if (this.has(settingName)) {

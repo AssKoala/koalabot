@@ -68,7 +68,7 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
          
             // Initialize the command with the runtime information, this has to go before ANY use of the object
             // The command isn't fully constructed as a Discord bot object until it's initialized.
-            botCommand.initCommand(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings()));
+            botCommand.initCommand(new DiscordBotRuntimeData(Global.bot(), Global.logger(), null, null, Global.settings()));
 
             const newCommand = {
                 data: botCommand.get(),

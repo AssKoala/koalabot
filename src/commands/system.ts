@@ -116,6 +116,7 @@ async function reboot(interaction) {
                 return false;
             } else {
                 Global.logger().logWarning(`Wrote reboot info to ${targetFile}`);
+                process.exit();
                 return true;
             }
         });
@@ -251,7 +252,6 @@ class SystemCommand extends DiscordBotCommand {
             }
 
             const subCommand = interaction.options.data[0].options[0];
-            let privateReply = true;
             let messageResponse = "";
 
             switch (subCommand.name) {
@@ -266,57 +266,66 @@ class SystemCommand extends DiscordBotCommand {
                             case 'name':
                                 variableName = options[i].value;
                                 break;
-                            case 'private':
-                                privateReply = options[i].value; 
-                                break;
                             default:
-                                messageResponse = `Invalid value: ${options[i].name}`;
                                 break;
                         }
                     }
-                    
-                    if (this.runtimeData().settings().has(variableName)) {
-                        const variableValue = this.runtimeData().settings().get(variableName);
-                        messageResponse = `${variableName}=${variableValue}`;
+
+                    if (variableName == "") {
+                        // List all when a value isnt provided.
+                        messageResponse = `Listing registered settings:\n`;
+
+                        this.runtimeData().settings().getAllSettings().forEach(setting => {
+                            messageResponse += `- ${setting}\n`;
+                        });
                     } else {
-                        messageResponse = `${variableName} not found`;
-                    }
+                        if (this.runtimeData().settings().has(variableName)) {
+                            const variableValue = this.runtimeData().settings().get(variableName);
+                            messageResponse = `${variableName}=${variableValue}`;
+                        } else {
+                            const potential = this.runtimeData().settings().search(variableName);
+    
+                            if (potential.length > 0) {
+                                messageResponse = `${variableName} not found, did you mean:\n`;
+                                potential.forEach((value) => {
+                                    messageResponse += `- ${value}\n`; 
+                                });
+                            } else {
+                                messageResponse = `${variableName} not found and no alternatives found with that substring.`;
+                            }                        
+                        }
+                    }                    
                 }
                 break;
 
                 case 'set':
                 {
-                    messageResponse = "set is not implemented, environment variables are read only";
-                    // let variableName;
-                    // let variableValue;
+                    let variableName;
+                    let variableValue;
 
-                    // const options = interaction.options.data[0].options[0].options;
+                    const options = interaction.options.data[0].options[0].options;
 
-                    // for (let i = 0; i < options.length; i++) {
-                    //     switch (options[i].name) {
-                    //         case 'name':
-                    //             variableName = options[i].value;
-                    //             break;
-                    //         case 'value':
-                    //             variableValue = options[i].value; 
-                    //             break;
-                    //         case 'private':
-                    //             privateReply = options[i].value;
-                    //             break;
-                    //         default:
-                    //             messageResponse = `Invalid value: ${options[i].name}`;
-                    //             break;
-                    //     }
-                    // }
+                    for (let i = 0; i < options.length; i++) {
+                        switch (options[i].name) {
+                            case 'name':
+                                variableName = options[i].value;
+                                break;
+                            case 'value':
+                                variableValue = options[i].value; 
+                                break;
+                            default:
+                                break;
+                        }
+                    }
 
-                    // if (messageResponse != "") {
-                    //     if (this.runtimeData().settings().has(variableName)) {
-                    //         messageResponse = `${variableName} was ${this.runtimeData().settings().get(variableName)}, setting to ${variableValue}`;
-                    //     } else {
-                    //         messageResponse = `New ${variableName} setting to ${variableValue}`;
-                    //     }
-                        
-                    // }
+                    if (this.runtimeData().settings().has(variableName)) {
+                        messageResponse = `${variableName} was ${this.runtimeData().settings().get(variableName)}, setting to ${variableValue}`;
+                        const result = this.runtimeData().settings().set(variableName, variableValue);
+
+                        messageResponse = (result ? "SUCCESS: " : "FAILED: ") + messageResponse;
+                    } else {
+                        messageResponse = `${variableName} not found or not registered. Check spelling or use get to find the right name.`;
+                    }                    
                 }
                 break;
 
@@ -324,7 +333,7 @@ class SystemCommand extends DiscordBotCommand {
                     messageResponse = "Unknown variable";
             }
             
-            await interaction.reply({content: messageResponse, ephemeral: privateReply});
+            await interaction.editReply(messageResponse);
         } catch (e) {
             this.runtimeData().logger().logError(`${e}`, interaction, false);
         }
@@ -346,6 +355,7 @@ class SystemCommand extends DiscordBotCommand {
                     await this.handleLogSubcommand(interaction);
                     break;
                 case 'environment':
+                    await interaction.deferReply({ephemeral: true});
                     await this.handleEnvironmentSubcommand(interaction);
                     break;
                 default:
@@ -426,13 +436,7 @@ class SystemCommand extends DiscordBotCommand {
                             .addStringOption((option) =>
                                 option
                                     .setName('name')
-                                    .setDescription('Environment Variable to get')
-                                    .setRequired(true)
-                            )
-                            .addBooleanOption((option) =>
-                                option
-                                    .setName('private')
-                                    .setDescription('Print publically')
+                                    .setDescription('Environment Variable to get (empty for all)')
                                     .setRequired(false)
                             )
                     )
@@ -451,12 +455,6 @@ class SystemCommand extends DiscordBotCommand {
                                     .setName('value')
                                     .setDescription('New environment variable value')
                                     .setRequired(true)
-                            )
-                            .addBooleanOption((option) =>
-                                option
-                                    .setName('private')
-                                    .setDescription('Print publically')
-                                    .setRequired(false)
                             )
                     )
             )

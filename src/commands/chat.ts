@@ -15,7 +15,10 @@ import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
 abstract class ChatResponse {
     botId;
     botName: string;
+    guildId;
+    channelId;
     userId;
+    useGuildLogs: boolean;
     userName: string;
     prompt: string;
     question: string;
@@ -92,7 +95,15 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 let tokens = ChatCommand.getTokens(userQuestion.content);
                 if (aiApi == AiApi.OpenAI) tokens += ChatCommand.getTokens(messageData[0].content);
     
-                Stenographer.getMessages().slice().reverse().every(entry => {
+                let messages;
+
+                if (requestData.useGuildLogs) {
+                    messages = Stenographer.getGuildMessages(requestData.guildId)
+                } else {
+                    messages = Stenographer.getChannelMessages(requestData.channelId);
+                }
+
+                messages.slice().reverse().every(entry => {
                     const msg = entry.getStandardDiscordMessageFormat();
     
                     const msgTokens = ChatCommand.getTokens(msg);
@@ -115,6 +126,8 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     
                 // Add the question to the list of messages
                 Stenographer.pushMessage(new DiscordStenographerMessage(
+                    requestData.guildId,
+                    requestData.channelId,
                     requestData.userName,
                     requestData.userId,
                     requestData.question,
@@ -177,6 +190,8 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     
                 // Add the response to our list of stuff
                 Stenographer.pushMessage(new DiscordStenographerMessage(
+                    requestData.guildId,
+                    requestData.channelId,
                     requestData.botName,
                     requestData.botId,
                     responseText,
@@ -210,6 +225,9 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 
             requestData.botId = this.runtimeData().bot().client().user.id;
             requestData.botName = this.runtimeData().bot().client().user.username;
+            requestData.channelId = interaction.channelId;
+            requestData.guildId = interaction.guildId;
+            requestData.useGuildLogs = slashCommandRequest.getOptionValueBoolean("use_guild_log", true);
             requestData.userId = interaction.member.user.id;
             requestData.userName = interaction.member.user.username;
             requestData.prompt = slashCommandRequest.getOptionValueString('ai_prompt', this.runtimeData().settings().get("CHAT_PROMPT_INSTRUCTIONS"));
@@ -253,6 +271,9 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 
                 requestData.botId = runtimeData.bot().client().user.id;
                 requestData.botName = runtimeData.bot().client().user.username;
+                requestData.channelId = message.channelId;
+                requestData.guildId= message.guildId;
+                requestData.useGuildLogs = false;
                 requestData.userId = message.author.id;
                 requestData.userName = message.author.username;
                 requestData.prompt = this.runtimeData().settings().get("CHAT_PROMPT_INSTRUCTIONS");
@@ -307,6 +328,12 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                             option
                                 .setName('ai_prompt')
                                 .setDescription('Prompt to tell the robot how to behave, e.g. You are a helpful assistant.')
+                                .setRequired(false),
+                        )
+                        .addBooleanOption((option) => 
+                            option
+                                .setName('use_guild_log')
+                                .setDescription(`Use logs from all channels in server, not just channel. Default is true for /chat, false for @${this.runtimeData().settings().get("BOT_NAME")}`)
                                 .setRequired(false),
                         )
 

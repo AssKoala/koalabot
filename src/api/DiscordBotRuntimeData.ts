@@ -15,6 +15,16 @@ export class DiscordBotRuntimeData {
         return this._logger;
     }
 
+    private readonly _channelLogger: Logger;
+    channelLogger(): Logger {
+        return this._channelLogger;
+    }
+
+    private readonly _guildlogger: Logger;
+    guildLogger(): Logger {
+        return this._guildlogger;
+    }
+
     private readonly _bot: Bot;
     bot(): Bot {
         return this._bot;
@@ -34,8 +44,10 @@ export class DiscordBotRuntimeData {
         return this.helpers().getPerformanceCounter(description);
     }
 
-    constructor(bot: Bot, logger: Logger, settings: SettingsManager) {
+    constructor(bot: Bot, logger: Logger, guildLogger: Logger, channelLogger: Logger, settings: SettingsManager) {
         this._logger = logger;
+        this._channelLogger = channelLogger;
+        this._guildlogger = guildLogger;
         this._bot = bot;
         this._settings = settings;
         this._helpers = new DiscordBotHelpers(this.logger(), settings.get("TIMING_ENABLE") == 'true');
