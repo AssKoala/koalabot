@@ -59,7 +59,17 @@ class MentionMessageResponse extends ChatResponse {
     }
 
     protected async replyInternal(runtimeData, message: string) {
-        this._message.reply(message);
+        const splitMessage = runtimeData.helpers().splitMessage(message);
+        
+        if (!Array.isArray(splitMessage)) {
+            this._message.reply(message);    
+        } else {
+            this._message.reply(`Response too long, split below`);
+
+            splitMessage.forEach(msg => {
+                this._message.channel.send(msg);
+            });
+        }
     }
 }
 
