@@ -10,7 +10,7 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('global', "TEMP_PATH", "./temp", "Path to write temporary files", true);
     settingsManager.register('global', "SCRIPT_PATH", "./scripts", "Path to load external scripts from", false);
     settingsManager.register('global', "REBOOT_FILE", "$TEMP_PATH/reboot", "Path to file to write to signal a reboot to the OS", false);
-    settingsManager.register('global', "LOG_MAX_ENTRIES", "2048", "Maximum number of log entries to keep in memory", false);
+    settingsManager.register('global', "LOG_MAX_ENTRIES", "2048", "Maximum number of log entries to keep in memory, should be the same or slightly higher than GPT_MAX_MESSAGES.", false);
     settingsManager.register('global', "LOG_PATH", "./logs", "Folder to write logs to", false);
     settingsManager.register('global', "FULL_LOG_FILENAME", "bot.log", "Log file to write ALL logs to", false);
     settingsManager.register('global', "MESSAGE_LOG_FILENAME", "discord_messages.log", "Log file to write discord messages to", false);
@@ -50,7 +50,7 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('chat', "GPT_TOKEN_COUNT", "8192", "Max number of tokens to send during chat command", false);
     settingsManager.register('chat', "GPT_MAX_MESSAGES", "2048", "Max number of message history to send during chat command", false);
     settingsManager.register('chat', "CHAT_PROMPT_INSTRUCTIONS", "You are a helpul assistant.", "Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant)", false);
-    settingsManager.register('chat', "CHAT_DEFAULT_MODEL", "gpt-4o", "LLM model to use: gpt-4o, gpt-4-turbo, claude-3.5-sonnet, or ollama", false);
+    settingsManager.register('chat', "CHAT_DEFAULT_MODEL", "chatgpt-4o-latest", "LLM model to use: chatgpt-4o-latest, gpt-4o, gpt-4-turbo, claude-3.5-sonnet, or ollama", false);
     settingsManager.register('chat', "CHAT_ENABLE_AT_REPLIES", 'true', "If enabled, bot will automatically treat an @ mention as a chat command with the body of the message as the prompt itself.", false);
 
     // module: weather

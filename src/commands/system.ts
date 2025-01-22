@@ -35,8 +35,8 @@ async function showMemoryStats(interaction)
 {
     try {
         const procMemUsage = process.memoryUsage();
-        var memoryUsage = procMemUsage["rss"] / (1024 * 1024);
-        var heapUsage = procMemUsage["heapTotal"] / (1024 * 1024);
+        var memoryUsage = (procMemUsage["rss"] / (1024 * 1024)).toFixed(2);
+        var heapUsage = (procMemUsage["heapTotal"] / (1024 * 1024)).toFixed(2);
 
         const msgCount = Stenographer.getInMemoryMessageCount();
 
@@ -46,7 +46,7 @@ async function showMemoryStats(interaction)
             + `Total Usage:      ${memoryUsage} MiB\n`
             + `Heap Usage:       ${heapUsage} MiB\n`
             + `Dict Entries:     ${Dict.getDictDataEntryCount()}\n`
-            + `In-Mem Messages:  ${msgCount["count"]}/${msgCount["max"]}\n`
+            + `In-Mem Messages:  ${msgCount["count"]} (Per-cache max: ${msgCount["max"]})\n`
             + `Affirmations:     ${getAffirmationCount()}\n`
             + "```";
 

@@ -101,6 +101,9 @@ class QueryCommand extends DiscordBotCommand {
                         { name: 'gpt-4o', value: 'gpt-4o' },
                         { name: 'gpt-4-turbo', value: 'gpt-4-turbo' },
                         { name: 'davinci', value: 'text-davinci-003' },
+                        { name: 'o1-preview', value: 'o1-preview' },
+                        { name: 'o1-mini', value: 'o1-mini' },
+                        { name: 'chatgpt-4o-latest', value: 'chatgpt-4o-latest' },
                     )
                     .setRequired(false),
             )

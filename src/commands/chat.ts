@@ -246,7 +246,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 if (!this.runtimeData().settings().has("ANTHROPIC_API_KEY")) {
                     await this.runtimeData().logger().logError(`Cannot use Claude without ANTHROPIC_API_KEY`, interaction, true);
                 }
-            } else if (requestData.ai_model.includes('gpt')) {
+            } else if (requestData.ai_model.includes('gpt') || requestData.ai_model.includes('o1')) {
                 aiApi = AiApi.OpenAI;
 
                 if (!this.runtimeData().settings().has("OPENAI_API_KEY")) {  // Same for ChatGPT
@@ -318,6 +318,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                                 .setDescription('AI Model to use')
                                 .addChoices(
                                     { name: 'gpt-4o', value: 'gpt-4o' },
+                                    { name: 'chatgpt-4o-latest', value: 'chatgpt-4o-latest' },
                                     { name: 'gpt-4-turbo', value: 'gpt-4-turbo' },
                                     { name: 'claude-3.5-sonnet', value: 'claude-3.5-sonnet' },
                                     { name: 'ollama', value: 'ollama' },
