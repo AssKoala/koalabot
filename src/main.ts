@@ -13,7 +13,7 @@ import { Global } from './global.js';
  * Error catching
  */
 process.on('unhandledRejection', error => {
-    Global.logger().logError(`Unhandled Process Rejection, got ${error}`);
+    Global.logger().logErrorAsync(`Unhandled Process Rejection, got ${error}`);
 });
 
 /* Startup the bot */

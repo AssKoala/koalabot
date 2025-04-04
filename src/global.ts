@@ -1,57 +1,64 @@
+// API Imports
+import { LogLevel } from './api/KoalaBotSystem.js'
+import { KoalaBotSystem } from './api/KoalaBotSystem.js';
+import { KoalaBotSystemDiscord } from './bot/KoalaBotSystemDiscord.js';
+
+// Internal
 import { PerformanceCounter } from './performancecounter.js';
 import { SettingsManager } from './helpers/settingsmanager.js'
 import { registerEnvironmentSettings } from './env-settings.js';
 import { UserSettingsManager } from "./helpers/usersettingsmanager.js"
-import { Logger, LogLevel } from './logging/logger.js'
+import { LoggerConcrete } from './logging/logger.js'
 import { LogManager } from './logging/logmanager.js'
 import { Bot } from './bot.js';
 import { CommandManager } from './commandmanager.js'
 import { ChatInputCommandInteraction } from 'discord.js'
-import { readFile } from "fs/promises";
+import fs from "fs";
+import fsPromises from "fs/promises";
 
 export abstract class Global {
-    static #userSettingsManager: UserSettingsManager;
+    private static _userSettingsManager: UserSettingsManager;
     static userSettings(): UserSettingsManager {
-        return Global.#userSettingsManager
+        return Global._userSettingsManager
     }
 
-    static #settingsManager: SettingsManager;
+    private static _settingsManager: SettingsManager;
     static settings(): SettingsManager {
-        return Global.#settingsManager;
+        return Global._settingsManager;
     }
 
-    static #logManager: LogManager;
+    private static _logManager: LogManager;
     static logManager() : LogManager {
-        return Global.#logManager;
+        return Global._logManager;
     }
-    static logger(): Logger {
-        return Global.#logManager.globalLogger();
+    static logger(): LoggerConcrete {
+        return Global._logManager.globalLogger();
     }
 
-    static #bot: Bot;
+    private static _bot: Bot;
     static bot() {
-        return Global.#bot;
+        return Global._bot;
     }
 
     static initSettings() {
-        Global.#settingsManager = new SettingsManager();
+        Global._settingsManager = new SettingsManager();
     }
 
     static initLogger(logRootPath: string, logFileName: string, logLevel: LogLevel, discordLogFileName: string) {
-        Global.#logManager = new LogManager(logRootPath, logFileName, logLevel, discordLogFileName);
+        Global._logManager = new LogManager(logRootPath, logFileName, logLevel, discordLogFileName);
     }
 
     static initUserSettings(settingsPath: string) {
-        Global.#userSettingsManager = new UserSettingsManager(settingsPath);
+        Global._userSettingsManager = new UserSettingsManager(settingsPath);
     }
 
     static initBot() {
-        Global.#bot = new Bot();
+        Global._bot = new Bot();
     }
 
     static init() {
         Global.initSettings();
-        registerEnvironmentSettings(Global.#settingsManager);
+        registerEnvironmentSettings(Global._settingsManager);
 
         Global.initLogger(
             process.env["LOG_PATH"] || './logs', 
@@ -70,7 +77,7 @@ export abstract class Global {
 
     static async initDiscord() {
         using perfCounter = this.getPerformanceCounter(`Bot::initBot()`);
-        await Global.#bot.init(Global.settings().getDiscordKey());
+        await Global._bot.init(Global.settings().getDiscordKey());
     }
 
     private static getPerformanceCounterInternal(description: string) {
@@ -118,16 +125,26 @@ export abstract class Global {
                 await interaction.editReply(message);
             }
         } catch (e) {
-            Global.logger().logError(`Failed to edit reply, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to edit reply, got error ${e}`);
         }
     }
 
     static async readJsonFile(path) {
         try {
-            const file = await readFile(path, "utf8");
+            const file = await fsPromises.readFile(path, {encoding: "utf8"});
             return JSON.parse(file);
         } catch (e) {
-            Global.logger().logError(`Failed to load ${path}, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to load ${path}, got ${e}`);
+            return null;
+        }
+    }
+
+    static readJsonFileSync(path) {
+        try {
+            const file = fs.readFileSync(path, {encoding: "utf8"});
+            return JSON.parse(file);
+        } catch (e) {
+            Global.logger().logErrorAsync(`Failed to load ${path}, got ${e}`);
             return null;
         }
     }

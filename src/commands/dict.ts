@@ -31,7 +31,7 @@ class Dict {
             });
             Global.logger().logInfo(`Sorted ${this.getDictDataEntryCount()} dictionary items.`);
         } catch (e) {
-            Global.logger().logError(`Failed to sort dict data, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to sort dict data, got ${e}`);
         }
         
     }
@@ -40,7 +40,7 @@ class Dict {
         try {
             return dictData.length;
         } catch (e) {
-            Global.logger().logError(`dict data not defined, got ${e}`);
+            Global.logger().logErrorAsync(`dict data not defined, got ${e}`);
             return 0;
         }
     }
@@ -56,7 +56,7 @@ class Dict {
             const jsonString = JSON.stringify(dictData, null, 2);
             fs.writeFile(dictDataPath, jsonString, err => {
                 if (err) {
-                    Global.logger().logError(`Error flushing dict data file, got ${err}`);
+                    Global.logger().logErrorAsync(`Error flushing dict data file, got ${err}`);
                     return false;
                 } else {
                     Global.logger().logInfo('Successfully wrote dict data');
@@ -64,7 +64,7 @@ class Dict {
                 }
             });
         } catch (e) {
-            Global.logger().logError(`Failed to flush dict data to disk, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to flush dict data to disk, got error ${e}`);
         }
         
     }
@@ -98,7 +98,7 @@ class Dict {
                 iterations++;
             }
         } catch (e) {
-            Global.logger().logError(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
+            Global.logger().logErrorAsync(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
         }
 
         return -1;
@@ -125,7 +125,7 @@ class Dict {
                 return { "author": dictData[result].author, "definition": dictData[result].definition };
             }
         } catch (e) {
-            Global.logger().logError(`Failed to find dictionary entry ${entryName}, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to find dictionary entry ${entryName}, got ${e}`);
         }
 
         return null;
@@ -144,7 +144,7 @@ class Dict {
             const slashCommandRequest = KoalaSlashCommandRequest.fromDiscordInteraction(interaction);
 
             if (interaction.options.data.length < 1) {
-                await Global.logger().logError(`Invalid interaction object sent to dict, data length 0!`, interaction, true);
+                await Global.logger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction, true);
                 return;
             }
 
@@ -163,7 +163,7 @@ class Dict {
                 await interaction.editReply(`**DICT:** No definition for ${dictRequested}`);
             }
         } catch (e) {
-            await Global.logger().logError(`Failed to handle DICT command, got error: ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Failed to handle DICT command, got error: ${e}`, interaction, true);
         }
         
     }
@@ -177,7 +177,7 @@ class Dict {
 
         try {
             if (interaction.options.data.length < 1) {
-                await Global.logger().logError(`Invalid interaction object sent to dict, data length 0!`, interaction);
+                await Global.logger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction);
                 return;
             }
 
@@ -208,7 +208,7 @@ class Dict {
                 await interaction.reply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry[1]} by ${existingEntry[0]}`);
             }
         } catch (e) {
-            await Global.logger().logError(`Failed to set definition, got error ${e}`, interaction);
+            await Global.logger().logErrorAsync(`Failed to set definition, got error ${e}`, interaction);
         }
 
         
@@ -245,7 +245,7 @@ class Dict {
             await interaction.editReply(outputString);
 
         } catch (e) {
-            await Global.logger().logError(`Failed to handle index command, got error ${e}`);
+            await Global.logger().logErrorAsync(`Failed to handle index command, got error ${e}`);
         }
 
         

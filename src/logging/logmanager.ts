@@ -1,12 +1,16 @@
-import { LogLevel, Logger } from './logger.js'
+// API
+import { LogLevel } from '../api/KoalaBotSystem.js'
+
+// Internal
+import { LoggerConcrete } from './logger.js'
 import winston from 'winston';
 
 export class LogManager {
-    private channelLoggerMap: Map<string, Logger> = new Map();
-    private guildLoggerMap: Map<string, Logger> = new Map();
+    private channelLoggerMap: Map<string, LoggerConcrete> = new Map();
+    private guildLoggerMap: Map<string, LoggerConcrete> = new Map();
     private channelToGuildMap: Map<string, string> = new Map();
     private guildToChannelMap: Map<string, string> = new Map();
-    #globalLogger: Logger;
+    #globalLogger: LoggerConcrete;
     logBaseDir: string;
     discordLogFileName: string;
     globalLogFileName: string;
@@ -48,7 +52,7 @@ export class LogManager {
         this.discordLogFileName = discordLogFileName;
         this.globalLogFileName = globalLogFileName;
 
-        this.#globalLogger = new Logger(logBasePath, globalLogFileName, globalLogLevel, outputGlobalToConsole);
+        this.#globalLogger = new LoggerConcrete(logBasePath, globalLogFileName, globalLogLevel, outputGlobalToConsole);
 
         // Add a global discord message log file
         this.#globalLogger.getRawLogger().add(new winston.transports.File({ filename: this.getGlobalDiscordLogFullPath(), level: LogLevel.DISCORD_MESSAGE }));
@@ -71,21 +75,21 @@ export class LogManager {
 
             // Check if we have the guild logger, create if not
             if (!this.hasGuildLogger(guildId)) {
-                this.guildLoggerMap.set(guildId, new Logger(this.getGuildLogBasePath(guildId), this.discordLogFileName, LogLevel.DISCORD_MESSAGE, false));
+                this.guildLoggerMap.set(guildId, new LoggerConcrete(this.getGuildLogBasePath(guildId), this.discordLogFileName, LogLevel.DISCORD_MESSAGE, false));
             }
 
-            this.channelLoggerMap.set(channelId, new Logger(this.getChannelLogBasePath(guildId, channelId), this.discordLogFileName, LogLevel.DISCORD_MESSAGE, false));
+            this.channelLoggerMap.set(channelId, new LoggerConcrete(this.getChannelLogBasePath(guildId, channelId), this.discordLogFileName, LogLevel.DISCORD_MESSAGE, false));
             return true;
         } else {
             return false;
         }
     }
 
-    getChannelLogger(channelId: string): Logger {
+    getChannelLogger(channelId: string): LoggerConcrete {
         return this.channelLoggerMap.get(channelId);
     }
 
-    getGuildLogger(guildId: string): Logger {
+    getGuildLogger(guildId: string): LoggerConcrete {
         return this.guildLoggerMap.get(guildId);
     }
 

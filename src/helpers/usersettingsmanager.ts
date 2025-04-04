@@ -51,7 +51,7 @@ export class UserSettingsManager {
         }
         catch (e)
         {
-            Global.logger().logError(`Failed to get user data, got exception: ${e}`);
+            Global.logger().logErrorAsync(`Failed to get user data, got exception: ${e}`);
             return null;
         }
     }
@@ -73,7 +73,7 @@ export class UserSettingsManager {
             return true;
         }
         catch (e) {
-            Global.logger().logError(`Failed to set user data, got exception ${e}`);
+            Global.logger().logErrorAsync(`Failed to set user data, got exception ${e}`);
             return false;
         }
     }
@@ -93,7 +93,7 @@ export class UserSettingsManager {
 
             fs.writeFile(this.#settingsJsonFile, jsonString, err => {
                 if (err) {
-                    Global.logger().logError(`Error flushing user data file to ${this.#settingsJsonFile}, got ${err}`);
+                    Global.logger().logErrorAsync(`Error flushing user data file to ${this.#settingsJsonFile}, got ${err}`);
                     return false;
                 } else {
                     Global.logger().logInfo(`Successfully wrote user data to ${this.#settingsJsonFile}`);
@@ -101,7 +101,7 @@ export class UserSettingsManager {
                 }
             });
         } catch (e) {
-            Global.logger().logError(`Failed to flush user data to disk, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to flush user data to disk, got error ${e}`);
             return false;
         }
     }
@@ -117,7 +117,7 @@ export class UserSettingsManager {
 
             return true;
         } catch (e) {
-            Global.logger().logError(`Failed to reload user data from ${this.#settingsJsonFile}, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to reload user data from ${this.#settingsJsonFile}, got ${e}`);
             return false;
         }
     }

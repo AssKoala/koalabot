@@ -39,7 +39,7 @@ class DiceRollCommand extends DiscordBotCommand {
 
             await interaction.editReply(outputStr);
         } catch (e) {
-            await this.runtimeData().logger().logError(`Top level exception during dice roll, got error ${e}`, interaction, true);
+            await this.runtimeData().logger().logErrorAsync(`Top level exception during dice roll, got error ${e}`, interaction, true);
         }
 
         

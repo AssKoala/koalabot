@@ -37,7 +37,7 @@ async function setUserLocation(interaction)
             }
         }
     } catch (e) {
-        Global.logger().logError(`Failed to set user location, got ${e}`);
+        Global.logger().logErrorAsync(`Failed to set user location, got ${e}`);
     }
     
 }
@@ -53,7 +53,7 @@ async function setPreferredUnits(interaction)
         if (interaction.options.data[0].options.length < 1)
         {
             const str = 'Interaction did not contain unit data'
-            Global.logger().logError(str);
+            Global.logger().logErrorAsync(str);
             await interaction.editReply(str);
         } else {
             // Assume the position element is the one we want
@@ -72,7 +72,7 @@ async function setPreferredUnits(interaction)
             }
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to set preferred units, got error ${e}`, interaction);
+        await Global.logger().logErrorAsync(`Failed to set preferred units, got error ${e}`, interaction);
     }
 }
 
@@ -94,7 +94,7 @@ async function getUserSettings(interaction)
             await interaction.editReply(`LOL you don't have any options saved, loser.`);
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to get user settings, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to get user settings, got ${e}`, interaction, true);
     }
 }
 
@@ -114,7 +114,7 @@ async function setUserSettings(interaction)
                 break;
         }
     } catch (e) {
-        await Global.logger().logError(e, interaction);
+        await Global.logger().logErrorAsync(e, interaction);
     }
 }
 
@@ -127,7 +127,7 @@ class SettingsCommand extends DiscordBotCommand {
 
             if (interaction.options.data.length < 1) {
                 const str = `Interaction data missing, got length: ${interaction.options.data.length}`;
-                Global.logger().logError(str);
+                Global.logger().logErrorAsync(str);
                 await interaction.editReply(str);
             }
 
@@ -139,11 +139,11 @@ class SettingsCommand extends DiscordBotCommand {
                     await setUserSettings(interaction);
                     break;
                 default:
-                    Global.logger().logError(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
+                    Global.logger().logErrorAsync(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
                     break;
             }
         } catch (e) {
-            await Global.logger().logError(`Failed to handle settings command, got error: ${e}`, interaction);
+            await Global.logger().logErrorAsync(`Failed to handle settings command, got error: ${e}`, interaction);
         }
     }
 

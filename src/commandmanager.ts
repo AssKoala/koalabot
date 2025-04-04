@@ -25,11 +25,11 @@ export abstract class CommandManager {
                     Global.logger().logInfo(`Successfully Loaded ${modulePath}, registering command`);
                 }
                 catch (e) {
-                    Global.logger().logError(`Failed to load module ${modulePath}, got error ${e}`);
+                    Global.logger().logErrorAsync(`Failed to load module ${modulePath}, got error ${e}`);
                 }
             }
         } catch (e) {
-            Global.logger().logError(`Failed to import all commands, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to import all commands, got error ${e}`);
         }
     }
 
@@ -37,13 +37,13 @@ export abstract class CommandManager {
         using perfCounter = Global.getPerformanceCounter("registerCommands(): ");
 
         if (!client) {
-            Global.logger().logError("Trying to register without a valid client");
+            Global.logger().logErrorAsync("Trying to register without a valid client");
         }
     
         try {
             await this.importCommands();    
         } catch (e) {
-            Global.logger().logError("Error registering commands, got: " + e);
+            Global.logger().logErrorAsync("Error registering commands, got: " + e);
         }
     }
 
@@ -114,7 +114,7 @@ export abstract class CommandManager {
                 }
             }
         } catch (e) {
-            Global.logger().logError(`Failed to deploy commands, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to deploy commands, got error ${e}`);
         }
     }
 }

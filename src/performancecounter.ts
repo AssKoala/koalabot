@@ -26,7 +26,7 @@ export class PerformanceCounter implements Disposable {
             this.#description = (desc == null) ? "[UNKNOWN]" : desc;
             this.#start = start;
         } catch (e) {
-            Global.logger().logError(`Failed to start timing, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to start timing, got ${e}`);
         }
     }
 

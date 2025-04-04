@@ -28,7 +28,7 @@ class RedditLinkCommand extends DiscordBotCommand {
                 this.runtimeData().settings().get("REDDIT_READER_SCRIPT_NAME"));
 
             if (!fs.existsSync(script)) {
-                this.runtimeData().logger().logError(`Cannot load reddit link script: ${script}`);
+                this.runtimeData().logger().logErrorAsync(`Cannot load reddit link script: ${script}`);
                 return new RedditLinks([], `Cannot load reddit link script: ${script}`);
             }
     
@@ -86,10 +86,10 @@ class RedditLinkCommand extends DiscordBotCommand {
                 const index = Math.floor(Math.random() * redditLinks.links.length);
                 await interaction.editReply(`${redditLinks.links[index]}`);
             } else {
-                await this.runtimeData().logger().logError(`${redditLinks.error}`, interaction, true);
+                await this.runtimeData().logger().logErrorAsync(`${redditLinks.error}`, interaction, true);
             }
         } catch (e) {
-            this.runtimeData().logger().logError(`Failed to get links, got exception ${e}`, interaction, true);
+            this.runtimeData().logger().logErrorAsync(`Failed to get links, got exception ${e}`, interaction, true);
         }
     }
 
@@ -144,7 +144,7 @@ class RedditLinkCommand extends DiscordBotCommand {
                 await interaction.editReply(`This command is confined to channel(s): ${this.whitelist}`);
             }
         } catch (e) {
-            await this.runtimeData().logger().logError(`Failed to get links, got exception ${e}`, interaction, true);
+            await this.runtimeData().logger().logErrorAsync(`Failed to get links, got exception ${e}`, interaction, true);
         }
     }
 

@@ -1,17 +1,9 @@
 import winston from 'winston';
 import { Message } from 'discord.js';
+import { LogLevel, Logger } from '../api/KoalaBotSystem.js'
 
-export enum LogLevel {
-    DISCORD_MESSAGE = 'discord_message',
-    FATAL = 'fatal',
-    ERROR = 'error',
-    WARNING = 'warning',
-    INFO = 'info',
-    DEBUG = 'debug',
-    TRACE = 'trace',
-}
 
-export class Logger {
+export class LoggerConcrete implements Logger {
     static getStandardDiscordMessageFormat(message: Message)
     {
         return `${message.author.username}<@${message.author.id}>: ${message.content}`;
@@ -123,7 +115,15 @@ export class Logger {
         }
     }
 
-    async logError(message: string, discordReply = null, editReply = false)
+    logError(message: string) {
+        try {
+            this.#logger.error(message);
+        } catch (e) {
+            console.log(`[PANIC] Failed to log error ${message}!!`);
+        }
+    }
+
+    async logErrorAsync(message: string, discordReply = null, editReply = false)
     {
         try {
             this.#logger.error(message);

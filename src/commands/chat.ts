@@ -5,6 +5,7 @@
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 
 import { SlashCommandOptionsOnlyBuilder, SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
+import { GrokHelper } from '../helpers/grokhelper.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { AnthropicHelper } from '../helpers/anthropichelper.js';
 import { OllamaHelper } from '../helpers/ollamahelper.js';
@@ -76,7 +77,8 @@ class MentionMessageResponse extends ChatResponse {
 enum AiApi {
     OpenAI,
     Anthropic,
-    Ollama
+    Ollama,
+    Grok
 }
 
 class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListener {
@@ -92,7 +94,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     
                 const systemPrompt = `You are named ${requestData.botName}<@${requestData.botId}> in a chat room where users talk to each other in a username: text format. ${requestData.prompt}}`;
 
-                if (aiApi == AiApi.OpenAI || aiApi == AiApi.Ollama) {
+                if (aiApi == AiApi.OpenAI || aiApi == AiApi.Ollama || aiApi == AiApi.Grok) {
                     messageData.push({
                         "role": "system",
                         "content": systemPrompt
@@ -103,7 +105,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     
                 // start with the header and footer accounted for
                 let tokens = ChatCommand.getTokens(userQuestion.content);
-                if (aiApi == AiApi.OpenAI) tokens += ChatCommand.getTokens(messageData[0].content);
+                if (aiApi == AiApi.OpenAI || aiApi == AiApi.Grok) tokens += ChatCommand.getTokens(messageData[0].content);
     
                 let messages;
 
@@ -154,8 +156,17 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 
                 switch (aiApi) {
                     case AiApi.OpenAI:
+                    case AiApi.Grok:
                     {
-                        const completion = await OpenAIHelper.getInterface().chat.completions.create({
+                        let helper;
+
+                        if (aiApi == AiApi.Grok) {
+                            helper = GrokHelper.getInterface();
+                        } else {
+                            helper = OpenAIHelper.getInterface();
+                        }
+
+                        const completion = await helper.chat.completions.create({
                             model: requestData.ai_model,
                             messages: messageData
                         });
@@ -216,7 +227,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 await requestData.reply(this.runtimeData(), `${requestData.responsePrepend} ${responseText}`);
             } catch (e) {
                 const errorMsg = `Exception getting chat reply to ${requestData.question}, got error ${e}`;
-                this.runtimeData().logger().logError(errorMsg);
+                this.runtimeData().logger().logErrorAsync(errorMsg);
                 await requestData.reply(this.runtimeData(), errorMsg);
             }
         }
@@ -254,21 +265,27 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 aiApi = AiApi.Anthropic;
 
                 if (!this.runtimeData().settings().has("ANTHROPIC_API_KEY")) {
-                    await this.runtimeData().logger().logError(`Cannot use Claude without ANTHROPIC_API_KEY`, interaction, true);
+                    await this.runtimeData().logger().logErrorAsync(`Cannot use Claude without ANTHROPIC_API_KEY`, interaction, true);
                 }
             } else if (requestData.ai_model.includes('gpt') || requestData.ai_model.includes('o1')) {
                 aiApi = AiApi.OpenAI;
 
                 if (!this.runtimeData().settings().has("OPENAI_API_KEY")) {  // Same for ChatGPT
-                    await this.runtimeData().logger().logError(`Cannot use ChatGPT without OPENAI_API_KEY`, interaction, true);
+                    await this.runtimeData().logger().logErrorAsync(`Cannot use ChatGPT without OPENAI_API_KEY`, interaction, true);
                 }
             } else if (requestData.ai_model.includes('llama')) {
                 aiApi = AiApi.Ollama;
+            } else if (requestData.ai_model.includes('grok')) {
+                aiApi = AiApi.Grok;
+
+                if (!this.runtimeData().settings().has("GROK_API_KEY")) {  // Same for Grok
+                    await this.runtimeData().logger().logErrorAsync(`Cannot use ChatGPT without GROK_API_KEY`, interaction, true);
+                }
             }
 
             await this.handleInternal(requestData, aiApi);
         } catch (e) {
-            await this.runtimeData().logger().logError(`ChatCommand::handle() exception getting chat reply, got error ${e}`, interaction, true);
+            await this.runtimeData().logger().logErrorAsync(`ChatCommand::handle() exception getting chat reply, got error ${e}`, interaction, true);
         }
     }
 
@@ -296,7 +313,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 await this.handleInternal(requestData, AiApi.OpenAI);
             }
         } catch (e) {
-            this.runtimeData().logger().logError(`Chat::onMessageCreate() error, got ${e}`);
+            this.runtimeData().logger().logErrorAsync(`Chat::onMessageCreate() error, got ${e}`);
         }
     }
 
@@ -332,6 +349,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                                     { name: 'gpt-4-turbo', value: 'gpt-4-turbo' },
                                     { name: 'claude-3.5-sonnet', value: 'claude-3.5-sonnet' },
                                     { name: 'ollama', value: 'ollama' },
+                                    { name: 'grok-2-latest', value: 'grok-2-latest' },
                                 )
                                 .setRequired(false),
                         )

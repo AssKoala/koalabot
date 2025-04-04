@@ -35,6 +35,9 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
 
     // module: openai (chat, vision, query, image)
     settingsManager.register('openai', "OPENAI_API_KEY", "", "OpenAI API key to access data", true);
+
+    // module: grok (chat)
+    settingsManager.register('openai', "GROK_API_KEY", "", "Grok API key to access data", true);
 	
     // module: anthropic (chat)
 	settingsManager.register('anthropic', "ANTHROPIC_API_KEY", "", "Anthropic API key to access Claude", true);
@@ -64,5 +67,16 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('discord', "DISCORD_CLEAR_SLASH_COMMANDS", "", "Clear slash commands on startup, recommend true for production use.", true);
     settingsManager.register('discord', "DISCORD_DEPLOY_GUILD_SLASH_COMMANDS", "", "Deploy slash commands to guilds, recommend true for production use", true);
     settingsManager.register('discord', "DISCORD_DEPLOY_GLOBAL_SLASH_COMMANDS", "false", "Deploy slash commands globally for bot, recommend to always be false", false);
+
+    // module: badwordlistener
+    settingsManager.register('badwordlistener', "LISTENER_BADWORD_TRACKING_SAVE_DIR", '/badword-tracking', "Path to save badword tracking data (appended to data path, e.g. ./data/badword-tracking/badword.json", false);
+    settingsManager.register('badwordlistener', "LISTENER_BADWORDS", "", "Bad word(s) to track (comma separated)", true);
+    settingsManager.register('badwordlistener', "LISTENER_BADWORD_TRACKING_CHANNEL", '', "Comma separated list of discord channel id's to track for bad words", true);
+
+    // module: wordtracker
+    settingsManager.register('wordtracker', "WORD_TRACKER_FILENAME", 'wordtracker.json', "Filename storing words to track (will load from DATA_PATH)", false);
+
+    // module: messageresponder
+    settingsManager.register('messageresponder', "MESSAGE_RESPONDER_DATASET_FILENAME", 'messageresponder_dataset.json', "Filename storing message responder dataset (will load from DATA_PATH)", false);
 }
 

@@ -49,7 +49,7 @@ class SortedArray
                 iterations++;
             }
         } catch (e) {
-            Global.logger().logError(`Failed to getIndexOf(${array},${entry},${compareFunc}), got ${e}`);
+            Global.logger().logErrorAsync(`Failed to getIndexOf(${array},${entry},${compareFunc}), got ${e}`);
         }
 
         return -1;

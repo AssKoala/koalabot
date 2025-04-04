@@ -1,12 +1,12 @@
 import { readFile } from "fs/promises";
-import { Logger } from '../logging/logger.js'
+import { LoggerConcrete } from '../logging/logger.js'
 import { ChatInputCommandInteraction } from 'discord.js'
 import { PerformanceCounter } from "../performancecounter.js";
 
 export class DiscordBotHelpers
 {
-    private logger: Logger;
-    constructor(logger: Logger, enableTiming: boolean) {
+    private logger: LoggerConcrete;
+    constructor(logger: LoggerConcrete, enableTiming: boolean) {
         if (logger == null) {
             throw new Error("DiscordHelperFunctions class requires a valid Logger instance");
         }
@@ -54,7 +54,7 @@ export class DiscordBotHelpers
                 await interaction.editReply(message);
             }
         } catch (e) {
-            this.logger.logError(`Failed to edit reply, got error ${e}`);
+            this.logger.logErrorAsync(`Failed to edit reply, got error ${e}`);
         }
     }
 
@@ -63,7 +63,7 @@ export class DiscordBotHelpers
             const file = await readFile(path, "utf8");
             return JSON.parse(file);
         } catch (e) {
-            this.logger.logError(`Failed to load ${path}, got ${e}`);
+            this.logger.logErrorAsync(`Failed to load ${path}, got ${e}`);
             return null;
         }
     }

@@ -6,19 +6,19 @@
   "author": "AssKoala",
   "type": "module",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.29.2",
-    "@types/node": "^20.14.1",
-    "discord.js": "^14.12.1",
-    "dotenv": "^16.4.5",
-    "got": "^14.2.1",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@types/node": "^22.13.13",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "got": "^14.4.6",
     "node-downloader-helper": "^2.1.9",
     "node-fetch": "^3.3.2",
-    "ollama": "^0.5.9",
-    "openai": "^4.37.1",
+    "ollama": "^0.5.14",
+    "openai": "^4.89.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "validator": "^13.11.0",
-    "winston": "^3.13.0"
+    "typescript": "^5.8.2",
+    "validator": "^13.15.0",
+    "winston": "^3.17.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -28,6 +28,6 @@
   "keywords": [],
   "license": "ISC",
   "devDependencies": {
-    "eslint": "^9.1.0"
+    "eslint": "^9.23.0"
   }
 }

@@ -13,7 +13,7 @@ class OpenAIHelper {
             OpenAIHelper.#openai = openai;
         }
         catch (e) {
-            Global.logger().logError(`Failed to initialize OpenAI Object, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to initialize OpenAI Object, got ${e}`);
         }
     }
 

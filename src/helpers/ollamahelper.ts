@@ -11,7 +11,7 @@ class OllamaHelper {
             OllamaHelper.ollama = ollama;
         }
         catch (e) {
-            Global.logger().logError(`Failed to initialize Anthropic Object, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to initialize Anthropic Object, got ${e}`);
         }
     }
 

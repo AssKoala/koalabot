@@ -61,7 +61,7 @@ export abstract class DiscordBotCommand extends BasicCommand {
 export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldDeferReply: boolean = true): boolean {
     try {
         if (Global.bot().client().commands.has(botCommand.name())) {
-            Global.logger().logError(`Cannot register ${botCommand.name()}, name is already registered!`);
+            Global.logger().logErrorAsync(`Cannot register ${botCommand.name()}, name is already registered!`);
             return false;
         } else {
             Global.logger().logDebug(`Registering ${botCommand.name()}, name is available.`);
@@ -87,7 +87,7 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
             return true;
         }
     } catch (e) {
-        Global.logger().logError(`Failed to registerDiscordBotCommand(${botCommand}, ${shouldDeferReply}), got error: ${e}`);
+        Global.logger().logErrorAsync(`Failed to registerDiscordBotCommand(${botCommand}, ${shouldDeferReply}), got error: ${e}`);
     }
 
     return false;

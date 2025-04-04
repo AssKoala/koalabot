@@ -24,11 +24,11 @@ export abstract class ListenerManager {
                     Global.logger().logInfo(`Successfully Loaded ${modulePath}.`);
                 }
                 catch (e) {
-                    Global.logger().logError(`Failed to load module ${modulePath}, got error ${e}`);
+                    Global.logger().logErrorAsync(`Failed to load module ${modulePath}, got error ${e}`);
                 }
             };
         } catch (e) {
-            Global.logger().logError(`Failed to import all listeners, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to import all listeners, got error ${e}`);
         }
     }
 
@@ -70,7 +70,7 @@ export abstract class ListenerManager {
 			const created = logManager.createLogger(message.guildId, message.channelId);
 
 			if (!created) {
-				Global.logger().logError(`Failed to create logger for channel ${message.channelId}`);
+				Global.logger().logErrorAsync(`Failed to create logger for channel ${message.channelId}`);
 			}
 		}
 
@@ -80,7 +80,12 @@ export abstract class ListenerManager {
         ListenerManager.messageCreateHandlers.forEach(handler => {
 			const runtimeData = new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings());
 
-			handler.onMessageCreate(runtimeData, message);
+			try {
+				handler.onMessageCreate(runtimeData, message);
+			} catch (e) {
+				Global.logger().logErrorAsync(`Error in onMessageCreate listener ${handler}, got ${e}`);
+			}
+			
 		});
     }
 
@@ -90,7 +95,11 @@ export abstract class ListenerManager {
 		const channelLogger = Global.logManager().getChannelLogger(reaction.message.channelId);
 
         ListenerManager.messageReactionAddHandlers.forEach(handler => {
-			handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings()), reaction, user);
+			try {
+				handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings()), reaction, user);
+			} catch (e) {
+				Global.logger().logErrorAsync(`Error with onMessageReactionAdd listender for ${handler}, got ${e}`);
+			}
 		});
     }
 }

@@ -16,7 +16,7 @@ class SlimelineListener implements DiscordMessageCreateListener {
                 message.reply(`Hey <@${process.env["GIGA_USER_ID"]}>, ${message.author.username} wants you!`);
             }
         } catch (e) {
-            runtimeData.logger().logError(`Failed to reply to lister, got ${e}`);
+            runtimeData.logger().logErrorAsync(`Failed to reply to lister, got ${e}`);
         }
         
     }

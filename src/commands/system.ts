@@ -3,16 +3,17 @@
 */
 
 import { Global } from '../global.js';
-import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
+import { SlashCommandBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import { Stenographer } from '../helpers/discordstenographer.js'
 import { getAffirmationCount } from './affirmation.js'
 import { Dict } from './dict.js'
 import { VersionInformation } from '../version.js';
 import fs from 'fs'
 import { EOL } from 'node:os'
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
 import crypto from 'crypto'
-import { rm } from 'node:fs/promises'
+import fsPromise from 'node:fs/promises'
+import { GetBadWordSaveFileName, GetBadWordSaveFilePath, GetBadWordSaveFolder } from '../listeners/badwordlistener.js';
 
 class Administration {
     static isSuper(memberId: string): boolean {
@@ -52,7 +53,7 @@ async function showMemoryStats(interaction)
 
         await Global.editAndSplitReply(interaction, outputString);
     } catch (e) {
-        await Global.logger().logError(`Exception getting memory stats, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Exception getting memory stats, got ${e}`, interaction, true);
     }
 }
 
@@ -92,7 +93,7 @@ async function showCpuStats(interaction)
 
         await Global.editAndSplitReply(interaction, outputString);
     } catch (e) {
-        await Global.logger().logError(`Exception getting cpu stats, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Exception getting cpu stats, got ${e}`, interaction, true);
     }
 }
 
@@ -130,7 +131,7 @@ async function showVersionInformation(interaction) {
     try {
         interaction.editReply(`Version: ${VersionInformation.versionNumber}`);
     } catch (e) {
-        Global.logger().logError(`Failed to get version info, got ${e}`, interaction, true);
+        Global.logger().logErrorAsync(`Failed to get version info, got ${e}`, interaction, true);
     }
 }
 
@@ -150,7 +151,7 @@ class SystemCommand extends DiscordBotCommand {
                 await showVersionInformation(interaction);
                 break;
             default:
-                Global.logger().logError(`Unknown core subcommand(${coreCommandName}.)`, interaction, true);
+                Global.logger().logErrorAsync(`Unknown core subcommand(${coreCommandName}.)`, interaction, true);
         }
     }
 
@@ -167,7 +168,7 @@ class SystemCommand extends DiscordBotCommand {
                     break;
             }
         } catch (e) {   
-            await Global.logger().logError(`Top level exception during system command, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Top level exception during system command, got error ${e}`, interaction, true);
         }
     }
 
@@ -192,7 +193,7 @@ class SystemCommand extends DiscordBotCommand {
                         pasteDirectly = parameter.value;
                         break;
                     default:
-                        Global.logger().logError(`Unexpected option found in system: ${parameter.name}`);
+                        Global.logger().logErrorAsync(`Unexpected option found in system: ${parameter.name}`);
                         break;
                 }
             }
@@ -230,17 +231,17 @@ class SystemCommand extends DiscordBotCommand {
 
                     // Delete the temporary file
                     try {
-                        await rm(filePath);
+                        await fsPromise.rm(filePath);
                     } catch (e) {
-                        Global.logger().logError(`Failed to delete temporary logfile, might need manual cleanup, got ${e}`);
+                        Global.logger().logErrorAsync(`Failed to delete temporary logfile, might need manual cleanup, got ${e}`);
                     }
                 }
             }
             catch (e) {
-                Global.logger().logError(`Failed to read log file, got ${e}`, interaction, true);
+                Global.logger().logErrorAsync(`Failed to read log file, got ${e}`, interaction, true);
             }
         } catch (e) {
-            await Global.logger().logError(`Top level error tailing the log, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Top level error tailing the log, got ${e}`, interaction, true);
         }
     }
 
@@ -335,7 +336,53 @@ class SystemCommand extends DiscordBotCommand {
             
             await interaction.editReply(messageResponse);
         } catch (e) {
-            this.runtimeData().logger().logError(`${e}`, interaction, false);
+            this.runtimeData().logger().logErrorAsync(`${e}`, interaction, false);
+        }
+    }
+
+    private async handleBadWordSubcommand(interaction) {
+        try {
+            const subCommand = interaction.options.data[0].options[0];
+            let messageResponse = "";
+
+            switch (subCommand.name) {
+                case 'list':
+                {
+                    const saveFolder = GetBadWordSaveFolder();
+                    let list = ''
+
+                    fs.readdirSync(saveFolder).forEach(file => {
+                        list += `${file}, `;
+                    });
+
+                    await interaction.editReply(list.slice(0, -2));
+                }
+                break;
+
+                case 'load':
+                    const filePath = GetBadWordSaveFilePath(subCommand.options[1].value, subCommand.options[0].value);
+                    try 
+                    {
+                        const file = new AttachmentBuilder(filePath);
+
+                        const embed = {
+                            title: `Badword save file`,
+                            article: {
+                                url: `attachment://${filePath}`,
+                            }
+                        };
+
+                        await interaction.editReply({ embeds: [embed], files: [file] });
+                    } catch (e) {
+                        await this.runtimeData().logger().logErrorAsync(`Failed to load file ${filePath}, got ${e}`, interaction, true);
+                    }
+                break;
+
+                default:
+                    await interaction.editReply(messageResponse);
+            }
+        } catch (e) {
+            await Global.logger().logErrorAsync(`Top level error handling badword command, got ${e}`, interaction, true);
         }
     }
 
@@ -351,19 +398,23 @@ class SystemCommand extends DiscordBotCommand {
                     await this.handleCoreSubcommand(interaction);
                     break;
                 case 'log':
-                    await interaction.deferReply({ephemeral: true});
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                     await this.handleLogSubcommand(interaction);
                     break;
                 case 'environment':
-                    await interaction.deferReply({ephemeral: true});
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                     await this.handleEnvironmentSubcommand(interaction);
                     break;
+                case 'badword':
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral});
+                    await this.handleBadWordSubcommand(interaction);
+                    break;
                 default:
-                    Global.logger().logError(`Unimplemented system command option: ${interaction.options._group}`, interaction, true);
+                    Global.logger().logErrorAsync(`Unimplemented system command option: ${interaction.options._group}`, interaction, true);
                     break;
             }
         } catch (e) {   
-            await Global.logger().logError(`Top level exception during system command, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Top level exception during system command, got error ${e}`, interaction, true);
         }
     }
 
@@ -454,6 +505,35 @@ class SystemCommand extends DiscordBotCommand {
                                 option
                                     .setName('value')
                                     .setDescription('New environment variable value')
+                                    .setRequired(true)
+                            )
+                    )
+            )
+            // Badword commands
+            .addSubcommandGroup((group) =>
+                group
+                    .setName('badword')
+                    .setDescription('Badword log management')
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('list')
+                            .setDescription('List badword logs')
+
+                    )
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('load')
+                            .setDescription('Load badword log (Epheremal)')
+                            .addStringOption((option) =>
+                                option
+                                    .setName('channelid')
+                                    .setDescription('Discord ChannelId to load (if available)')
+                                    .setRequired(true)
+                            )
+                            .addStringOption((option) =>
+                                option
+                                    .setName('badword')
+                                    .setDescription('Badword to load')
                                     .setRequired(true)
                             )
                     )

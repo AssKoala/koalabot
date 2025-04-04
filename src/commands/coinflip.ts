@@ -49,7 +49,7 @@ class CoinFlipCommand extends DiscordBotCommand {
 
             await interaction.editReply(outputStr);
         } catch (e) {   
-            await this.runtimeData().logger().logError(`Top level exception during coin flip, got error ${e}`, interaction, true);
+            await this.runtimeData().logger().logErrorAsync(`Top level exception during coin flip, got error ${e}`, interaction, true);
         }
     } // handleCoinflipCommand
 

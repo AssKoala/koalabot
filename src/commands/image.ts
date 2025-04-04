@@ -112,7 +112,7 @@ class OpenAI {
             Global.logger().logInfo(`image::getImageUrl(): [Asked] ${imageGenData.getGeneratedPrompt()} [Used] ${response.data[0].revised_prompt} [Got] ${image_url}`);
         } catch (e) {
             error = e;
-            await Global.logger().logError(`Exception occurred during image gen, asked: ${imageGenData.getGeneratedPrompt()}, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Exception occurred during image gen, asked: ${imageGenData.getGeneratedPrompt()}, got ${e}`, interaction, true);
         }
 
         return {
@@ -125,7 +125,7 @@ class OpenAI {
         await mkdir(download_dir, { recursive: true });
 
         const dl = new DownloaderHelper(url, download_dir);
-        dl.on('error', (err) => Global.logger().logError(`Failed to download image from ${url} to ${download_dir}, got error ${err}`));
+        dl.on('error', (err) => Global.logger().logErrorAsync(`Failed to download image from ${url} to ${download_dir}, got error ${err}`));
         await dl.start();
 
         const downloaded_fullpath = dl.getDownloadPath();
@@ -139,13 +139,13 @@ class OpenAI {
             const result = await OpenAI.getImageUrl(imageGenData, interaction);
 
             if (result.error != null) {
-                Global.logger().logError(`Error getting image URL, got error ${result.error}`, interaction, true);
+                Global.logger().logErrorAsync(`Error getting image URL, got error ${result.error}`, interaction, true);
             } else {
                 const downloadedFileinfo = await OpenAI.downloadUrlToFile(result.image_url);
                 return downloadedFileinfo;
             }
         } catch (e) {
-            await Global.logger().logError(`Unexpected error generating OpenAI image, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Unexpected error generating OpenAI image, got ${e}`, interaction, true);
         }
 
         return null;
@@ -177,13 +177,13 @@ class StableDiffusion {
                 fs.writeFileSync(fullpath, decoded);
                 Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
             } catch (e) {
-                await Global.logger().logError(`Failed to write temp-image file, got ${e}`, interaction, true);
+                await Global.logger().logErrorAsync(`Failed to write temp-image file, got ${e}`, interaction, true);
             }
             
 
             return new ImageDownloadedFileInfo(fullpath, filename);
         } catch (e) {
-            await Global.logger().logError(`Got error calling stable diffusion api: ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Got error calling stable diffusion api: ${e}`, interaction, true);
         }
 
         return null;
@@ -226,15 +226,15 @@ class GetimgAi {
                     fs.writeFileSync(fullpath, decoded);
                     Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
                 } catch (e) {
-                    await Global.logger().logError(`Failed to write temp-image file, got ${e}`, interaction, true);
+                    await Global.logger().logErrorAsync(`Failed to write temp-image file, got ${e}`, interaction, true);
                 }
                 
                 return new ImageDownloadedFileInfo(fullpath, filename, responseData.seed);
             } else {
-                await Global.logger().logError(`Failed to download image from Getimg.Ai, got error code ${fetchResult.status}, see here: https://docs.getimg.ai/reference/errors`, interaction, true);
+                await Global.logger().logErrorAsync(`Failed to download image from Getimg.Ai, got error code ${fetchResult.status}, see here: https://docs.getimg.ai/reference/errors`, interaction, true);
             }
         } catch (e) {
-            await Global.logger().logError(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
         }
         return null;
     }
@@ -263,7 +263,7 @@ class ImageCommand extends DiscordBotCommand {
                     downloadedFileInfo = await GetimgAi.download(imageGenData, interaction);
                     break;
                 default:
-                    await Global.logger().logError(`Unexpected model ${imageGenData.model}`, interaction, true);
+                    await Global.logger().logErrorAsync(`Unexpected model ${imageGenData.model}`, interaction, true);
                     return;
             }
     
@@ -284,18 +284,18 @@ class ImageCommand extends DiscordBotCommand {
     
                     await interaction.editReply({ embeds: [embed], files: [file] });
                 } catch (e) {
-                    await Global.logger().logError(`Failed to generate/post images, got ${e}`, interaction, true);
+                    await Global.logger().logErrorAsync(`Failed to generate/post images, got ${e}`, interaction, true);
                 }
     
                 try {
                     // Delete the file
                     await rm(downloadedFileInfo.fullpath);
                 } catch (e) {
-                    Global.logger().logError(`Failed to delete image file, might need manual cleanup, got ${e}`);
+                    Global.logger().logErrorAsync(`Failed to delete image file, might need manual cleanup, got ${e}`);
                 }
             } 
         } catch (e) {
-            await Global.logger().logError(`Top level exception during image, got error ${e}`, interaction, false);
+            await Global.logger().logErrorAsync(`Top level exception during image, got error ${e}`, interaction, false);
         }
     } // handleImageCommand
 
@@ -472,7 +472,7 @@ class ImageCommand extends DiscordBotCommand {
                     imageCommand = this.appendGetimgAiFluxSubCommand(imageCommand);
                     break;
                 default:
-                    this.runtimeData().logger().logError(`Unexpected option in IMAGE_ENABLED_AI_LIST: ${subcommand}`);
+                    this.runtimeData().logger().logErrorAsync(`Unexpected option in IMAGE_ENABLED_AI_LIST: ${subcommand}`);
                     break;
             }
         });

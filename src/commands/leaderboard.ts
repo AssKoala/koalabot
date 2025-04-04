@@ -3,7 +3,7 @@
 */
 
 import { Global } from '../global.js';
-import { Logger } from '../logging/logger.js';
+import { LoggerConcrete } from '../logging/logger.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js'
 import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
@@ -42,7 +42,7 @@ class ProfanityLeaderboard {
                 });
             }
         } catch (e) {
-            Global.logger().logError(`Failed to calculate profanity leaders, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to calculate profanity leaders, got ${e}`);
         }
     }
     
@@ -88,7 +88,7 @@ class ProfanityLeaderboard {
 
             this._leaderboardMap.set(discordStenographerMsg.guildId, profanityLeaders);
         } catch (e) {
-            Global.logger().logError(`Failed to add message to profanity leaderboard, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to add message to profanity leaderboard, got ${e}`);
             result = [];
         }
 
@@ -125,7 +125,7 @@ class ProfanityLeaderboard {
 
             return { "leader": leader, "count": count, "total": leaderMessageCount };
         } catch (e) {
-            Global.logger().logError(`Failed to get profanity leader for ${profanity}, got error ${e}`);
+            Global.logger().logErrorAsync(`Failed to get profanity leader for ${profanity}, got error ${e}`);
         }
 
         return { "leader": "error", "count": 0 };
@@ -160,7 +160,7 @@ class ProfanityLeaderboard {
 
             await Global.editAndSplitReply(interaction, outputString);
         } catch (e) {
-            Global.logger().logError(`Exception getting profanity leaderboard, got ${e}`, interaction, true);
+            Global.logger().logErrorAsync(`Exception getting profanity leaderboard, got ${e}`, interaction, true);
         }
     }
 
@@ -171,7 +171,7 @@ class ProfanityLeaderboard {
         try {
             if (message.author.bot) return;
 
-            const stdMsg = Logger.getStandardDiscordMessageFormat(message);
+            const stdMsg = LoggerConcrete.getStandardDiscordMessageFormat(message);
             let discordStenographerMsg = DiscordStenographerMessage.parseFromStandardMessageFormat(message.guildId, message.channelId, stdMsg);
 
             const result = this.addMessageToProfanityLeaderboard(discordStenographerMsg);
@@ -210,7 +210,7 @@ class ProfanityLeaderboard {
                 message.channel.send(`Congrats ${result[0].leader}, you've surpassed ${convertToOutput(dethroned)} at saying ${convertToOutput(profanitiesInLead)}!`);
             }
         } catch (e) {
-            Global.logger().logError(`Failed to update profanity leaderboard, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to update profanity leaderboard, got ${e}`);
         }
 
         
@@ -235,7 +235,7 @@ class ProfanityLeaderboard {
             }
             
         } catch (e) {
-            await Global.logger().logError(`Failed to handle leaderboard display command, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Failed to handle leaderboard display command, got ${e}`, interaction, true);
         }
     }
 
@@ -256,7 +256,7 @@ class ProfanityLeaderboard {
                         perCapita = opt.value;
                         break;
                     default:
-                        Global.logger().logError(`Unexpected value when displaying custom leaderboard: ${opt.name}`);
+                        Global.logger().logErrorAsync(`Unexpected value when displaying custom leaderboard: ${opt.name}`);
                         break;
                 }
             });
@@ -329,10 +329,10 @@ class ProfanityLeaderboard {
 
                 await Global.editAndSplitReply(interaction, outputString);
             } catch (e) {
-                Global.logger().logError(`Exception getting profanity leaderboard, got ${e}`, interaction, true);
+                Global.logger().logErrorAsync(`Exception getting profanity leaderboard, got ${e}`, interaction, true);
             }
         } catch (e) {
-            await Global.logger().logError(`Failed to handle custom leaderboard, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Failed to handle custom leaderboard, got ${e}`, interaction, true);
         }
     }
 }
@@ -363,7 +363,7 @@ class LeaderboardCommand extends DiscordBotCommand {
                 }
             }
         } catch (e) {
-            await Global.logger().logError(`Top level exception during vision, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Top level exception during vision, got error ${e}`, interaction, true);
         }        
     }
 

@@ -58,7 +58,7 @@ function getTemperatureString(temperatureKelvin)
         let temperatureCelsius = temperatureKelvin - 273.15;
         return celsiusToFahrenheit(temperatureCelsius) + 'F/' + temperatureCelsius.toFixed(0) + 'C';
     } catch (e) {
-        Global.logger().logError(`Failed to convert temperature ${temperatureKelvin}, got ${e}`);
+        Global.logger().logErrorAsync(`Failed to convert temperature ${temperatureKelvin}, got ${e}`);
     }
 }
 
@@ -75,7 +75,7 @@ function degreesToCompass(degrees)
 
         return directions[val % 16];
     } catch (e) {
-        Global.logger().logError(`Failed to convert ${degrees}, got ${e}`);
+        Global.logger().logErrorAsync(`Failed to convert ${degrees}, got ${e}`);
         return -1;
     }
 }
@@ -93,7 +93,7 @@ function getUserPreferredUnits(interaction)
             return userData.weatherSettings.preferredUnits;
         }
     } catch (e) {
-        Global.logger().logError(`Failed to get preferred units, got ${e}`);
+        Global.logger().logErrorAsync(`Failed to get preferred units, got ${e}`);
     }
 
     return "rankine";
@@ -124,7 +124,7 @@ async function getWeatherLocation(interaction)
                 try {
                     location = userData.weatherSettings.location;
                 } catch (e) {
-                    await Global.logger().logError(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction, true);
+                    await Global.logger().logErrorAsync(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction, true);
                     return null;
                 }
             } else {
@@ -133,7 +133,7 @@ async function getWeatherLocation(interaction)
             }
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to get weather location, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to get weather location, got ${e}`, interaction, true);
     }
 
     return location;
@@ -171,11 +171,11 @@ async function getWeatherLocationGoogleMapsAPI(interaction)
                 return null;
             }
         } catch (e) {
-            await Global.logger().logError(`Failed to get geocoded data, got error: ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Failed to get geocoded data, got error: ${e}`, interaction, true);
             return null;
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to get weather location using maps API, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to get weather location using maps API, got ${e}`, interaction, true);
     }
 
 }
@@ -191,7 +191,7 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
 {
     try {
         if (locationData.length != 3) {
-            await Global.logger().logError(`Trying to print API with incorrect location data: ${locationData}`, interaction, true);
+            await Global.logger().logErrorAsync(`Trying to print API with incorrect location data: ${locationData}`, interaction, true);
             return null;
         }
 
@@ -220,12 +220,12 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
                 await interaction.editReply(`${Global.settings().get("BOT_NAME")} breakdown trying to get the weather, check logs`);
             }
 
-            Global.logger().logError(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction, true);
+            Global.logger().logErrorAsync(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction, true);
 
             return null;
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to get weather using one api, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to get weather using one api, got ${e}`, interaction, true);
     }
 }
 
@@ -255,7 +255,7 @@ async function printWeatherUsingOneApiv3(locationData, interaction)
             );
         } 
     } catch (e) {
-        await Global.logger().logError(`Received malformed weather data, got error ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
@@ -278,7 +278,7 @@ async function handleWeatherCommand(interaction) {
             printWeatherUsingOneApiv3(result, interaction);
         }        
     } catch (e) {
-        await Global.logger().logError(`Failed to handle weather command, got error: ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
     }
 
     
@@ -301,7 +301,7 @@ async function printHourlyForecast(locationData, interaction, weatherData) {
 
         await interaction.editReply(hourlyWeatherString);
     } catch (e) {
-        await Global.logger().logError(`Failed to generate hourly weather string, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to generate hourly weather string, got ${e}`, interaction, true);
     }
 }
 
@@ -356,7 +356,7 @@ async function printMinutelyForecast(locationData, interaction, weatherData) {
         await interaction.editReply(`**Minutely forecast for ${locationData[0]}** :: ` + messageStr);
     }
     catch (e) {
-        await Global.logger().logError(`Failed to get minutely weather, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to get minutely weather, got ${e}`, interaction, true);
     }
 }
 
@@ -439,7 +439,7 @@ async function printDailyForecast(locationData, interaction, weatherData) {
 
         await interaction.editReply(dailyWeatherString);
     } catch (e) {
-        await Global.logger().logError(`Failed to generate daily weather data, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to generate daily weather data, got ${e}`, interaction, true);
     }
 }
 
@@ -462,7 +462,7 @@ async function printAlertForecast(locationData, interaction, weatherData) {
             await interaction.editReply(`No active alerts for ${locationData[0]}`);
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to process the alert forecast, got ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to process the alert forecast, got ${e}`, interaction, true);
     }
 }
 
@@ -480,7 +480,7 @@ function getForecastMapData(forecastType)
             }
         }
     } catch (e) {
-        Global.logger().logError(`Failed to get forecast map data, got ${e}`);
+        Global.logger().logErrorAsync(`Failed to get forecast map data, got ${e}`);
     }
 
     return null;
@@ -503,7 +503,7 @@ async function printForecastUsingOneApiv3(locationData, interaction, forecastTyp
             Global.logger().logInfo(`Failed to get forecast data`);
         }
     } catch (e) {
-        await Global.logger().logError(`Received malformed weather data, got error ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
@@ -534,7 +534,7 @@ async function getForecastOptions(interaction)
 
         return [forecastType, location];
     } catch (e) {
-        await Global.logger().logError(`Error getting forecast options, got: ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Error getting forecast options, got: ${e}`, interaction, true);
     }
 }
 
@@ -556,7 +556,7 @@ async function handleForecastCommand(interaction)
         if (!forecastOptions) {
             return;
         } else if (getForecastMapData(forecastOptions[0]) == null) {
-            await Global.logger().logError(`Unexpected forecast type received: ${forecastOptions[0]}`);
+            await Global.logger().logErrorAsync(`Unexpected forecast type received: ${forecastOptions[0]}`);
             return;
         }
 
@@ -567,7 +567,7 @@ async function handleForecastCommand(interaction)
             printForecastUsingOneApiv3(result, interaction, forecastOptions[0]);
         }
     } catch (e) {
-        await Global.logger().logError(`Failed to handle weather command, got error: ${e}`, interaction, true);
+        await Global.logger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
     }
 
     

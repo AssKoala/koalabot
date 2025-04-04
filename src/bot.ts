@@ -4,10 +4,11 @@
 
 // Imports
 import { Global } from './global.js';
+import { KoalaBotSystemDiscord } from "./bot/KoalaBotSystemDiscord.js";
 import { 
 	Client, Collection, Events, 
 	GatewayIntentBits, Message, Interaction, PartialMessageReaction, 
-	MessageReaction, TextChannel, User, PartialUser 
+	MessageReaction, TextChannel, User, PartialUser, MessageFlags
 } from 'discord.js';
 
 import fs from 'fs'
@@ -19,11 +20,16 @@ import { CommandManager } from "./commandmanager.js";
 import { ListenerManager } from "./listenermanager.js";
 
 export class Bot {
-	private _client: Client;
+	private _client: Client = null;
 	client() { return this._client; }
 
+	private _koalaBotSystem: KoalaBotSystemDiscord = null;
+	koalaBotSystem(): KoalaBotSystemDiscord {
+		return this._koalaBotSystem;
+	}
+
 	constructor() {
-		this._client = null;
+		// init must be called.
 	}
 
 	async init(discordKey: string) {
@@ -37,6 +43,8 @@ export class Bot {
 			],
 			autoReconnect: true,
 		});
+
+		this._koalaBotSystem = new KoalaBotSystemDiscord();
 
 		// Enable debug features?
 		if (Global.settings().get("DEBUG_ENABLE") == `true`)
@@ -100,7 +108,7 @@ export class Bot {
 			await command.execute(interaction);
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+			await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
 		}
 	}
 
@@ -144,7 +152,7 @@ export class Bot {
 			return { hasRebooted, memberId, channelId };
 		}
 		catch (e) {
-			Global.logger().logError(`Failed to check for reboot, got ${e}`);
+			Global.logger().logErrorAsync(`Failed to check for reboot, got ${e}`);
 		}
 
 		return { hasRebooted, memberId: "", channelId: "" };

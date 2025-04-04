@@ -13,7 +13,7 @@ class AnthropicHelper {
             AnthropicHelper.anthropic = anthropic;
         }
         catch (e) {
-            Global.logger().logError(`Failed to initialize Anthropic Object, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to initialize Anthropic Object, got ${e}`);
         }
     }
 

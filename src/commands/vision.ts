@@ -37,7 +37,7 @@ class VisionCommand extends DiscordBotCommand {
                         model = interaction.options.data[i].value;
                         break;
                     default:
-                        Global.logger().logError(`handleVisionCommand::unknown option ${name}`);
+                        Global.logger().logErrorAsync(`handleVisionCommand::unknown option ${name}`);
                         break;
                 }
             }
@@ -66,7 +66,7 @@ class VisionCommand extends DiscordBotCommand {
 
             await Global.editAndSplitReply(interaction, `Query: \"${query}\" Image: ${url}: ${responseText}`);
         } catch (e) {
-            await Global.logger().logError(`Top level exception during vision, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Top level exception during vision, got error ${e}`, interaction, true);
         }
 
         

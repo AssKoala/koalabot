@@ -1,4 +1,4 @@
-import { Logger } from '../logging/logger.js';
+import { LoggerConcrete } from '../logging/logger.js';
 import { Bot } from '../bot.js';
 import { Global } from '../global.js'
 import { DiscordBotHelpers } from './DiscordBotHelpers.js'
@@ -10,18 +10,18 @@ import { SettingsManager } from '../helpers/settingsmanager.js'
  * Contains instance information for a given command (loggers, references to the owning bot, etc)
  */
 export class DiscordBotRuntimeData {
-    private readonly _logger: Logger;
-    logger(): Logger {
+    private readonly _logger: LoggerConcrete;
+    logger(): LoggerConcrete {
         return this._logger;
     }
 
-    private readonly _channelLogger: Logger;
-    channelLogger(): Logger {
+    private readonly _channelLogger: LoggerConcrete;
+    channelLogger(): LoggerConcrete {
         return this._channelLogger;
     }
 
-    private readonly _guildlogger: Logger;
-    guildLogger(): Logger {
+    private readonly _guildlogger: LoggerConcrete;
+    guildLogger(): LoggerConcrete {
         return this._guildlogger;
     }
 
@@ -44,7 +44,7 @@ export class DiscordBotRuntimeData {
         return this.helpers().getPerformanceCounter(description);
     }
 
-    constructor(bot: Bot, logger: Logger, guildLogger: Logger, channelLogger: Logger, settings: SettingsManager) {
+    constructor(bot: Bot, logger: LoggerConcrete, guildLogger: LoggerConcrete, channelLogger: LoggerConcrete, settings: SettingsManager) {
         this._logger = logger;
         this._channelLogger = channelLogger;
         this._guildlogger = guildLogger;

@@ -40,7 +40,7 @@ export class DiscordStenographerMessage
                 }
             }
         } catch (e) {
-            Global.logger().logError(`Failed to load JSON chat logs, got: ${e}`);
+            Global.logger().logErrorAsync(`Failed to load JSON chat logs, got: ${e}`);
         }
 
         return messages;
@@ -51,7 +51,7 @@ export class DiscordStenographerMessage
         try {
             return DiscordStenographerMessage.parseFromStandardMessageFormat(guildId, channelId, jsonLogObject.message);
         } catch (e) {
-            Global.logger().logError(`Failed to create json log object from ${jsonLogObject}, got error: ${e}`);
+            Global.logger().logErrorAsync(`Failed to create json log object from ${jsonLogObject}, got error: ${e}`);
             return null;
         }
         

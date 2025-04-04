@@ -16,7 +16,7 @@ class AffirmationCommand extends DiscordBotCommand  {
         try {
             return this.affirmationData.length;
         } catch (e) {
-            this.runtimeData().logger().logError(`Failed to retrieve affirmation count, got ${e}`);
+            this.runtimeData().logger().logErrorAsync(`Failed to retrieve affirmation count, got ${e}`);
             return 0;
         }
     }
@@ -28,7 +28,7 @@ class AffirmationCommand extends DiscordBotCommand  {
             const index = Math.floor(Math.random() * this.affirmationData.length);
             await interaction.reply(`${this.affirmationData[index].entry} by **${this.affirmationData[index].author}**`);
         } catch (e) {
-            this.runtimeData().logger().logError(`Failed to get affirmation, got exception ${e}`, interaction);
+            this.runtimeData().logger().logErrorAsync(`Failed to get affirmation, got exception ${e}`, interaction);
         }
     }
 

@@ -34,11 +34,11 @@ class QueryCommand extends DiscordBotCommand {
                     await this.handleChatModelQuery(interaction, question, model);
                 }
             } catch (e) {
-                await Global.logger().logError(`Exception during query for ${question}, got error ${e}`, interaction, true);
+                await Global.logger().logErrorAsync(`Exception during query for ${question}, got error ${e}`, interaction, true);
             }
         } catch (e) {
 
-            await Global.logger().logError(`Top level exception during query command, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Top level exception during query command, got error ${e}`, interaction, true);
         }        
     }
 
@@ -57,7 +57,7 @@ class QueryCommand extends DiscordBotCommand {
             await Global.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
         }
         catch (e) {
-            await Global.logger().logError(`Failed to get chat reply for ${question}, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Failed to get chat reply for ${question}, got error ${e}`, interaction, true);
         }
     }
 
@@ -78,7 +78,7 @@ class QueryCommand extends DiscordBotCommand {
             await Global.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
         } catch (e) {
 
-            await Global.logger().logError(`Failed to get davinci reply for ${question}, got error ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Failed to get davinci reply for ${question}, got error ${e}`, interaction, true);
         }
     }
 
@@ -101,8 +101,9 @@ class QueryCommand extends DiscordBotCommand {
                         { name: 'gpt-4o', value: 'gpt-4o' },
                         { name: 'gpt-4-turbo', value: 'gpt-4-turbo' },
                         { name: 'davinci', value: 'text-davinci-003' },
-                        { name: 'o1-preview', value: 'o1-preview' },
+                        { name: 'o1', value: 'o1' },
                         { name: 'o1-mini', value: 'o1-mini' },
+                        { name: 'o3-mini', value: 'o3-mini' },
                         { name: 'chatgpt-4o-latest', value: 'chatgpt-4o-latest' },
                     )
                     .setRequired(false),

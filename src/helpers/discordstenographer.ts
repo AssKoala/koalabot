@@ -1,4 +1,4 @@
-import { Logger } from '../logging/logger.js';
+import { LoggerConcrete } from '../logging/logger.js';
 import { Global } from '../global.js';
 import fs from 'fs';
 import path from 'path';
@@ -28,7 +28,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
                 this._maxEntriesPerCache = parseInt(max);
             } catch (e) {
                 // This really should never happen, but lets still use a somewhat sane default
-                Global.logger().logError(`Failed to set max entries (will use default of 1000), got ${e}`);
+                Global.logger().logErrorAsync(`Failed to set max entries (will use default of 1000), got ${e}`);
                 this._maxEntriesPerCache = 1000;
             }
         }
@@ -43,7 +43,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
             try {
                 this.loadGlobalDiscordMessages(globalFileName);
             } catch (e) {
-                Global.logger().logError(`Failed to load discord messages from ${globalFileName}, got ${e}`);
+                Global.logger().logErrorAsync(`Failed to load discord messages from ${globalFileName}, got ${e}`);
             }
 
             // Load each channel log
@@ -67,7 +67,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
                     try {
                         this.loadDiscordMessagesForGuild(guildLogFileName, guildId);
                     } catch (e) {
-                        Global.logger().logError(`Failed to load guild log ${guildLogFileName}, got ${e}`);
+                        Global.logger().logErrorAsync(`Failed to load guild log ${guildLogFileName}, got ${e}`);
                     }
 
                     // Get all the channels
@@ -83,12 +83,12 @@ class DiscordStenographer implements DiscordMessageCreateListener
                         try {
                             this.loadDiscordMessagesForChannel(channelLogFileName, guildId, channelId);
                         } catch (e) {
-                            Global.logger().logError(`Failed to load guild log ${channelLogFileName}, got ${e}`);
+                            Global.logger().logErrorAsync(`Failed to load guild log ${channelLogFileName}, got ${e}`);
                         }
                     });
                 });
             } catch (e) {
-                Global.logger().logError(`Failed to all channel logs, got ${e}`);
+                Global.logger().logErrorAsync(`Failed to all channel logs, got ${e}`);
             }
         }       
     }
@@ -193,7 +193,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
         using perfCounter = Global.getPerformanceCounter("loadMessageJson(): ");
 
         const error = function(message){
-            Global.logger().logError(message);
+            Global.logger().logErrorAsync(message);
             return message;
         };
 
@@ -222,7 +222,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
         }
         catch (e)
         {
-            Global.logger().logError(messagesFile);
+            Global.logger().logErrorAsync(messagesFile);
             error(`Failed to parse ${filename}, got error: ${e}`);
             return null;
         }
@@ -282,12 +282,12 @@ class DiscordStenographer implements DiscordMessageCreateListener
     async onMessageCreate(runtimeData, message) {
         try {
             if (!message.author.bot || message.content.length > 0) {
-                const storedString = Logger.getStandardDiscordMessageFormat(message);
+                const storedString = LoggerConcrete.getStandardDiscordMessageFormat(message);
                 
                 this.pushMessage(DiscordStenographerMessage.parseFromStandardMessageFormat(message.guildId, message.channelId, storedString));
             }
         } catch (e) {
-            Global.logger().logError(`Failed to log ${message} to stenographer, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to log ${message} to stenographer, got ${e}`);
         }
     }
 }
@@ -309,7 +309,7 @@ class Stenographer {
         try {
             return Stenographer.stenographer.getMessages(channelId);
         } catch (e) {
-            Global.logger().logError(`Failed to get messages from channel ${channelId}, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to get messages from channel ${channelId}, got ${e}`);
             return [];
         }
     }
@@ -318,7 +318,7 @@ class Stenographer {
         try {
             return Stenographer.stenographer.getAllMessagesFromGuild(guildId);
         } catch (e) {
-            Global.logger().logError(`Failed to get all messages from guild ${guildId}, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to get all messages from guild ${guildId}, got ${e}`);
             return [];
         }
     }
@@ -335,7 +335,7 @@ class Stenographer {
         try {
             Stenographer.stenographer.pushMessage(msg);
         } catch (e) {
-            Global.logger().logError(`Failed to push message, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to push message, got ${e}`);
         }
     }
 
@@ -343,7 +343,7 @@ class Stenographer {
         try {
             return { "count": Stenographer.stenographer.getTotalMessages(), "max": Stenographer.stenographer.getMaxEntries() };
         } catch (e) {
-            Global.logger().logError(`Failed to get in memory message count, got ${e}`);
+            Global.logger().logErrorAsync(`Failed to get in memory message count, got ${e}`);
             return { "count": 0, "max": 0 };
         }
     }
