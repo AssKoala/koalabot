@@ -92,6 +92,7 @@ class BadWordTracker {
 
     public addEvent(event: BadWordEvent) {
         this.badWordEvents.push(event);
+        this.recalculateLongestStreak();
     }
 
     public last() {
