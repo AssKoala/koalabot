@@ -10,7 +10,8 @@ namespace MessageResponderInternal {
         Positive,
         Negative,
         Neutral,
-        None
+        None,
+        Found
     }
 
     export interface MessageResponseSearch {
@@ -25,6 +26,40 @@ namespace MessageResponderInternal {
         performAction(runtimeData: DiscordBotRuntimeData, message: Message, responseType: MessageResponseType): Promise<void>;
     }
 
+    export class MessageResponseSearchSimple implements MessageResponseSearch {
+        id: string;
+        searchText: string[];
+        className: string;
+        constructor(id: string, searchText: string[]) {
+            this.id = id;
+            this.searchText = searchText;
+            this.className = this.constructor.name;
+        }
+
+        async getResponseType(runtimeData: DiscordBotRuntimeData, message: Message) {
+            let response = MessageResponseType.None;
+
+            this.searchText.every(text => {
+                if (message.content.toLowerCase().match(text) != null) {
+                    response = MessageResponseType.Found;
+                    return false;
+                }
+                return true;
+            });
+
+            return response;
+        }
+
+        static Create(data: any): MessageResponseSearchSimple  {
+            try {
+                const search = new (<any>MessageResponderInternal)[data.className](data.id, data.searchText);
+                return search;
+            } catch (e) {
+                return null;
+            }
+        }
+    }
+    
     export class MessageResponseSearchQueryAI implements MessageResponseSearch {
         id: string;
         initialSearchText: string[] = [];
@@ -46,10 +81,10 @@ namespace MessageResponderInternal {
                 let response = MessageResponseType.None;
 
                 this.initialSearchText.every(text => {
-                    if (message.content.toLowerCase().includes(text)) {
+                    if (message.content.toLowerCase().match(text) != null) {
                         shouldQuery = true;
                         return false;
-                    }    
+                    }
                     return true;
                 });
 
@@ -58,7 +93,9 @@ namespace MessageResponderInternal {
                     const timeSinceLastQuery = currentTime - this.lastQuery;
 
                     // Rate limit to once every 30 seconds
-                    if (timeSinceLastQuery < 10000) return MessageResponseType.None;
+                    const rateLimit = parseInt(GetKoalaBotSystem().getEnvironmentVariable("MESSAGE_RESPONDER_AI_COOLDOWN_MS"));
+
+                    if (timeSinceLastQuery < rateLimit) return MessageResponseType.None;
 
                     const completion = await OpenAIHelper.getInterface().chat.completions.create({
                         model: "chatgpt-4o-latest",
@@ -67,20 +104,65 @@ namespace MessageResponderInternal {
                         ]
                     });
                     
+                    // Reset the query timer
                     this.lastQuery = Date.now();
 
                     const responseText = completion.choices[0].message.content;
 
-                    if (responseText.toLowerCase().includes("yes")) {
+                    if (responseText.toLowerCase().includes("positive")) {
                         response = MessageResponseType.Positive;
-                    } else if (responseText.toLowerCase().includes("no")) {
+                    } else if (responseText.toLowerCase().includes("negative")) {
                         response = MessageResponseType.Negative;
+                    } else if (responseText.toLowerCase().includes("neutral")) {
+                        response = MessageResponseType.Neutral;
                     }
                 }
                 
                 return response;
             } catch (e) {
                 GetKoalaBotSystem().getLogger().logError(`MessageResponseSearchQueryAI.getResponseType Failure!, got ${e}`);
+            }
+        }
+
+        static Create(data: any): MessageResponseSearchQueryAI  {
+            try {
+                const search = new (<any>MessageResponderInternal)[data.className](data.id, data.query, data.initialSearchText);
+                return search;
+            } catch (e) {
+                return null;
+            }
+        }
+    }
+
+    export class MessageResponseActionSimpleReaction implements MessageResponseAction {
+        id: string;
+        reaction: string;
+        className: string;
+
+        constructor(id: string, reaction: string) {
+            this.id = id;
+            this.reaction = reaction;
+            this.className = this.constructor.name;
+        }
+
+        async performAction(runtimeData: DiscordBotRuntimeData, message: Message, responseType: MessageResponseType) {
+            try {
+                if (responseType == MessageResponseType.Found) {
+                    message.react(this.reaction).catch((e) => {
+                        GetKoalaBotSystem().getLogger().logError(`Failed to react to message, got ${e}`);
+                    });
+                }
+            } catch (e) {
+                GetKoalaBotSystem().getLogger().logError(`MessageResponseActionSimpleReaction.performAction Failure!, got ${e}`);
+            }
+        }
+
+        static Create(data: any): MessageResponseActionSimpleReaction  {
+            try {
+                const action = new (<any>MessageResponderInternal)[data.className](data.id, data.reaction);
+                return action;
+            } catch (e) {
+                return null;
             }
         }
     }
@@ -124,6 +206,15 @@ namespace MessageResponderInternal {
                 GetKoalaBotSystem().getLogger().logError(`Failed to perform message responder action, got ${e}`);
             }
         }
+
+        static Create(data: any): MessageResponseActionReact  {
+            try {
+                const action = new (<any>MessageResponderInternal)[data.className](data.id, data.positiveReaction, data.negativeReaction, data.neutralReaction);
+                return action;
+            } catch (e) {
+                return null;
+            }
+        }
     }
 
     export class MessageResponseRule {
@@ -153,20 +244,35 @@ class MessageResponder implements DiscordMessageCreateListener {
                 const data = Global.readJsonFileSync(filePath);
     
                 if (data != null) {
-                    this.dataSet = new MessageResponderInternal.MessageResponseDataSet()
+                    this.dataSet = new MessageResponderInternal.MessageResponseDataSet();
     
                     data.searches.forEach(search => {
-                        this.dataSet.searches.push(new (<any>MessageResponderInternal)[search.className](search.id, search.query, search.initialSearchText));
+                        const newSearch = (<any>MessageResponderInternal)[search.className].Create(search);
+                        if (newSearch != null) {
+                            this.dataSet.searches.push(newSearch);    
+                        } else {
+                            GetKoalaBotSystem().getLogger().logError(`Failed to parse ${search}`);
+                        }
                     });
     
                     data.actions.forEach(action => {
-                       this.dataSet.actions.push(new (<any>MessageResponderInternal)[action.className](action.id, action.positiveReaction, action.negativeReaction, action.neutralReaction)); 
+                        const newAction = (<any>MessageResponderInternal)[action.className].Create(action);
+                        if (newAction != null) {
+                            this.dataSet.actions.push(newAction);
+                        } else {
+                            GetKoalaBotSystem().getLogger().logError(`Failed to parse ${action}`);
+                        }
                     });
     
                     data.rules.forEach(rule => {
                         let search = this.dataSet.searches.find(search => search.id == rule.searchid);
                         let action = this.dataSet.actions.find(action => action.id == rule.actionid);
-                        this.dataSet.rules.push(new MessageResponderInternal.MessageResponseRule(search, action));
+
+                        if (search != null && action != null) {
+                            this.dataSet.rules.push(new MessageResponderInternal.MessageResponseRule(search, action));
+                        } else {
+                            GetKoalaBotSystem().getLogger().logError(`Failed to parse ${rule}`);
+                        }
                     });
                 }
 
@@ -181,6 +287,8 @@ class MessageResponder implements DiscordMessageCreateListener {
     
     async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
         try {
+            if (message.author.bot) return;
+
             for (let i = 0; i < this.dataSet.rules.length; i++) {
                 const response = await this.dataSet.rules[i].search.getResponseType(runtimeData, message);
                 await this.dataSet.rules[i].action.performAction(runtimeData, message, response);

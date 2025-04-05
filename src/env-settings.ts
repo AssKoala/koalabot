@@ -78,5 +78,6 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
 
     // module: messageresponder
     settingsManager.register('messageresponder', "MESSAGE_RESPONDER_DATASET_FILENAME", 'messageresponder_dataset.json', "Filename storing message responder dataset (will load from DATA_PATH)", false);
+    settingsManager.register('messageresponder', "MESSAGE_RESPONDER_AI_COOLDOWN_MS", '2000', "Cooldown before AI will make an AI call", false);
 }
 
