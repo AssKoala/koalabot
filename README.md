@@ -31,7 +31,7 @@ At a **minimum**, your .env file must define every required parameter without a 
 Additionally, you **must** attain a bot token and place it in the appropriate variable in the .env file.  [There are lots of instructions on the internet](https://letmegooglethat.com/?q=create+discord+bot+token) though the bot doesn't require much by way of privileges, but depends on commands in use.  No commands currently require admin.
 
 <details>
-<summary>All Discord Bot Settings</summary
+<summary>All Discord Bot Settings</summary>
 
 ###
 #### Global settings
