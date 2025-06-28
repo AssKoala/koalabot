@@ -222,7 +222,7 @@ JSON is formatted as an array as follows:
   
 Query ChatGPT using conversation history using /chat slash command.  This requires an [OpenAI API Key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key).
 
-Use this to ask the bot to summarize the channel conversation or that sort of thing.
+Use this to ask the bot to summarize the channel conversation or that sort of thing.  @'ing the bot will automatically behave like a chat command, by default.
 
 There's nothing special to setup other than adding the API key and enabling the command via the env command list.  The bot will load logs on startup to repopulate the chat in-memory log that's sent to ChatGPT.
 </details>
@@ -272,9 +272,9 @@ Example JSON:
   
 Adds /image slash command
 
-Depending on what Image API's you want access to, you need to define different variables to the .env file.
+Depending on what Image API's you want access to, you need to define different variables to the .env file.  Supports input images for API's that allow it.
 
-Currently, the bot supports OpenAI's DALL-E API, Stable Diffusion through [stablediffusion-web-ui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), and getimg.ai FLUX.  Appropriate .env parameters must be provided for given subcommands to actually work.
+Currently, the bot supports OpenAI's API's (dall-e-3, gpt-image-1, etc), Stable Diffusion through [stablediffusion-web-ui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), and getimg.ai FLUX.  Appropriate .env parameters must be provided for given subcommands to actually work.
 </details>
 <details>
 <summary>Leaderboard</summary>
@@ -305,6 +305,13 @@ JSON is array of entries, e.g.
     }
 ]
 ```
+</details>
+<details>
+<summary>Pillow</summary>
+  
+Adds /pillow slash command
+
+Lets users yell into the pillow, hiding it from the general audience unless actively inspecting the response.
 </details>
 <details>
 <summary>Query</summary>
@@ -357,6 +364,20 @@ If "spam" was instead in the blacklist, it would be allowed in all channels _exc
 Adds /settings slash command.  This allows users to set preferred temperature unit preferences and location for use with other commands.
 
 The file is saved in $DATA_PATH/settings.json
+</details>
+<details>
+<summary>ShortenURL</summary>
+  
+Adds /shortenurl slash command
+
+Bot currently supports shlink.  Fill out necessary env parameters and enable to allow the bot to generate shortened links.
+</details>
+<details>
+<summary>System</summary>
+  
+Adds /system slash command
+
+Adds bot health commands.  Destructive or otherwise important functionality, e.g. reboot, env variable access, etc, is restricted to sudo users.
 </details>
 <details>
 <summary>Vision</summary>
