@@ -3,7 +3,7 @@
 */
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 
 class AffirmationCommand extends DiscordBotCommand  {
     private affirmationData = null;

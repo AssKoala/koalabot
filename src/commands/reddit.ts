@@ -3,7 +3,7 @@
 */
 
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import validator from 'validator';
 import cp from 'child_process';
 import path from "path";

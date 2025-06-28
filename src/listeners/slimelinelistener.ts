@@ -1,7 +1,7 @@
-import { DiscordMessageCreateListener } from "../api/DiscordMessageListener.js";
+import { DiscordMessageCreateListener } from "../api/discordmessagelistener.js";
 import { Message } from 'discord.js'
 import { ListenerManager } from "../listenermanager.js"
-import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
+import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 
 class SlimelineListener implements DiscordMessageCreateListener {
     async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {

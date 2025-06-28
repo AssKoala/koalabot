@@ -1,5 +1,5 @@
 // API
-import { LogLevel } from '../api/KoalaBotSystem.js'
+import { LogLevel } from '../api/koalabotsystem.js'
 
 // Internal
 import { LoggerConcrete } from './logger.js'
@@ -46,7 +46,10 @@ export class LogManager {
         discordLogFileName: string = 'discord_messages.log', 
         outputGlobalToConsole: boolean = true) 
     {
-       console.log(`Creating LogManager(${logBasePath}, ${globalLogFileName}, ${globalLogLevel}, ${discordLogFileName}, ${outputGlobalToConsole})`);
+        // Don't do raw logging if in jest
+        if (process.env.JEST_WORKER_ID == undefined) {
+            console.log(`Creating LogManager(${logBasePath}, ${globalLogFileName}, ${globalLogLevel}, ${discordLogFileName}, ${outputGlobalToConsole})`);
+        }
 
         this.logBaseDir = logBasePath;
         this.discordLogFileName = discordLogFileName;

@@ -18,7 +18,7 @@ import { Global } from './../global.js';
 import validator from 'validator';
 import { SlashCommandBuilder } from "discord.js";
 
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 
 /**
  * Map for type to excludes and print function

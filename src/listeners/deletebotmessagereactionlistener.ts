@@ -1,4 +1,4 @@
-import { DiscordReactionAddListener } from "../api/DiscordMessageListener.js";
+import { DiscordReactionAddListener } from "../api/discordmessagelistener.js";
 import { EmbedBuilder } from 'discord.js';
 import { ListenerManager } from "../listenermanager.js"
 

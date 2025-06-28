@@ -44,14 +44,14 @@ export class DiscordBotHelpers
             const splitMessage = this.splitMessage(message);
     
             if (Array.isArray(splitMessage)) {
-                await interaction.editReply(`Message too long, split below`);
+                interaction.editReply(splitMessage[0]);
 
-                for (let i = 0; i < splitMessage.length; i++)
+                for (let i = 1; i < splitMessage.length; i++)
                 {
-                    await interaction.channel.send(splitMessage[i]);
+                    interaction.channel.send(splitMessage[i]);
                 }
             } else {
-                await interaction.editReply(message);
+                interaction.editReply(message);
             }
         } catch (e) {
             this.logger.logErrorAsync(`Failed to edit reply, got error ${e}`);

@@ -1,6 +1,6 @@
 import winston from 'winston';
 import { Message } from 'discord.js';
-import { LogLevel, Logger } from '../api/KoalaBotSystem.js'
+import { LogLevel, Logger } from '../api/koalabotsystem.js'
 
 
 export class LoggerConcrete implements Logger {
@@ -15,29 +15,29 @@ export class LoggerConcrete implements Logger {
         return date.toISOString() + " :: ";
     }
     
-    #logDir : string;
+    private _logDir : string;
     logDir() {
-        return this.#logDir
+        return this._logDir
     }
 
-    #logFileName : string;
+    private _logFileName : string;
     logFileName() {
-        return this.#logFileName;
+        return this._logFileName;
     }
     logFullPath() {
         return `${this.logDir()}/${this.logFileName()}`;
     }
 
-    #logger;
+    private _logger;
     getRawLogger() {
-        return this.#logger;
+        return this._logger;
     }
 
     constructor(logRootPath: string, logFileName: string, logLevel: LogLevel, outputToConsole: boolean = true) {
-        this.#logDir = logRootPath;
-        this.#logFileName = logFileName;
+        this._logDir = logRootPath;
+        this._logFileName = logFileName;
 
-        this.#logger = winston.createLogger({
+        this._logger = winston.createLogger({
             levels: {
                 discord_message: 0,
                 fatal: 1,
@@ -62,7 +62,7 @@ export class LoggerConcrete implements Logger {
         // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
         //
         if (outputToConsole == true) {
-            this.#logger.add(new winston.transports.Console({
+            this._logger.add(new winston.transports.Console({
                 format: winston.format.combine(
                     winston.format.timestamp(),
                     winston.format.simple()
@@ -75,7 +75,7 @@ export class LoggerConcrete implements Logger {
     logDiscordMessage(message)
     {
         try {
-            this.#logger.discord_message(message);
+            this._logger.discord_message(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log discord message ${message}!!`);
         }
@@ -84,7 +84,7 @@ export class LoggerConcrete implements Logger {
     logInfo(message)
     {
         try {
-            this.#logger.info(message);
+            this._logger.info(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log info ${message}!!`);
         }
@@ -93,7 +93,7 @@ export class LoggerConcrete implements Logger {
     logDebug(message)
     {
         try {
-            this.#logger.debug(message);
+            this._logger.debug(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log debug ${message}!!`);
         }
@@ -102,14 +102,14 @@ export class LoggerConcrete implements Logger {
     logWarning(message)
     {
         try {
-            this.#logger.warning(message);
+            this._logger.warning(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log warning ${message}!!`);
         }
     }
 
     logFatal(message, shouldThrow = true) {
-        this.#logger.fatal(message);
+        this._logger.fatal(message);
         if (shouldThrow) {
             throw new Error(message);
         }
@@ -117,7 +117,7 @@ export class LoggerConcrete implements Logger {
 
     logError(message: string) {
         try {
-            this.#logger.error(message);
+            this._logger.error(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log error ${message}!!`);
         }
@@ -126,7 +126,7 @@ export class LoggerConcrete implements Logger {
     async logErrorAsync(message: string, discordReply = null, editReply = false)
     {
         try {
-            this.#logger.error(message);
+            this._logger.error(message);
 
             try {
                 if (discordReply)
@@ -143,7 +143,7 @@ export class LoggerConcrete implements Logger {
             }
             catch (e)
             {
-                this.#logger.error(`Failed to reply to discord, got error ${e}`);
+                this._logger.error(`Failed to reply to discord, got error ${e}`);
             }
         } catch (e) {
             console.log(`[PANIC] Failed to log error ${message}!!`);

@@ -1,4 +1,4 @@
-import { Global } from '../global.js'
+import { GetKoalaBotSystem, KoalaBotSystem } from '../api/koalabotsystem.js';
 import fs from 'fs'
 
 export class UserWeatherSettings {
@@ -22,13 +22,13 @@ export class UserSettingsData {
 }
 
 export class UserSettingsManager {
-    #userSettings: Map<string, UserSettingsData>;
-    #settingsJsonFile: string;
+    private userSettings: Map<string, UserSettingsData>;
+    private settingsJsonFile: string;
     
     constructor(settingsJsonFile: string) {
-        this.#userSettings = new Map<string, UserSettingsData>();
-        this.#settingsJsonFile = settingsJsonFile;
-        this.reload();
+        this.userSettings = new Map<string, UserSettingsData>();
+        this.settingsJsonFile = settingsJsonFile;
+        this.reload(this.settingsJsonFile);
     }
 
     /**
@@ -40,8 +40,8 @@ export class UserSettingsManager {
     get(username: string, createNew: boolean = false) : UserSettingsData {
         try {
             // If the user's data already exists, return that
-            if (this.#userSettings.has(username)) {
-                return this.#userSettings.get(username);
+            if (this.userSettings.has(username)) {
+                return this.userSettings.get(username);
             }
             else if (createNew) {
                 return new UserSettingsData(username);
@@ -51,7 +51,7 @@ export class UserSettingsManager {
         }
         catch (e)
         {
-            Global.logger().logErrorAsync(`Failed to get user data, got exception: ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to get user data, got exception: ${e}`);
             return null;
         }
     }
@@ -64,7 +64,7 @@ export class UserSettingsManager {
      */
     set(userSettingsData: UserSettingsData, flush: boolean = false) : boolean {
         try {
-            this.#userSettings.set(userSettingsData.name, userSettingsData);
+            this.userSettings.set(userSettingsData.name, userSettingsData);
 
             if (flush) {
                 this.flush();
@@ -73,7 +73,7 @@ export class UserSettingsManager {
             return true;
         }
         catch (e) {
-            Global.logger().logErrorAsync(`Failed to set user data, got exception ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to set user data, got exception ${e}`);
             return false;
         }
     }
@@ -85,39 +85,39 @@ export class UserSettingsManager {
         try {
             let userData = new Array<UserSettingsData>();
 
-            this.#userSettings.forEach((value: UserSettingsData, key: string) => {
+            this.userSettings.forEach((value: UserSettingsData, key: string) => {
                 userData.push(value);
             });
 
             const jsonString = JSON.stringify(userData, null, 2);
 
-            fs.writeFile(this.#settingsJsonFile, jsonString, err => {
+            fs.writeFile(this.settingsJsonFile, jsonString, err => {
                 if (err) {
-                    Global.logger().logErrorAsync(`Error flushing user data file to ${this.#settingsJsonFile}, got ${err}`);
+                    GetKoalaBotSystem().getLogger().logError(`Error flushing user data file to ${this.settingsJsonFile}, got ${err}`);
                     return false;
                 } else {
-                    Global.logger().logInfo(`Successfully wrote user data to ${this.#settingsJsonFile}`);
+                    GetKoalaBotSystem().getLogger().logInfo(`Successfully wrote user data to ${this.settingsJsonFile}`);
                     return true;
                 }
             });
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to flush user data to disk, got error ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to flush user data to disk, got error ${e}`);
             return false;
         }
     }
 
-    reload() : boolean {
+    reload(jsonFile) : boolean {
         try {
-            const data = fs.readFileSync(this.#settingsJsonFile, { encoding: "utf8", flag: "r" });
+            const data = fs.readFileSync(jsonFile, { encoding: "utf8", flag: "r" });
             const jsonData = JSON.parse(data);
 
             jsonData.forEach((item) => {
-                this.#userSettings.set(item.name, new UserSettingsData(item.name, item.weatherSettings.location, item.weatherSettings.preferredUnits));
+                this.userSettings.set(item.name, new UserSettingsData(item.name, item.weatherSettings.location, item.weatherSettings.preferredUnits));
             });
 
             return true;
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to reload user data from ${this.#settingsJsonFile}, got ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to reload user data from ${jsonFile}, got ${e}`);
             return false;
         }
     }

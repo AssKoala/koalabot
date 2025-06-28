@@ -1,5 +1,5 @@
 import { SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { DiscordBotRuntimeData } from './DiscordBotRuntimeData.js';
+import { DiscordBotRuntimeData } from './discordbotruntimedata.js';
 import { Global } from '../global.js';
 
 /**

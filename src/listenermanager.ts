@@ -1,7 +1,7 @@
-import { DiscordMessageCreateListener, DiscordReactionAddListener } from './api/DiscordMessageListener.js';
+import { DiscordMessageCreateListener, DiscordReactionAddListener } from './api/discordmessagelistener.js';
 import { Message, MessageReaction, PartialMessageReaction, User, PartialUser } from 'discord.js';
 import { Global } from './global.js';
-import { DiscordBotRuntimeData } from './api/DiscordBotRuntimeData.js';
+import { DiscordBotRuntimeData } from './api/discordbotruntimedata.js';
 
 export abstract class ListenerManager {
     static async importListeners() {

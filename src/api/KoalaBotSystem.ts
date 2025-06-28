@@ -1,5 +1,5 @@
 import { Global } from "../global.js";
-import { DiscordMessageCreateListener, WordListener } from "./DiscordMessageListener.js";
+import { DiscordMessageCreateListener, WordListener } from "./discordmessagelistener.js";
 
 export enum LogLevel {
     DISCORD_MESSAGE = 'discord_message',
@@ -33,6 +33,16 @@ export interface KoalaBotSystem {
     registerWordListener(listener: WordListener, word: string): void;
 }
 
-export function GetKoalaBotSystem(): KoalaBotSystem {
+let internalKoalaBotSystem = function(): KoalaBotSystem {
     return Global.bot().koalaBotSystem();
+};
+
+export function SetKoalaBotSystem(koalaBotSystem: KoalaBotSystem) {
+    internalKoalaBotSystem = function(): KoalaBotSystem {
+        return koalaBotSystem;
+    };
+}
+
+export function GetKoalaBotSystem(): KoalaBotSystem {
+    return internalKoalaBotSystem();
 }

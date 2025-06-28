@@ -6,7 +6,7 @@ import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
 import { getRandomValues } from 'node:crypto';
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 
 class DiceRollCommand extends DiscordBotCommand {
     

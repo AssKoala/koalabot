@@ -10,8 +10,8 @@ import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { AnthropicHelper } from '../helpers/anthropichelper.js';
 import { OllamaHelper } from '../helpers/ollamahelper.js';
 import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
-import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
-import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 
 abstract class ChatResponse {
     botId;
@@ -65,11 +65,11 @@ class MentionMessageResponse extends ChatResponse {
         if (!Array.isArray(splitMessage)) {
             this._message.reply(message);    
         } else {
-            this._message.reply(`Response too long, split below`);
+            this._message.reply(splitMessage[0]);
 
-            splitMessage.forEach(msg => {
-                this._message.channel.send(msg);
-            });
+            for (let i = 1; i < splitMessage.length; i++) {
+                this._message.channel.send(splitMessage[i]);
+            }
         }
     }
 }
@@ -246,7 +246,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 
             requestData.botId = this.runtimeData().bot().client().user.id;
             requestData.botName = this.runtimeData().bot().client().user.username;
-            requestData.channelId = interaction.channelId;
+            requestData.channelId = slashCommandRequest.getOptionValueString("override_channel_id", interaction.channelId);
             requestData.guildId = interaction.guildId;
             requestData.useGuildLogs = slashCommandRequest.getOptionValueBoolean("use_guild_log", true);
             requestData.userId = interaction.member.user.id;
@@ -365,6 +365,12 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                                 .setDescription(`Use logs from all channels in server, not just channel. Default is true for /chat, false for @${this.runtimeData().settings().get("BOT_NAME")}`)
                                 .setRequired(false),
                         )
+                        .addStringOption((option) => 
+                            option
+                                .setName('override_channel_id')
+                                .setDescription(`Use logs from specific channel when guild (whole server) logs are disabled.`)
+                                .setRequired(false),
+                        )
 
                         ;
         return chatCommand;
@@ -373,7 +379,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 } 
 
 import { ListenerManager } from '../listenermanager.js';
-import { DiscordMessageCreateListener } from '../api/DiscordMessageListener.js';
+import { DiscordMessageCreateListener } from '../api/discordmessagelistener.js';
 
 const chatInstance = new ChatCommand('chat');
 registerDiscordBotCommand(chatInstance);

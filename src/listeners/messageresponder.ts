@@ -1,8 +1,8 @@
-import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/DiscordMessageListener.js";
-import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js';
+import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/discordmessagelistener.js";
+import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
 import { Message } from 'discord.js';
 import { Global } from "../global.js";
-import { GetKoalaBotSystem } from "../api/KoalaBotSystem.js";
+import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 
 namespace MessageResponderInternal {
@@ -234,7 +234,7 @@ namespace MessageResponderInternal {
     }
 }
 
-class MessageResponder implements DiscordMessageCreateListener {
+export class MessageResponder implements DiscordMessageCreateListener {
     private dataSet: MessageResponderInternal.MessageResponseDataSet;
 
     constructor(filePath: string = null) {

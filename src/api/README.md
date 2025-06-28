@@ -13,7 +13,7 @@ This is base class to use to create a command.  All you need to do is create a n
 Implementing the command is pretty straight forward and just requires extending and implementing the DiscordBotRuntime abstract class.
 
 ```javascript
-import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 
 class MyCommand extends DiscrdBotCommand {
   async handle(interaction: ChatInputCommandInteraction) {

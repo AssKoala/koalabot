@@ -13,9 +13,11 @@ import { got } from 'got';
 import fs from 'node:fs';
 import crypto from 'crypto';
 
+import { toFile } from "openai";
+
 // For getimg.ai
 import fetch from 'node-fetch';
-import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
 const INVALID_SEED = -1;
 
@@ -25,10 +27,12 @@ class ImageGenerationData {
     readonly quality: string = 'standard';
     readonly forcePrompt: boolean = false;
     readonly promptPrepend: string = "I NEED to test how the tool works with extremely simple prompts. DO NOT add any detail, just use it AS-IS:";
-    readonly model: string = "dalle";
+    readonly model: string = "dall-e-3";
     readonly sd_model_checkpoint: string = 'Deliberate_v6.safetensors';
     readonly seed: number = INVALID_SEED;
     readonly steps: number = 4;
+    readonly transparency: string = 'opaque';
+    readonly base_images: string[] = [];
 
     private isSizeValid(image_size: string): boolean {
         try {
@@ -50,6 +54,18 @@ class ImageGenerationData {
         this.sd_model_checkpoint = request.getSubcommand().getOptionValueString('sd_model_checkpoint', this.sd_model_checkpoint);
         this.steps = request.getSubcommand().getOptionValueNumber('steps', this.steps);
         this.seed = request.getSubcommand().getOptionValueNumber('seed', this.seed);
+        this.transparency = request.getSubcommand().getOptionValueString('transparency', this.transparency);
+
+        this.base_images = [];
+
+        let base_images = request.getSubcommand().getOptionValueString("base_images", null);
+
+        if (base_images != null) {
+            const base_images_array = base_images.split('|');
+            base_images_array.forEach(image => {
+                this.base_images.push(image);
+            });
+        }
     }
 
     getSteps(): number {
@@ -91,32 +107,77 @@ class ImageDownloadedFileInfo {
 }
 
 class OpenAI {
-    private static async getImageUrl(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction) {
+    private static async getImageResponse(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction) {
         using perfCounter = Global.getPerformanceCounter("image::getImageUrl(): ");
         let image_url = null;
         let error = null;
+        let response = null;
 
         try {
+            switch (imageGenData.model) {
+                case 'dall-e-3':
+                    // Create the image with OpenAI
+                    response = await OpenAIHelper.getInterface().images.generate({
+                        model: `${imageGenData.model}`,
+                        prompt: `${imageGenData.getGeneratedPrompt()}`,
+                        n: 1,
+                        size: `${imageGenData.size}`,
+                        quality: `${imageGenData.quality}`,
+                    });
+                    break;
 
-            // Create the image with OpenAI
-            const response = await OpenAIHelper.getInterface().images.generate({
-                model: "dall-e-3",
-                prompt: `${imageGenData.getGeneratedPrompt()}`,
-                n: 1,
-                size: `${imageGenData.size}`,
-                quality: `${imageGenData.quality}`,
-            });
+                case 'gpt-image-1':                    
+                    const quality = imageGenData.quality == 'standard' ? 'auto' : imageGenData.quality
 
-            image_url = response.data[0].url;
+                    if (imageGenData.base_images.length == 0) {
+                        response = await OpenAIHelper.getInterface().images.generate({
+                            model: `${imageGenData.model}`,
+                            prompt: `${imageGenData.getGeneratedPrompt()}`,
+                            size: `${imageGenData.size}`,
+                            quality: quality,
+                            background: `${imageGenData.transparency}`,
+                        });
+                    } else {
+                        let baseImageFileList = [];                  
 
-            Global.logger().logInfo(`image::getImageUrl(): [Asked] ${imageGenData.getGeneratedPrompt()} [Used] ${response.data[0].revised_prompt} [Got] ${image_url}`);
+                        // Check if there are base images and download them somewhere temporary
+                        for (let i = 0; i < imageGenData.base_images.length; i++) {
+                            let downloadedFileInfo = await this.downloadUrlToFile(imageGenData.base_images[i]);
+                            baseImageFileList.push(downloadedFileInfo.fullpath);
+                        }
+
+                        const images = await Promise.all(
+                            baseImageFileList.map(async (file) =>
+                                await toFile(fs.createReadStream(file), null, {
+                                    type: "image/png",
+                                })
+                            ),
+                        );
+
+                        response = await OpenAIHelper.getInterface().images.edit({
+                            model: `${imageGenData.model}`,
+                            prompt: `${imageGenData.getGeneratedPrompt()}`,
+                            size: `${imageGenData.size}`,
+                            quality: quality,
+                            background: `${imageGenData.transparency}`,
+                            image: images
+                        });
+
+                        // Delete downloaded files
+                        baseImageFileList.forEach((file) => { rm(file);});
+                    }                    
+
+                    break;
+            }
+            
+            Global.logger().logInfo(`image::getImageUrl(): [Asked] _${imageGenData.getGeneratedPrompt()}_ [Used] _${response.data[0].revised_prompt}_ [Got] _${image_url}_`);
         } catch (e) {
             error = e;
-            await Global.logger().logErrorAsync(`Exception occurred during image gen, asked: ${imageGenData.getGeneratedPrompt()}, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Exception occurred during image gen, asked: _${imageGenData.getGeneratedPrompt()}_, got _${e}_`, interaction, true);
         }
 
         return {
-            image_url: image_url, error: error
+            response: response, error: error
         };
     } // getImageUrl
 
@@ -125,7 +186,7 @@ class OpenAI {
         await mkdir(download_dir, { recursive: true });
 
         const dl = new DownloaderHelper(url, download_dir);
-        dl.on('error', (err) => Global.logger().logErrorAsync(`Failed to download image from ${url} to ${download_dir}, got error ${err}`));
+        dl.on('error', (err) => Global.logger().logErrorAsync(`Failed to download image from _${url}_ to _${download_dir}_, got error _${err}_`));
         await dl.start();
 
         const downloaded_fullpath = dl.getDownloadPath();
@@ -134,18 +195,41 @@ class OpenAI {
         return new ImageDownloadedFileInfo(downloaded_fullpath, downloaded_filename);
     } // downloadUrlToFile
 
+    private static async downloadBufferToFile(image_bytes: Buffer, download_dir: string = Global.settings().get("TEMP_PATH")) {
+        // Download the image temporarily
+        await mkdir(download_dir, { recursive: true });
+
+        const hash = crypto.createHash('md5').update(image_bytes).digest('hex');
+        const downloadFileName = `${hash}.png`;
+        const downloadPath = `${download_dir}/${downloadFileName}`;
+
+        fs.writeFileSync(downloadPath, image_bytes);
+
+        return new ImageDownloadedFileInfo(downloadPath, downloadFileName);
+    } // downloadUrlToFile
+
     static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
         try {
-            const result = await OpenAI.getImageUrl(imageGenData, interaction);
+            const result = await OpenAI.getImageResponse(imageGenData, interaction);
 
             if (result.error != null) {
-                Global.logger().logErrorAsync(`Error getting image URL, got error ${result.error}`, interaction, true);
-            } else {
-                const downloadedFileinfo = await OpenAI.downloadUrlToFile(result.image_url);
+                if (result.error.status == 400) {
+                    Global.logger().logErrorAsync(`Got Nannied for prompt: _${imageGenData.getGeneratedPrompt()}_ with reason: _${result.error.message}_`, interaction, true);
+                } else {
+                    Global.logger().logErrorAsync(`Error getting image URL, got error _${result.error}_`, interaction, true);
+                }
+            } else if (imageGenData.model == 'dall-e-3') {
+                const downloadedFileinfo = await OpenAI.downloadUrlToFile(result.response.data[0].url);
+                return downloadedFileinfo;
+            } else if (imageGenData.model == 'gpt-image-1') {
+                const image_b64 = result.response.data[0].b64_json;
+                const image_bytes = Buffer.from(image_b64, "base64");
+
+                const downloadedFileinfo = await OpenAI.downloadBufferToFile(image_bytes);
                 return downloadedFileinfo;
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Unexpected error generating OpenAI image, got ${e}`, interaction, true);
+            await Global.logger().logErrorAsync(`Error generating OpenAI image: _${e}_`, interaction, true);
         }
 
         return null;
@@ -253,7 +337,10 @@ class ImageCommand extends DiscordBotCommand {
             let downloadedFileInfo: ImageDownloadedFileInfo = null;
     
             switch (imageGenData.model) {
-                case 'dalle':
+                case 'dall-e-3':
+                    downloadedFileInfo = await OpenAI.download(imageGenData, interaction);
+                    break;
+                case 'gpt-image-1':
                     downloadedFileInfo = await OpenAI.download(imageGenData, interaction);
                     break;
                 case 'stablediffusion':
@@ -299,11 +386,71 @@ class ImageCommand extends DiscordBotCommand {
         }
     } // handleImageCommand
 
+    private appendGptImageSubCommand(imageCommand) {
+        return imageCommand
+                    .addSubcommandGroup((group) =>
+                        group
+                            .setName('gpt-image-1')
+                            .setDescription('Generate an image using GPT Image')
+                            .addSubcommand((subcommand) =>
+                                subcommand
+                                    .setName('generate')
+                                    .setDescription('Generate an image using GPT Image')
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_details')
+                                            .setDescription('Details of what to generate')
+                                            .setRequired(true),
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_size')
+                                            .setDescription('Image size to generate')
+                                            .addChoices(
+                                                { name: 'square', value: '1024x1024' },
+                                                { name: 'portrait', value: '1024x1536' },
+                                                { name: 'landscape', value: '1536x1024' },
+                                                { name: 'auto', value: 'auto'}
+                                            )
+                                            .setRequired(false),
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('image_quality')
+                                            .setDescription('Image quality to use')
+                                            .addChoices(
+                                                { name: 'low', value: 'low' },
+                                                { name: 'medium', value: 'medium' },
+                                                { name: 'high', value: 'high' },
+                                                { name: 'auto', value: 'auto' },
+                                            )
+                                            .setRequired(false),
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('transparency')
+                                            .setDescription('Enable transparent background')
+                                            .addChoices(
+                                                { name: 'enable', value: 'transparent' },
+                                                { name: 'disable', value: 'opaque' },
+                                            )
+                                            .setRequired(false),
+                                    )
+                                    .addStringOption((option) =>
+                                        option
+                                            .setName('base_images')
+                                            .setDescription('Set of base images to use (separate multiple with |)')
+                                            .setRequired(false),
+                                    )
+                            )
+                    );
+    }
+
     private appendDalleSubCommand(imageCommand) {
         return imageCommand
                     .addSubcommandGroup((group) =>
                         group
-                            .setName('dalle')
+                            .setName('dall-e-3')
                             .setDescription('Generate an image using Dall-E')
                             .addSubcommand((subcommand) =>
                                 subcommand
@@ -462,8 +609,11 @@ class ImageCommand extends DiscordBotCommand {
 
         enabledSubCommands.forEach((subcommand) => {
             switch (subcommand) {
-                case 'dalle':
+                case 'dall-e-3':
                     imageCommand = this.appendDalleSubCommand(imageCommand);
+                    break;
+                case 'gpt-image-1':
+                    imageCommand = this.appendGptImageSubCommand(imageCommand);
                     break;
                 case 'stablediffusion':
                     imageCommand = this.appendStableDiffusionSubCommand(imageCommand);

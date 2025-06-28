@@ -1,0 +1,6 @@
+.vs/
+build/
+data/badword-tracking
+logs/
+node_modules/
+runtime/

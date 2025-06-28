@@ -1,4 +1,4 @@
-import { Global } from '../global.js';
+import { GetKoalaBotSystem } from '../api/koalabotsystem.js';
 import { DiscordStenographerMessage } from './discordstenographermessage.js';
 
 export class MessageCache
@@ -51,7 +51,7 @@ export class MessageCache
             this._authorMessageCount.set(msg.author, this._authorMessageCount.get(msg.author) + 1);
             this.trimEntries();
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to push message ${msg}, got ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to push message ${msg}, got ${e}`);
         }
     }
 
@@ -67,7 +67,7 @@ export class MessageCache
                 return toRet;
             }
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to pop message, got ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to pop message, got ${e}`);
         }
 
         return null;
@@ -80,7 +80,7 @@ export class MessageCache
                 this.popMessage();
             }
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to trim entries, got ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to trim entries, got ${e}`);
         }
     }
 }

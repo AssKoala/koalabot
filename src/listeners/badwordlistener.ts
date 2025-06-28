@@ -1,11 +1,11 @@
-import { TrackedWord, WordListener } from "../api/DiscordMessageListener.js";
+import { TrackedWord, WordListener } from "../api/discordmessagelistener.js";
 import { Message } from 'discord.js'
-import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
+import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 import path from "path";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import { Global } from "../global.js";
-import { GetKoalaBotSystem } from "../api/KoalaBotSystem.js";
+import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
 
 export function GetBadWordSaveFolder() {
     return path.join(GetKoalaBotSystem().getEnvironmentVariable("DATA_PATH"), GetKoalaBotSystem().getEnvironmentVariable("LISTENER_BADWORD_TRACKING_SAVE_DIR"))
@@ -23,6 +23,12 @@ interface IBadWordEvent {
     timestamp: number;
     userId: string;
     userName: string;
+}
+
+enum BadWordResponseType {
+    ALL,
+    NEW_RECORD,
+    NONE
 }
 
 class BadWordEvent implements IBadWordEvent { 
@@ -58,13 +64,15 @@ class BadWordTracker {
             return 0;
         }
 
-        return this.badWordEvents.reduce((longestStreak, current, index, array) => {
+        this.longestStreak = this.badWordEvents.reduce((longestStreak, current, index, array) => {
             if (index > 0) {
                 const diff = Math.abs(current.timestamp - array[index-1].timestamp);
                 return Math.max(longestStreak, diff);
             }
             return longestStreak;
         }, 0);
+
+        return this.longestStreak;
     }
 
     public calculateAverageStreak() {
@@ -112,12 +120,52 @@ class BadWordTracker {
     }
 }
 
+class HumanReadableTimestamp {
+    readonly days: number;
+    readonly hours: number;
+    readonly minutes: number;
+    readonly seconds: number;
+
+    constructor(timestamp: number) {
+        let days = 0;
+        let hours = 0;
+
+        const ms_per_day = 86400000;
+        const ms_per_hour = 3600000;
+
+        // sub days
+        while (timestamp > ms_per_day) {
+            timestamp -= ms_per_day;
+            days++;
+        }
+
+        // sub hours
+        while (timestamp > ms_per_hour) {
+            timestamp -= ms_per_hour;
+            hours++;
+        }
+
+        const minutes = Math.floor(timestamp / 60000);
+        const seconds = ((timestamp % 60000) / 1000);
+
+        this.days = days;
+        this.hours = hours;
+        this.minutes = minutes;
+        this.seconds = seconds;
+    }
+
+    public toString(short: boolean = true): string {
+        if (short) return `${this.days}d ${this.hours}h ${this.minutes}m ${this.seconds.toFixed(0)}s`;
+        else return `${this.days} days ${this.hours} hours and ${this.minutes}m${this.seconds.toFixed(0)}s`;
+    }
+}
+
 class BadWordListener implements WordListener {
     private _badword: string;
     private readonly trackingChannels: string[];
     private lastUsedMap: Map<string, BadWordTracker> = new Map<string, BadWordTracker>();
     private enabled: boolean = true;
-    private _displayOnlyRecords: boolean = true;
+    private responseType: BadWordResponseType;
 
     private fileOpHandle: Promise<any> = Promise.resolve();
 
@@ -129,10 +177,10 @@ class BadWordListener implements WordListener {
         return GetBadWordSaveFolder();
     }
 
-    constructor(badword: string, displayOnlyRecords: boolean = true) {
+    constructor(badword: string, responseType: BadWordResponseType = BadWordResponseType.NONE) {
         try {
             this._badword = badword;
-            this._displayOnlyRecords = displayOnlyRecords;
+            this.responseType = responseType;
             this.trackingChannels = GetKoalaBotSystem().getEnvironmentVariable("LISTENER_BADWORD_TRACKING_CHANNEL").split(",");
             
             const saveFolder = this.getBadWordSaveFolder();
@@ -161,49 +209,15 @@ class BadWordListener implements WordListener {
         }
     }
 
-    private getHumanTime(timestamp: number): [days: number, hours: number, minutes: number, seconds: number] {
-        // Calculate the human readable time string
-        let days = 0;
-        let hours = 0;
+    private printMessage(message: Message, diff: number, average: number, longestStreak: number, isNewRecord: boolean) {
+        const timeSinceLast = new HumanReadableTimestamp(diff);
+        const averageTime = new HumanReadableTimestamp(average);
+        const longestStreakTime = new HumanReadableTimestamp(longestStreak);
 
-        const ms_per_day = 86400000;
-        const ms_per_hour = 3600000;
-
-        // sub days
-        while (timestamp > ms_per_day) {
-            timestamp -= ms_per_day;
-            days++;
-        }
-
-        // sub hours
-        while (timestamp > ms_per_hour) {
-            timestamp -= ms_per_hour;
-            hours++;
-        }
-
-        const minutes = Math.floor(timestamp / 60000);
-        const seconds = ((timestamp % 60000) / 1000);
-
-        return [days, hours, minutes, seconds];
-    }
-
-    private printMessage(message: Message, diff: number, average: number, isNewRecord: boolean) {
-        const humanTimeSinceLast = this.getHumanTime(diff); 
-        const d_days = humanTimeSinceLast[0];
-        const d_hours = humanTimeSinceLast[1];
-        const d_minutes = humanTimeSinceLast[2];
-        const d_seconds = humanTimeSinceLast[3].toFixed(0);
-
-        const averageHumanTime = this.getHumanTime(average);
-        const a_days = averageHumanTime[0];
-        const a_hours = averageHumanTime[1];
-        const a_minutes = averageHumanTime[2];
-        const a_seconds = averageHumanTime[3].toFixed(0);
-
-        if (isNewRecord) {
-            message.reply(`IT'S A NEW RECORD! It's been ${d_days} days ${d_hours} hours and ${d_minutes}m${d_seconds}s since the last time ${this._badword} was said with a new average of ${a_days}d ${a_hours}h ${a_minutes}m ${a_seconds}s!`);
-        } else if (!this._displayOnlyRecords) {
-            message.reply(`RESET THE CLOCK! It's been ${d_days} days ${d_hours} hours and ${d_minutes}m${d_seconds}s since the last time ${this._badword} was said with a new average of ${a_days}d ${a_hours}h ${a_minutes}m ${a_seconds}s!`);
+        if (isNewRecord && this.responseType != BadWordResponseType.NONE) {
+            message.reply(`IT'S A NEW RECORD! It's been ${timeSinceLast.toString(false)} since the last time ${this._badword} was said with a new average of ${averageTime.toString()}!`);
+        } else if (this.responseType != BadWordResponseType.NONE && this.responseType != BadWordResponseType.NEW_RECORD) {
+            message.reply(`RESET THE CLOCK! It's been ${timeSinceLast.toString(false)} since the last time ${this._badword} was said with a new average of ${averageTime.toString()} with an active long streak of ${longestStreakTime.toString()}!`);
         }
     }
 
@@ -212,7 +226,7 @@ class BadWordListener implements WordListener {
 
         if (this.trackingChannels.includes(message.channelId) && message.content.toLowerCase().includes(this._badword.toLowerCase())) {
             const newEvent = new BadWordEvent(message.member.user.id, message.member.user.username);
-            let tracker;
+            let tracker: BadWordTracker = null;
 
             if (!this.lastUsedMap.has(message.channelId)) { // It's the first event
                 this.lastUsedMap.set(message.channelId, new BadWordTracker());
@@ -232,7 +246,7 @@ class BadWordListener implements WordListener {
                 // Store off the new event
                 tracker.addEvent(newEvent);
 
-                this.printMessage(message, diff, tracker.calculateAverageStreak(), isNewRecord);
+                this.printMessage(message, diff, tracker.calculateAverageStreak(), tracker.getLongestStreak(), isNewRecord);
             }
 
             await this.fileOpHandle;
@@ -244,9 +258,9 @@ class BadWordListener implements WordListener {
 try {
     GetKoalaBotSystem().getEnvironmentVariable("LISTENER_BADWORDS").split(",").forEach(badword => {
         if (badword == 'retard') {
-            GetKoalaBotSystem().registerWordListener(new BadWordListener(badword, false), badword);        
+            GetKoalaBotSystem().registerWordListener(new BadWordListener(badword, BadWordResponseType.ALL), badword);
         } else {
-            GetKoalaBotSystem().registerWordListener(new BadWordListener(badword), badword);
+            GetKoalaBotSystem().registerWordListener(new BadWordListener(badword, BadWordResponseType.NEW_RECORD), badword);
         }
     });
 } catch (e) {

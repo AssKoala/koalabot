@@ -1,8 +1,8 @@
-import { DiscordMessageCreateListener } from "../api/DiscordMessageListener.js";
+import { DiscordMessageCreateListener } from "../api/discordmessagelistener.js";
 import { Message } from 'discord.js'
 import { ListenerManager } from "../listenermanager.js"
 import { LoggerConcrete } from '../logging/logger.js'
-import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
+import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 
 class LogListener implements DiscordMessageCreateListener {
     async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {

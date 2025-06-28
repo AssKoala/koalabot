@@ -7,7 +7,7 @@ import { Global } from '../global.js';
 import fs from 'fs'
 import { SlashCommandBuilder } from 'discord.js';
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
 const dictDataPath = `${Global.settings().get("DATA_PATH")}/dictdata.json`
 const dictData = await Global.readJsonFile(dictDataPath);

@@ -1,5 +1,5 @@
-import { DiscordMessageCreateListener, WordListener } from "../api/DiscordMessageListener.js";
-import { KoalaBotSystem } from "../api/KoalaBotSystem.js";
+import { DiscordMessageCreateListener, WordListener } from "../api/discordmessagelistener.js";
+import { KoalaBotSystem } from "../api/koalabotsystem.js";
 import { Global } from "../global.js";
 import { ListenerManager } from "../listenermanager.js";
 import { WordTracker } from "../listeners/wordtracker.js";

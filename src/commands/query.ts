@@ -5,7 +5,7 @@
 import { Global } from '../global.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
 class QueryCommand extends DiscordBotCommand {
 

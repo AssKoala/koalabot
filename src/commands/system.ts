@@ -10,7 +10,7 @@ import { Dict } from './dict.js'
 import { VersionInformation } from '../version.js';
 import fs from 'fs'
 import { EOL } from 'node:os'
-import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import crypto from 'crypto'
 import fsPromise from 'node:fs/promises'
 import { GetBadWordSaveFileName, GetBadWordSaveFilePath, GetBadWordSaveFolder } from '../listeners/badwordlistener.js';

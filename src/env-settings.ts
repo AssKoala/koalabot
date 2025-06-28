@@ -27,7 +27,7 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('reddit', "REDDIT_USER_AGENT", "", "Reddit custom user agent for use in praw", true);
 
     // module: image general
-    settingsManager.register('image', "IMAGE_ENABLED_AI_LIST", 'stablediffusion,dalle,getimg.ai-flux', 'Comma separate list of AI image generation models to use slash commands with (requires reloading guild commands when changing this value). Default is all available, so remove any AI services you dont have an API key for (or just dont want to use).', false);
+    settingsManager.register('image', "IMAGE_ENABLED_AI_LIST", 'stablediffusion,dall-e-3,getimg.ai-flux,gpt-image-1', 'Comma separate list of AI image generation models to use slash commands with (requires reloading guild commands when changing this value). Default is all available, so remove any AI services you dont have an API key for (or just dont want to use).', false);
 
     // module: stablediffusion web-ui
     settingsManager.register('stablediffusion', "SD_WEBUI_ADDRESS", '127.0.0.1:7860', 'host:port of stable diffusion host', false);
@@ -79,5 +79,9 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     // module: messageresponder
     settingsManager.register('messageresponder', "MESSAGE_RESPONDER_DATASET_FILENAME", 'messageresponder_dataset.json', "Filename storing message responder dataset (will load from DATA_PATH)", false);
     settingsManager.register('messageresponder', "MESSAGE_RESPONDER_AI_COOLDOWN_MS", '2000', "Cooldown before AI will make an AI call", false);
+
+    // module: shortenUrl
+    settingsManager.register('shortenUrl', "SHORTEN_URL_API_KEY", '', "API Key for shorten URL command", true);
+    settingsManager.register('shortenUrl', "SHORTEN_URL_SHLINK_BASE_ADDRESS", '', "Shlink host", true);
 }
 

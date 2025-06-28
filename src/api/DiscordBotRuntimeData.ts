@@ -1,7 +1,7 @@
 import { LoggerConcrete } from '../logging/logger.js';
 import { Bot } from '../bot.js';
 import { Global } from '../global.js'
-import { DiscordBotHelpers } from './DiscordBotHelpers.js'
+import { DiscordBotHelpers } from './discordbothelpers.js'
 import { SettingsManager } from '../helpers/settingsmanager.js'
 
 /**

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "babykoala",
+    "weatherSettings": {
+      "location": "Weston",
+      "preferredUnits": "rankine"
+    }
+  },
+  {
+    "name": "asskoala",
+    "weatherSettings": {
+      "location": "32801",
+      "preferredUnits": "fahrenheit"
+    }
+  }
+]

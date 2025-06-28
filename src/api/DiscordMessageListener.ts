@@ -1,4 +1,4 @@
-import { DiscordBotRuntimeData } from '../api/DiscordBotRuntimeData.js'
+import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 import { Message, MessageReaction, PartialMessageReaction, User, PartialUser } from 'discord.js';
 
 export interface DiscordMessageCreateListener {

@@ -6,7 +6,7 @@ import { Global } from '../global.js';
 import { LoggerConcrete } from '../logging/logger.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js'
 import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
-import { DiscordBotCommand, registerDiscordBotCommand } from '../api/DiscordBotCommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
 const profanities = await Global.readJsonFile(`${Global.settings().get("DATA_PATH")}/profanity.json`);
 
@@ -419,7 +419,7 @@ class LeaderboardCommand extends DiscordBotCommand {
 }
 
 import { ListenerManager } from '../listenermanager.js';
-import { DiscordMessageCreateListener } from '../api/DiscordMessageListener.js';
+import { DiscordMessageCreateListener } from '../api/discordmessagelistener.js';
 
 const leaderboardInstance = new LeaderboardCommand('leaderboard');
 registerDiscordBotCommand(leaderboardInstance, false);

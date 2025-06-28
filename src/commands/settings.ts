@@ -5,7 +5,7 @@
 import dotenv from "dotenv"
 import { Global } from './../global.js'
 import { SlashCommandBuilder } from 'discord.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from "../api/DiscordBotCommand.js";
+import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from "../api/discordbotcommand.js";
 
 /**
  * Sets the user's location and saves it off

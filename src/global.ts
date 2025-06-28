@@ -1,6 +1,6 @@
 // API Imports
-import { LogLevel } from './api/KoalaBotSystem.js'
-import { KoalaBotSystem } from './api/KoalaBotSystem.js';
+import { LogLevel } from './api/koalabotsystem.js'
+import { KoalaBotSystem } from './api/koalabotsystem.js';
 import { KoalaBotSystemDiscord } from './bot/KoalaBotSystemDiscord.js';
 
 // Internal
@@ -67,6 +67,7 @@ export abstract class Global {
             process.env["MESSAGE_LOG_FILENAME"] || 'discord_messages.log'
         );
         Global.initUserSettings(`${Global.settings().get("DATA_PATH")}/settings.json`);
+        
         Global.initBot();
 
         // Once bot is initialized, disable performance counters if timing not enabled
@@ -115,14 +116,14 @@ export abstract class Global {
             const splitMessage = Global.#splitMessage(message);
     
             if (Array.isArray(splitMessage)) {
-                await interaction.editReply(`Message too long, split below`);
+                interaction.editReply(splitMessage[0]);
 
-                for (let i = 0; i < splitMessage.length; i++)
+                for (let i = 1; i < splitMessage.length; i++)
                 {
-                    await interaction.channel.send(splitMessage[i]);
+                    interaction.channel.send(splitMessage[i]);
                 }
             } else {
-                await interaction.editReply(message);
+                interaction.editReply(message);
             }
         } catch (e) {
             Global.logger().logErrorAsync(`Failed to edit reply, got error ${e}`);

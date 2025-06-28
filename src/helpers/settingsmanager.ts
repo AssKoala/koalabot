@@ -26,7 +26,7 @@ export class SettingsManager {
     register(moduleName:string, settingName:string, defaultValue:string, description:string, required:boolean = false) {
         // .env settings are just the setting name, but module name is used for logging/docs
         if (settingName in this.registeredSettings) {
-            throw Error(`SettingsManager.register: ${moduleName}::${settingName} already exists!`);
+            throw RangeError(`SettingsManager.register: ${moduleName}::${settingName} already exists!`);
         } else {
             this.registeredSettings[settingName] = new Setting(moduleName, settingName, defaultValue, description, required);
         }
@@ -51,9 +51,9 @@ export class SettingsManager {
     get(settingName: string): string {
         if (!(settingName in this.registeredSettings)) {
             if (this.has(settingName)) {
-                throw Error(`SettingsManager.get: ${settingName} is not registered, but has value ${process.env[settingName]} in .env!`)
+                throw RangeError(`SettingsManager.get: ${settingName} is not registered, but has value ${process.env[settingName]} in .env!`)
             } else {
-                throw Error(`SettingsManager.get: ${settingName} is not registered and doesn't exist!`);
+                throw RangeError(`SettingsManager.get: ${settingName} is not registered and doesn't exist!`);
             }
         }
 
@@ -70,6 +70,10 @@ export class SettingsManager {
         }
 
         return this.registeredSettings[settingName].defaultValue;
+    }
+
+    isRegistered(settingName: string): boolean {
+        return (settingName in this.registeredSettings);
     }
 
     has(settingName): boolean {
