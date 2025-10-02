@@ -6,7 +6,7 @@ import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-com
 
 import * as Discord from 'discord.js';
 import { AttachmentBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
-import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
+import { Stenographer, DiscordStenographerMessage } from '../app/stenographer/discordstenographer.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 

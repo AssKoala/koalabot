@@ -2,7 +2,7 @@ import { DiscordMessageCreateListener, WordListener } from "../api/discordmessag
 import { KoalaBotSystem } from "../api/koalabotsystem.js";
 import { Global } from "../global.js";
 import { ListenerManager } from "../listenermanager.js";
-import { WordTracker } from "../listeners/wordtracker.js";
+import { WordTracker } from "../sys/wordtracker.js";
 
 export class KoalaBotSystemDiscord implements KoalaBotSystem {
     private _wordTracker: WordTracker;

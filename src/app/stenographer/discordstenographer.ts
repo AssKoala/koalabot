@@ -1,12 +1,12 @@
-import { LoggerConcrete } from '../logging/logger.js';
-import { Global } from '../global.js';
+import { LoggerConcrete } from '../../logging/logger.js';
+import { Global } from '../../global.js';
 import fs from 'fs';
 import path from 'path';
-import { DiscordMessageCreateListener } from '../api/discordmessagelistener.js'
-import { ListenerManager } from "../listenermanager.js"
+import { DiscordMessageCreateListener } from '../../api/discordmessagelistener.js'
+import { ListenerManager } from "../../listenermanager.js"
 import { DiscordStenographerMessage } from './discordstenographermessage.js'
-import { MessageCache } from './messagecache.js'
-import { PerformanceCounter } from '../performancecounter.js';
+import { MessageCache } from '../../helpers/messagecache.js'
+import { PerformanceCounter } from '../../performancecounter.js';
 
 /**
  * Caches discord messages in memory for use in bot processing

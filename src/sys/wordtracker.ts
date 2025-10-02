@@ -2,8 +2,6 @@ import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
 import { Message } from 'discord.js';
 import { Global } from "../global.js";
-import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
-import fs from "fs";
 
 class TrackedWordConcrete implements TrackedWord {
     word: string;           // human readable word
@@ -37,11 +35,15 @@ export class WordTracker implements DiscordMessageCreateListener {
             const data = Global.readJsonFileSync(filePath);
 
             if (data != null) {
-                data.forEach(entry => {
-                    this.trackWord(entry);
-                });
+                this.trackWords(data);
             }
         }
+    }
+
+    public trackWords(words: TrackedWord[]): void {
+        words.forEach(word => {
+            this.trackWord(word);
+        });
     }
 
     public trackWord(word: TrackedWord): void {

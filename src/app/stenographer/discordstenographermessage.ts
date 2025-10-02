@@ -1,4 +1,4 @@
-import { GetKoalaBotSystem } from '../api/koalabotsystem.js';
+import { GetKoalaBotSystem } from '../../api/koalabotsystem.js';
 
 /**
  * Discord Stenographer internally keeps messages using this data structure

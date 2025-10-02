@@ -5,7 +5,7 @@
 import { Global } from '../global.js';
 import { LoggerConcrete } from '../logging/logger.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js'
-import { Stenographer, DiscordStenographerMessage } from '../helpers/discordstenographer.js';
+import { Stenographer, DiscordStenographerMessage } from '../app/stenographer/discordstenographer.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
 const profanities = await Global.readJsonFile(`${Global.settings().get("DATA_PATH")}/profanity.json`);

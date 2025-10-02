@@ -1,5 +1,5 @@
 import { GetKoalaBotSystem } from '../api/koalabotsystem.js';
-import { DiscordStenographerMessage } from './discordstenographermessage.js';
+import { DiscordStenographerMessage } from '../app/stenographer/discordstenographermessage.js';
 
 export class MessageCache
 {

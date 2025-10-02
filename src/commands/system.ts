@@ -4,7 +4,7 @@
 
 import { Global } from '../global.js';
 import { SlashCommandBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
-import { Stenographer } from '../helpers/discordstenographer.js'
+import { Stenographer } from '../app/stenographer/discordstenographer.js'
 import { getAffirmationCount } from './affirmation.js'
 import { Dict } from './dict.js'
 import { VersionInformation } from '../version.js';

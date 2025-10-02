@@ -114,5 +114,5 @@
     "esm": true
   },
   "include": ["./src/**/*", "jest.config.js"],
-  "exclude": ["dist", "node_modules", "tests", "__mocks__"]
+  "exclude": ["**/__mocks__/*", "build", "node_modules", "tests", "__mocks__"]
 }

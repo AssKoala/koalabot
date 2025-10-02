@@ -1,6 +1,6 @@
 import { Global } from "../../__mocks__/global.js";
 import { MessageCache } from "../../helpers/messagecache.js";
-import { DiscordStenographerMessage } from "../../helpers/discordstenographermessage.js";
+import { DiscordStenographerMessage } from "../../app/stenographer/discordstenographermessage.js";
 
 const maxEntries = 3;
 let messageCache: MessageCache;
