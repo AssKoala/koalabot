@@ -7,14 +7,15 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Run Bot",
+            "name": "Run Bot (Test Environment)",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "preLaunchTask": "tsc: build - tsconfig.json",
             "program": "${workspaceFolder}/src/main.ts",
             "outputCapture": "std",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"]
+            "outFiles": ["${workspaceFolder}/build/**/*.js"],
+            "envFile": "${workspaceFolder}/environment/test/env.txt"
         },
         {
             "type": "node",

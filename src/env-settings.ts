@@ -53,8 +53,8 @@ export function registerEnvironmentSettings(settingsManager: SettingsManager): v
     settingsManager.register('chat', "GPT_TOKEN_COUNT", "8192", "Max number of tokens to send during chat command", false);
     settingsManager.register('chat', "GPT_MAX_MESSAGES", "2048", "Max number of message history to send during chat command", false);
     settingsManager.register('chat', "CHAT_PROMPT_INSTRUCTIONS", "You are a helpul assistant.", "Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant)", false);
-    settingsManager.register('chat', "CHAT_DEFAULT_MODEL", "chatgpt-4o-latest", "LLM model to use: chatgpt-4o-latest, gpt-4o, gpt-4-turbo, claude-3.5-sonnet, or ollama", false);
-    settingsManager.register('chat', "CHAT_ENABLE_AT_REPLIES", 'true', "If enabled, bot will automatically treat an @ mention as a chat command with the body of the message as the prompt itself.", false);
+    settingsManager.register('chat', "CHAT_DEFAULT_MODEL", "gpt-5", "LLM model to use: gpt-5, gpt-5-chat-latest, chatgpt-4o-latest, gpt-4o, gpt-4-turbo, claude-3.5-sonnet, or ollama", false);
+    settingsManager.register('chat', "CHAT_ENABLE_LONG_DESCRIPTION", 'true', "If enabled, responses with images will include the revised prompt as the embed description", false);
 
     // module: weather
     settingsManager.register('weather', "GOOGLE_MAPS_API_KEY", "", "Google maps API key.  See https://developers.google.com/maps/documentation/javascript/get-api-key", true);

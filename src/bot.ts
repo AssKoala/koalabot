@@ -146,13 +146,13 @@ export class Bot {
 			hasRebooted = true;
 
 			if (clearStatus) {
-				fs.unlinkSync(Global.settings().get("REBOOT_FILE"));
+				fs.promises.unlink(Global.settings().get("REBOOT_FILE"));
 			}
 
 			return { hasRebooted, memberId, channelId };
 		}
 		catch (e) {
-			Global.logger().logErrorAsync(`Failed to check for reboot, got ${e}`);
+			Global.logger().logInfo(`Reboot file not found, starting clean.`);
 		}
 
 		return { hasRebooted, memberId: "", channelId: "" };

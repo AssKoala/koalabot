@@ -117,7 +117,12 @@ export class UserSettingsManager {
 
             return true;
         } catch (e) {
-            GetKoalaBotSystem().getLogger().logError(`Failed to reload user data from ${jsonFile}, got ${e}`);
+            try {
+                GetKoalaBotSystem().getLogger().logError(`Failed to reload user data from ${jsonFile}, got ${e}`);
+            } catch (e) {
+                console.error(`Failed to reload user data from ${jsonFile}, got ${e}`);
+            }
+            
             return false;
         }
     }

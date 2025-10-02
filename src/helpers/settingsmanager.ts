@@ -128,7 +128,7 @@ export class SettingsManager {
         toRet += "#### Global settings" + "\n\n";
         toRet += `| Name | DefaultValue | Required | Description |\n`;
         toRet += `| ---- | ------------ | -------- | ----------- |\n`;
-        toRet += this.getReadmeSettingsString(Object.entries(moduleSorted["global"]));
+        toRet += this.getReadmeSettingsString(Object.entries(moduleSorted["global"])) + "\n\n";
 
         // Then the rest of the settings in whatever order
         Object.entries(moduleSorted).forEach(([key, settings]) => {
@@ -136,7 +136,7 @@ export class SettingsManager {
                 toRet += `#### ${key} settings` + "\n\n";
                 toRet += `| Name | DefaultValue | Required | Description |\n`;
                 toRet += `| ---- | ------------ | -------- | ----------- |\n`;
-                toRet += this.getReadmeSettingsString(Object.entries(settings));
+                toRet += this.getReadmeSettingsString(Object.entries(settings)) + "\n\n";
             }
         });
 

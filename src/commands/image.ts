@@ -363,7 +363,9 @@ class ImageCommand extends DiscordBotCommand {
                     title += imageGenData.getGeneratedPrompt();
 
                     const embed = {
-                        title: title.substring(0, 256),
+                        
+                        title: `${this.runtimeData().settings().get("BOT_NAME")} x ${interaction.user.displayName}`.substring(0, 256),
+                        description: title.substring(0, 4096),
                         image: {
                             url: `attachment://${downloadedFileInfo.filename}`,
                         }

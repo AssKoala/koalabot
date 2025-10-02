@@ -1,0 +1,10 @@
+.git/
+.vscode/
+buildsys/
+data/
+environment/
+runtime/
+test-data/
+.dockerignore
+compose.yml
+Dockerfile
