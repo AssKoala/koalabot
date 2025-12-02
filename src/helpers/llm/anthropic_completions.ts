@@ -4,6 +4,7 @@ import { AnthropicHelper } from '../anthropichelper.js';
 export class AnthropicCompletions extends OpenAiCompletionsV1Compatible {
     
     public async getCompletion(): Promise<any> {
+        // @ts-ignore
         return AnthropicHelper.getInterface().chat.completions.create({
             model: "claude-3-5-sonnet-20240620",
             max_tokens: this.getMaxTokens(),
@@ -16,7 +17,7 @@ export class AnthropicCompletions extends OpenAiCompletionsV1Compatible {
         return (await this.getCompletion()).content[0].text;
     }
 
-    public static create(aiModel, maxMessages, maxTokens, systemPrompt = "You are a helpful assistant.") {
+    public static create(aiModel: string, maxMessages: number, maxTokens: number, systemPrompt = "You are a helpful assistant.") {
         return new AnthropicCompletions(aiModel, maxMessages, maxTokens, systemPrompt);
     }
 }

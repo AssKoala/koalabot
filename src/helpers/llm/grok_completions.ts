@@ -3,11 +3,12 @@ import { GrokHelper } from "../grokhelper.js";
 
 export class GrokCompletions extends OpenAiCompletionsV1 {
 
+    // @ts-ignore
     protected override getInterface() {
         return GrokHelper.getInterface();
     }
 
-    public static override create(aiModel, maxMessages, maxTokens, systemPrompt = "You are a helpful assistant.") {
+    public static override create(aiModel: string, maxMessages: number, maxTokens: number, systemPrompt = "You are a helpful assistant.") {
         return new GrokCompletions(aiModel, maxMessages, maxTokens, systemPrompt);
     }
 }

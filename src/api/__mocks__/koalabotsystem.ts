@@ -8,7 +8,7 @@ class MockLogger implements Logger {
     logWarning(message: string) {}
     logFatal(message: string, shouldThrow: boolean) {}
     logError(message: string) {}
-    async logErrorAsync(message: string, discordReply, editReply: boolean) {}
+    async logErrorAsync(message: string, discordReply: any, editReply: boolean) {}
 }
 
 class KoalaBotSystemMock implements KoalaBotSystem {

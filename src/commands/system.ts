@@ -32,6 +32,7 @@ class Administration {
     }
 }
 
+// @ts-ignore
 async function showMemoryStats(interaction)
 {
     try {
@@ -57,6 +58,7 @@ async function showMemoryStats(interaction)
     }
 }
 
+// @ts-ignore
 async function showCpuStats(interaction)
 {
     try {
@@ -97,6 +99,7 @@ async function showCpuStats(interaction)
     }
 }
 
+// @ts-ignore
 async function reboot(interaction) {
     try {
         if (!Administration.isSuper(interaction.member.id)) {
@@ -127,6 +130,7 @@ async function reboot(interaction) {
     }
 }
 
+// @ts-ignore
 async function showVersionInformation(interaction) {
     try {
         interaction.editReply(`Version: ${VersionInformation.versionNumber}`);
@@ -137,6 +141,7 @@ async function showVersionInformation(interaction) {
 
 class SystemCommand extends DiscordBotCommand {
 
+    // @ts-ignore
     private async handleDisplaySubcommand(interaction, subcommandOptions) {
         const coreCommandName = subcommandOptions[0].options[0].value;
 
@@ -155,6 +160,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     private async handleCoreSubcommand(interaction) {
         try {
             const subcommand = interaction.options.data[0].options[0].name;
@@ -172,6 +178,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     private async handleLogSubcommand(interaction) {
         try {
             if (!Administration.isSuper(interaction.member.id)) {
@@ -206,6 +213,7 @@ class SystemCommand extends DiscordBotCommand {
                 const lines = data.split(EOL);
 
                 for (let i = Math.max(0, lines.length - count - 1); i < lines.length; i++) {
+                    // @ts-ignore
                     tailOutput += `${lines[i]}\n`;
                 }
 
@@ -213,9 +221,11 @@ class SystemCommand extends DiscordBotCommand {
                     await Global.editAndSplitReply(interaction, `Last ${count} lines from log:${EOL}${tailOutput}`);
                 } else {
                     // Store the data into a temp file to attach to discord
+                    // @ts-ignore
                     const hash = crypto.createHash('md5').update(tailOutput).digest("hex");
                     const filePath = `${Global.settings().get("TEMP_PATH")}/${hash}.txt`;
 
+                    // @ts-ignore
                     fs.writeFileSync(filePath, tailOutput, 'utf8');
 
                     const file = new AttachmentBuilder(filePath);
@@ -245,6 +255,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     private async handleEnvironmentSubcommand(interaction) {
         try {
             if (!Administration.isSuper(interaction.member.id)) {
@@ -340,6 +351,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     private async handleBadWordSubcommand(interaction) {
         try {
             const subCommand = interaction.options.data[0].options[0];
@@ -386,6 +398,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     async handle(interaction) {
         using perfCounter = Global.getPerformanceCounter("handleSystemCommand(): ");
 

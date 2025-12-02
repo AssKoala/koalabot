@@ -7,6 +7,7 @@ export class MessageCache
     private _authorMessageCount: Map<string, number> = new Map<string, number>();
     private _maxEntries: number = Number.MAX_VALUE;
 
+    // @ts-ignore
     constructor(maxEntries:number, messages: DiscordStenographerMessage[] = null) {
         this._maxEntries = maxEntries;
 
@@ -32,6 +33,7 @@ export class MessageCache
     getMessagesCountBy(author: string): number {
         if (!this._authorMessageCount.has(author)) return -1;
 
+        // @ts-ignore
         return this._authorMessageCount.get(author);
     }
 
@@ -48,6 +50,7 @@ export class MessageCache
             if (!this._authorMessageCount.has(msg.author)) this._authorMessageCount.set(msg.author, 0);
 
             this._messages.push(msg);
+            // @ts-ignore
             this._authorMessageCount.set(msg.author, this._authorMessageCount.get(msg.author) + 1);
             this.trimEntries();
         } catch (e) {
@@ -61,6 +64,7 @@ export class MessageCache
             if (this.messages().length > 0) {
                 var toRet = this.messages()[0];
 
+                // @ts-ignore
                 this._authorMessageCount.set(toRet.author, this._authorMessageCount.get(toRet.author) - 1);
                 this._messages.shift();
 

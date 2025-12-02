@@ -8,14 +8,14 @@ import { Global } from '../global.js';
  * Commands should PROBABLY just extend this unless they have a good reason not to.
  */
 export class BasicCommand {
-    private _runtimeData: DiscordBotRuntimeData = null;
+    private _runtimeData?: DiscordBotRuntimeData;
     runtimeData() {
-        return this._runtimeData;
+        return this._runtimeData!;
     }
 
     private readonly _name: string;
     name(): string {
-        return this._name;
+        return this._name!;
     }
 
     constructor(name: string) {
@@ -68,7 +68,7 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
          
             // Initialize the command with the runtime information, this has to go before ANY use of the object
             // The command isn't fully constructed as a Discord bot object until it's initialized.
-            botCommand.initCommand(new DiscordBotRuntimeData(Global.bot(), Global.logger(), null, null, Global.settings()));
+            botCommand.initCommand(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings()));
 
             const newCommand = {
                 data: botCommand.get(),

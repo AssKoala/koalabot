@@ -67,6 +67,7 @@ export abstract class ListenerManager {
 		const logManager = Global.logManager();
 
 		if (!logManager.hasChannelLogger(message.channelId)) {
+            // @ts-ignore
 			const created = logManager.createLogger(message.guildId, message.channelId);
 
 			if (!created) {
@@ -74,11 +75,12 @@ export abstract class ListenerManager {
 			}
 		}
 
+        // @ts-ignore
 		const guildLogger = Global.logManager().getGuildLogger(message.guildId);
 		const channelLogger = Global.logManager().getChannelLogger(message.channelId);
 
         ListenerManager.messageCreateHandlers.forEach(handler => {
-			const runtimeData = new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings());
+			const runtimeData = new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings(), guildLogger, channelLogger);
 
 			try {
 				handler.onMessageCreate(runtimeData, message);
@@ -91,12 +93,13 @@ export abstract class ListenerManager {
 
     static processMessageReactionAddListeners(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) 
 	{
+        // @ts-ignore
 		const guildLogger = Global.logManager().getGuildLogger(reaction.message.guildId);
 		const channelLogger = Global.logManager().getChannelLogger(reaction.message.channelId);
 
         ListenerManager.messageReactionAddHandlers.forEach(handler => {
 			try {
-				handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), guildLogger, channelLogger, Global.settings()), reaction, user);
+				handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings(), guildLogger, channelLogger), reaction, user);
 			} catch (e) {
 				Global.logger().logErrorAsync(`Error with onMessageReactionAdd listender for ${handler}, got ${e}`);
 			}

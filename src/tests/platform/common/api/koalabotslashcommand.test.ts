@@ -33,7 +33,9 @@ describe('KoalaBotSlashCommand', () => {
         });
 
         test('Modify', () => {
+            // @ts-ignore
             command.setName(null);
+            // @ts-ignore
             command.setDescription(null);
 
             expect(command.getName()).toBe(null);

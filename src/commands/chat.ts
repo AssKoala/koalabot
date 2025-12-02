@@ -24,20 +24,20 @@ import { rm } from 'node:fs/promises';
 import { LlmDictTool } from '../helpers/llm/tools/dicttool.js';
 
 abstract class ChatResponse {
-    botId;
-    botName: string;
-    guildId;
-    channelId;
-    userId;
-    useGuildLogs: boolean;
-    userName: string;
-    prompt: string;
-    question: string;
-    maxTokens: number;
-    ai_model: string;
-    maxMessages: number;
-    responsePrepend: string = '';
-    stripBotNameFromResponse: boolean = false;
+    botId?: string;
+    botName?: string;
+    guildId?: string;
+    channelId?: string;
+    userId?: string;
+    useGuildLogs?: boolean;
+    userName?: string;
+    prompt?: string;
+    question?: string;
+    maxTokens?: number;
+    ai_model?: string;
+    maxMessages?: number;
+    responsePrepend?: string = '';
+    stripBotNameFromResponse?: boolean = false;
 
     protected abstract replyInternal(runtimeData: DiscordBotRuntimeData, message: string): Promise<void>;
     
@@ -45,23 +45,23 @@ abstract class ChatResponse {
         await this.replyInternal(runtimeData, message);
     }
 
-    public abstract replyGeneric(data: any): Promise<void>;
+    public abstract replyGeneric(data: any): Promise<Discord.Message<boolean>>;
 }
 
 class SlashCommandResponse extends ChatResponse {
     private _interaction;
 
-    constructor(interaction) {
+    constructor(interaction: Discord.ChatInputCommandInteraction) {
         super();
 
         this._interaction = interaction;
     }
     
-    protected async replyInternal(runtimeData, message) {
+    protected async replyInternal(runtimeData: DiscordBotRuntimeData, message: string) {
         runtimeData.helpers().editAndSplitReply(this._interaction, message);
     }
 
-    public replyGeneric(data) {
+    public replyGeneric(data: any) {
         return this._interaction.editReply(data);
     }
 }
@@ -75,7 +75,7 @@ class MentionMessageResponse extends ChatResponse {
         this._message = message;
     }
 
-    protected async replyInternal(runtimeData, message: string) {
+    protected async replyInternal(runtimeData: DiscordBotRuntimeData, message: string) {
         const splitMessage = runtimeData.helpers().splitMessage(message);
         
         if (!Array.isArray(splitMessage)) {
@@ -84,12 +84,16 @@ class MentionMessageResponse extends ChatResponse {
             this._message.reply(splitMessage[0]);
 
             for (let i = 1; i < splitMessage.length; i++) {
-                this._message.channel.send(splitMessage[i]);
+                if ('send' in this._message.channel) {
+                    this._message.channel.send(splitMessage[i]);
+                } else {
+                    runtimeData.logger().logErrorAsync(`Failed to send split message, message channel lacks send method`);
+                }
             }
         }
     }
 
-    public replyGeneric(data) {
+    public replyGeneric(data: any) {
         return this._message.reply(data);
     }
 }
@@ -103,7 +107,7 @@ enum AiApi {
 
 class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListener {
     
-    static getTokens(msg): number {
+    static getTokens(msg: string): number {
         return msg.length / 4;
     }
 
@@ -119,17 +123,17 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
         }
     }
 
-    private async replyText(requestData, responseText) {
+    private async replyText(requestData: ChatResponse, responseText: string) {
         this.runtimeData().logger().logInfo(`Asked: ${requestData.question}, got: ${responseText}`);
 
         // Add the response to our list of stuff
         Stenographer.pushMessage(new DiscordStenographerMessage(
-            requestData.guildId,
-            requestData.channelId,
-            requestData.botName,
-            requestData.botId,
+            requestData.guildId!,
+            requestData.channelId!,
+            requestData.botName!,
+            requestData.botId!,
             responseText,
-            Date.now
+            Date.now()
         ));
         
         if (requestData.stripBotNameFromResponse) {
@@ -143,16 +147,16 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     private async handleInternal(requestData: ChatResponse, aiApi: AiApi) {
         try {    
             try {
-                const createFunc = OpenAiCompletionsV1Compatible.getCompletionsCompatibleApi(requestData.ai_model);
+                const createFunc = OpenAiCompletionsV1Compatible.getCompletionsCompatibleApi(requestData.ai_model!);
 
                 if (createFunc == null) {
                     throw new Error(`No compatible API found for model ${requestData.ai_model}`);
                 }
 
                 const api = createFunc(
-                    requestData.ai_model,
-                    requestData.maxMessages,
-                    requestData.maxTokens,
+                    requestData.ai_model!,
+                    requestData.maxMessages!,
+                    requestData.maxTokens!,
                     `You are named ${requestData.botName}<@${requestData.botId}> in a chat room where users talk to each other in a username: text format. ${requestData.prompt}}`
                 );
                 
@@ -166,9 +170,9 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 let messages;
 
                 if (requestData.useGuildLogs) {
-                    messages = Stenographer.getGuildMessages(requestData.guildId)
+                    messages = Stenographer.getGuildMessages(requestData.guildId!)
                 } else {
-                    messages = Stenographer.getChannelMessages(requestData.channelId);
+                    messages = Stenographer.getChannelMessages(requestData.channelId!);
                 }
 
                 messages.slice().reverse().every(entry => {
@@ -192,17 +196,17 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     
                 // Add the question to the list of messages after we've scanned the rest of the messages
                 Stenographer.pushMessage(new DiscordStenographerMessage(
-                    requestData.guildId,
-                    requestData.channelId,
-                    requestData.userName,
-                    requestData.userId,
-                    requestData.question,
-                    Date.now
+                    requestData.guildId!,
+                    requestData.channelId!,
+                    requestData.userName!,
+                    requestData.userId!,
+                    requestData.question!,
+                    Date.now()
                 ));
     
                 let responseText = undefined;
 
-                if (api.getAiModel() == "gpt-5") {
+                if (api.getAiModel().includes("gpt-5")) {
                     this.runtimeData().logger().logInfo(`ChatCommand::handleInternal() Using OpenAIResponsesV1Compatible for model ${api.getAiModel()}`);
 
                     const apiv2 = api as OpenAIResponsesV1Compatible;
@@ -211,11 +215,11 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                     let madeFunctionCall: boolean = false;
 
                     // Copy all the messages into the input
-                    completion.getResponse().output.forEach((item) => {
+                    completion.getResponse().output.forEach((item: any) => {
                         completion.getApi().pushMessage(item, true);
                     });
 
-                    completion.getResponse().output.forEach((toolCall) => {
+                    completion.getResponse().output.forEach((toolCall: any) => {
                         // If its a function call, need to call the tool and pass in the output
                         if (toolCall.type == "function_call") {
                             const name = toolCall.name;
@@ -234,11 +238,12 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 
                     if (madeFunctionCall) {
                         this.runtimeData().logger().logInfo(`ChatCommand::handleInternal() Made function call, getting new completion...`);
-                        try {
-                            completion = await completion.getApi().getCompletion();
-                        } catch (e) {
-                            completion = undefined;
-                        }
+                        completion = await completion.getApi().getCompletion();
+
+                        // Copy all the new messages into the input since there was a function call
+                        completion.getResponse().output.forEach((item: any) => {
+                            completion.getApi().pushMessage(item, true);
+                        });
                     }
 
                     // We know its a responses API call
@@ -246,29 +251,26 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                     responseText = completion.getMessageText();
 
                     if (imageData != undefined) {
-                        /* Image defined, we have an image
-                            - Download the image to a temp file
-                            - Reply with the image as an embed
-                            - Delete the temp file
-
-                        */
                         this.runtimeData().logger().logInfo(`ChatCommand::handleInternal() Results contain image data, responding with image.`);
 
-                        const imageDownloadInfo = await SystemHelpers.downloadBufferToFile(imageData.imageBytes, this.runtimeData().settings().get("TEMP_PATH"));
-                        const file = new AttachmentBuilder(imageDownloadInfo.fullpath);
+                        const image = new Discord.AttachmentBuilder(imageData.imageBytes, {
+                            name: 'image.png',
+                            description: imageData.revisedPrompt
+                        });
 
                         const TITLE_MAX_LEN = 256;
                         const DESCR_MAX_LEN = 4096;
 
                         const embed = new Discord.EmbedBuilder();
-                        embed.setTitle(requestData.question.trim().substring(0, TITLE_MAX_LEN));
+                        embed.setTitle(requestData.question!.trim().substring(0, TITLE_MAX_LEN));
                         if (this.runtimeData().settings().get("CHAT_ENABLE_LONG_DESCRIPTION") == 'true') {
-                            embed.setDescription(imageData.revisedPrompt.substring(0, DESCR_MAX_LEN));
+                            const text = "-# " + imageData.revisedPrompt;
+                            embed.setDescription(text.substring(0, DESCR_MAX_LEN));
                         }
-                        embed.setImage(`attachment://${imageDownloadInfo.filename}`);
 
-                        await requestData.replyGeneric({ embeds: [embed], files: [file] });
-                        await rm(imageDownloadInfo.fullpath);
+                        embed.setImage(`attachment://image.png`);
+
+                        await requestData.replyGeneric({ embeds: [embed], files: [image] });
                     }
                 } else if (responseText == undefined) {
                     responseText = await api.getCompletionText();
@@ -300,15 +302,16 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
 
             const requestData = new SlashCommandResponse(interaction);
 
-            requestData.botId = this.runtimeData().bot().client().user.id;
-            requestData.botName = this.runtimeData().bot().client().user.username;
+            // TODO: Fixup use of !
+            requestData.botId = this.runtimeData().bot().client().user!.id;
+            requestData.botName = this.runtimeData().bot().client().user!.username;
             requestData.channelId = slashCommandRequest.getOptionValueString("override_channel_id", interaction.channelId);
-            requestData.guildId = interaction.guildId;
+            requestData.guildId = interaction.guildId!;
             requestData.useGuildLogs = slashCommandRequest.getOptionValueBoolean("use_guild_log", true);
-            requestData.userId = interaction.member.user.id;
-            requestData.userName = interaction.member.user.username;
+            requestData.userId = interaction.member!.user.id;
+            requestData.userName = interaction.member!.user.username;
             requestData.prompt = slashCommandRequest.getOptionValueString('ai_prompt', this.runtimeData().settings().get("CHAT_PROMPT_INSTRUCTIONS"));
-            requestData.question = `${interaction.member.user.username}: ${slashCommandRequest.getOptionValueString('response')}`;
+            requestData.question = `${interaction.member!.user.username}: ${slashCommandRequest.getOptionValueString('response')}`;
             requestData.maxTokens = slashCommandRequest.getOptionValueNumber('token_count', parseInt(this.runtimeData().settings().get("GPT_TOKEN_COUNT")));
             requestData.ai_model = slashCommandRequest.getOptionValueString('ai_model', this.runtimeData().settings().get("CHAT_DEFAULT_MODEL"));
             requestData.maxMessages = parseInt(this.runtimeData().settings().get("GPT_MAX_MESSAGES")) || 2048;
@@ -337,6 +340,8 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 if (!this.runtimeData().settings().has("GROK_API_KEY")) {  // Same for Grok
                     await this.runtimeData().logger().logErrorAsync(`Cannot use ChatGPT without GROK_API_KEY`, interaction, true);
                 }
+            } else {
+                throw new Error(`Unknown AI model specified: ${requestData.ai_model}`);
             }
 
             await this.handleInternal(requestData, aiApi);
@@ -345,7 +350,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
         }
     }
 
-    private async sendTypingIndicator(channelId): Promise<void> {
+    private async sendTypingIndicator(channelId: string): Promise<void> {
         const channel: any = await this.runtimeData().bot().client().channels.cache.get(channelId);
         
         try {
@@ -359,17 +364,18 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
         using perfCounter = this.runtimeData().getPerformanceCounter("handleChatCommand(): ");
 
         try {
-            if (!message.author.bot && message.mentions.has(this.runtimeData().bot().client().user.id)) {
+            if (!message.author.bot && message.mentions.has(this.runtimeData().bot().client().user!.id)) {
                 this.runtimeData().logger().logInfo(`ChatCommand::onMessageCreate() start message processing from ${message.author.username} in channel ${message.channelId}`);
 
                 this.sendTypingIndicator(message.channelId);
 
                 const requestData = new MentionMessageResponse(message);
 
-                requestData.botId = runtimeData.bot().client().user.id;
-                requestData.botName = runtimeData.bot().client().user.username;
+                // TODO: Fixup use of !
+                requestData.botId = runtimeData.bot().client().user!.id;
+                requestData.botName = runtimeData.bot().client().user!.username;
                 requestData.channelId = message.channelId;
-                requestData.guildId= message.guildId;
+                requestData.guildId = message.guildId!;
                 requestData.useGuildLogs = false;
                 requestData.userId = message.author.id;
                 requestData.userName = message.author.username;
@@ -414,6 +420,8 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                                 .setName('ai_model')
                                 .setDescription('AI Model to use')
                                 .addChoices(
+                                    { name: 'gpt-5.1', value: 'gpt-5.1' },
+                                    { name: 'gpt-5', value: 'gpt-5' },
                                     { name: 'gpt-5-chat-latest', value: 'gpt-5-chat-latest' },
                                     { name: 'gpt-4o', value: 'gpt-4o' },
                                     { name: 'chatgpt-4o-latest', value: 'chatgpt-4o-latest' },

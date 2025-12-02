@@ -7,7 +7,9 @@ import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../a
 import { Global } from "../global.js";
 
 export class ShortenUrlResult {
+    // @ts-ignore
     shortUrl: string = null;
+    // @ts-ignore
     fetchResult: Response = null;
     responseData: any = null;
     error: unknown = null;

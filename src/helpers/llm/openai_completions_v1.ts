@@ -19,6 +19,7 @@ export abstract class OpenAiCompletionsV1Compatible {
     }
 
     public static getCompletionsCompatibleApi(aiModel: string): ApiCreateFunction {
+        // @ts-ignore
         return this.completionsCompatibleApis.get(aiModel);
     }
 
@@ -33,12 +34,14 @@ export abstract class OpenAiCompletionsV1Compatible {
     // Shared methods for all LLMs that are compatible with the OpenAI Completions API v1
     protected messageData: MessageDataType[] = [];
     protected messageTokens: number = 0;
+    // @ts-ignore
     protected systemPrompt: string;
     protected systemTokens: number = 0;
     protected maxTokens: number;
     protected maxMessages: number;
     protected aiModel: string;
 
+    // @ts-ignore
     protected constructor(aiModel, maxMessages, maxTokens, systemPrompt) {
         this.aiModel = aiModel;
         this.maxTokens = maxTokens;
@@ -62,6 +65,7 @@ export abstract class OpenAiCompletionsV1Compatible {
         return this.systemPrompt;
     }
 
+    // @ts-ignore
     public setSystemPrompt(prompt): void {
         this.systemPrompt = prompt;
         this.systemTokens = OpenAiCompletionsV1Compatible.getEstimatedTokens(this.getAiModel(), prompt);
@@ -125,8 +129,10 @@ export abstract class OpenAiCompletionsV1Compatible {
     }
 
     public unshiftMessage(message: MessageDataType): boolean {
+        // @ts-ignore
         const messageTokens = OpenAiCompletionsV1Compatible.getEstimatedTokens(this.getAiModel(), message.content);
 
+        // @ts-ignore
         if (this.messageFits(message.content)) {
             this.messageTokens += messageTokens;
             this.messageData.unshift(message);

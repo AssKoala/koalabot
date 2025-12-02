@@ -5,7 +5,7 @@
 // TODO: Remove Global here -- legacy issues
 import { Global } from '../global.js';
 import fs from 'fs'
-import { SlashCommandBuilder } from 'discord.js';
+import * as Discord from 'discord.js';
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
@@ -25,7 +25,7 @@ class Dict {
     static sortDictData() {
         using perfCounter = Global.getPerformanceCounter("sortDictData(): ");
         try {
-            dictData.sort((a, b) => {
+            dictData.sort((a: any, b: any) => {
                 //console.log(sortDictData(): `${a.entry} compareTo ${b.entry} == ${a.entry.localeCompare(b.entry)}`);
                 return a.entry.localeCompare(b.entry, undefined, { sensitivity: 'accent' })
             });
@@ -76,7 +76,7 @@ class Dict {
      * @param {function(left,right)} compareFunc - Function comparing left and right
      * @returns the index of target in the array, -1 if not found
      */
-    static getIndexOf(array, target, compareFunc) {
+    static getIndexOf(array: any, target: any, compareFunc: any) {
         try {
             let start = 0;
             let end = array.length - 1;
@@ -109,10 +109,10 @@ class Dict {
      * @param {string} entryName - Entry we're looking for
      * @returns { [string, string] } - Array containing author, definition.  Null if not found 
      */
-    static findDictionaryEntry(entryName) {
+    static findDictionaryEntry(entryName: any) {
         try {
             let result = this.getIndexOf(dictData, entryName,
-                (x, y) => {
+                (x: any, y: any) => {
                     const left = x.entry;
                     const right = y;
                     const result = left.localeCompare(right, undefined, { sensitivity: 'accent' });
@@ -135,7 +135,7 @@ class Dict {
      * Handles the /dict command
      * @param {Discord.interaction} interaction - interaction message to reply to
      */
-    static async handleDictCommand(interaction) {
+    static async handleDictCommand(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = Global.getPerformanceCounter("handleDictCommand(): ");
 
         try {
@@ -172,7 +172,7 @@ class Dict {
      * Handles the /define command
      * @param {Discord.interaction} interaction - discord interaction to reply to
      */
-    static async handleDefineCommand(interaction) {
+    static async handleDefineCommand(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = Global.getPerformanceCounter("handleDefineCommand(): ");
 
         try {
@@ -187,9 +187,22 @@ class Dict {
                 return;
             }
 
-            const entryName = interaction.options.data[0].value.trim();
-            const definition = interaction.options.data[1].value.trim();
-            let existingEntry = this.findDictionaryEntry(entryName);
+            let entryName: string = '', definition: string = '';
+
+            interaction.options.data.forEach(option => {
+                if (option.name === 'phrase') {
+                    entryName = option.value!.toString().trim();
+                } else if (option.name === 'definition') {
+                    definition = option.value!.toString().trim();
+                }
+            });
+
+            if (entryName == '') {
+                await interaction.reply('Missing entry name for define command, need phrase to define.');
+                return;
+            }
+
+            let existingEntry: any = this.findDictionaryEntry(entryName);
 
             if (existingEntry === null) {
                 const newEntry =
@@ -218,15 +231,15 @@ class Dict {
      * Handles the /index command
      * @param {Discord.interaction} interaction - discord interaction to reply to
      */
-    static async handleIndexCommand(interaction) {
+    static async handleIndexCommand(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = Global.getPerformanceCounter("handleIndexCommand(): ");
 
         try {
             await interaction.deferReply();
 
-            const search_string = interaction.options.data[0].value.trim().toLowerCase();
+            const search_string = interaction.options.data[0].value!.toString().trim().toLowerCase();
 
-            const matches = dictData.filter(entry => entry.definition.toLowerCase().includes(search_string));
+            const matches = dictData.filter((entry: any) => entry.definition.toLowerCase().includes(search_string));
 
             let outputString;
 
@@ -253,12 +266,12 @@ class Dict {
 }
 
 class DictCommand extends DiscordBotCommand {
-    async handle(interaction) {
+    async handle(interaction: Discord.ChatInputCommandInteraction) {
         return Dict.handleDictCommand(interaction);
     }
 
     get() {
-        const dictCommand = new SlashCommandBuilder()
+        const dictCommand = new Discord.SlashCommandBuilder()
                         .setName(this.name())
                         .setDescription('Retrieve a definition')
                         .addStringOption((option) =>
@@ -273,13 +286,13 @@ class DictCommand extends DiscordBotCommand {
 }
 
 class DefineCommand extends DiscordBotCommand {
-    async handle(interaction) {
+    async handle(interaction: Discord.ChatInputCommandInteraction) {
         return Dict.handleDefineCommand(interaction);
     }
 
     get() {
         // discord define command
-        const defineCommand = new SlashCommandBuilder()
+        const defineCommand = new Discord.SlashCommandBuilder()
                 .setName(this.name())
                 .setDescription('Define a phrase')
                 .addStringOption((option) =>
@@ -301,13 +314,13 @@ class DefineCommand extends DiscordBotCommand {
 }
 
 class IndexCommand extends DiscordBotCommand {
-    async handle(interaction) {
+    async handle(interaction: Discord.ChatInputCommandInteraction) {
         return Dict.handleIndexCommand(interaction);
     }
 
     get() {
         // discord index command
-        const indexCommand = new SlashCommandBuilder()
+        const indexCommand = new Discord.SlashCommandBuilder()
                 .setName(this.name())
                 .setDescription("Search dict entries")
                 .addStringOption((option) =>

@@ -11,7 +11,7 @@ export class KoalaCommand {
     name: string;
     description: string;
 
-    constructor(name: string = undefined, description: string = undefined) {
+    constructor(name: string, description: string) {
         this.name = name;
         this.description = description;
     }
@@ -156,7 +156,7 @@ export class KoalaBotSlashSubcommand extends KoalaCommand {
         }
     }
 
-    getArgument(argumentName: string): KoalaBotSlashCommandArgument {
+    getArgument(argumentName: string): KoalaBotSlashCommandArgument | undefined {
         return this.arguments.find(entry => entry.getName() == argumentName);
     }
 }
@@ -188,17 +188,17 @@ export class KoalaBotSlashCommand extends KoalaBotSlashSubcommand {
         return this.commandgroups;
     }
 
-    getGroup(group: string): KoalaBotSlashCommandGroup {
+    getGroup(group: string): KoalaBotSlashCommandGroup | undefined {
         return this.commandgroups.find(entry => entry.name === group);
     }
 
-    hasSubcommandGroup(group: string): boolean {
+    hasSubcommandGroup(group: string): boolean | undefined{
         return this.commandgroups.find(entry => entry.name === group) !== undefined;
     }
 
     getSubcommands(group: string): KoalaBotSlashSubcommand[] {
         if (this.hasSubcommandGroup(group)) {
-            return this.getGroup(group).subcommands;
+            return this.getGroup(group)!.subcommands;
         }
 
         throw new Error(`Group: ${group} doesn't exist`);
@@ -244,13 +244,13 @@ export interface SlashCommandObjectFactoryInstance {
 }
 
 export class SlashCommandObjectFactory {
-    private static _slashCommandObjectFactory: SlashCommandObjectFactoryInstance = null;
+    private static _slashCommandObjectFactory?: SlashCommandObjectFactoryInstance;
 
-    GetSlashCommandObjectFactory(): SlashCommandObjectFactoryInstance {
+    GetSlashCommandObjectFactory(): SlashCommandObjectFactoryInstance | undefined {
         return SlashCommandObjectFactory._slashCommandObjectFactory;
     }
 
-    SetSlashCommandObjectFactory(factory): void {
+    SetSlashCommandObjectFactory(factory: SlashCommandObjectFactoryInstance): void {
         SlashCommandObjectFactory._slashCommandObjectFactory = factory;
     }
 }

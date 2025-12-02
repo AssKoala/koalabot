@@ -1,6 +1,8 @@
+.git/
 .vs/
 build/
 data/badword-tracking
+dist/
 logs/
 node_modules/
 runtime/

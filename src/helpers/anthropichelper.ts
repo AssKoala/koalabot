@@ -10,6 +10,7 @@ class AnthropicHelper {
                 apiKey: Global.settings().get(`ANTHROPIC_API_KEY`)
             });
 
+            // @ts-ignore
             AnthropicHelper.anthropic = anthropic;
         }
         catch (e) {

@@ -41,17 +41,20 @@ export class UserSettingsManager {
         try {
             // If the user's data already exists, return that
             if (this.userSettings.has(username)) {
+                // @ts-ignore
                 return this.userSettings.get(username);
             }
             else if (createNew) {
                 return new UserSettingsData(username);
             } else {
+                // @ts-ignore
                 return null;
             }
         }
         catch (e)
         {
             GetKoalaBotSystem().getLogger().logError(`Failed to get user data, got exception: ${e}`);
+            // @ts-ignore
             return null;
         }
     }
@@ -81,6 +84,7 @@ export class UserSettingsManager {
     /**
      * Flush the user data to disk in JSON format
      */
+    // @ts-ignore
     async flush() : Promise<boolean> {
         try {
             let userData = new Array<UserSettingsData>();
@@ -106,11 +110,13 @@ export class UserSettingsManager {
         }
     }
 
+    // @ts-ignore
     reload(jsonFile) : boolean {
         try {
             const data = fs.readFileSync(jsonFile, { encoding: "utf8", flag: "r" });
             const jsonData = JSON.parse(data);
 
+            // @ts-ignore
             jsonData.forEach((item) => {
                 this.userSettings.set(item.name, new UserSettingsData(item.name, item.weatherSettings.location, item.weatherSettings.preferredUnits));
             });

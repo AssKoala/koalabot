@@ -72,7 +72,7 @@ export abstract class Global {
 
         // Once bot is initialized, disable performance counters if timing not enabled
         if (Global.settings().get("TIMING_ENABLE") != 'true') {
-            this._getPerformanceCounter = function(descr:string): PerformanceCounter { return null; };
+            this._getPerformanceCounter = function(descr:string): PerformanceCounter | undefined { return undefined; };
         }
     }
 
@@ -86,13 +86,13 @@ export abstract class Global {
     }
 
     // Timing is enabled by default to get initialization timings always since counter overhead is nominal during init
-    private static _getPerformanceCounter = this.getPerformanceCounterInternal;
+    private static _getPerformanceCounter: (description: string) => PerformanceCounter | undefined = this.getPerformanceCounterInternal;
 
     static getPerformanceCounter(description: string) {
         return this._getPerformanceCounter(description);
     }
 
-    static #splitMessage(message, size = 2000)
+    static #splitMessage(message: string, size = 2000)
     {
         if (message.length <= size)
         {
@@ -120,6 +120,7 @@ export abstract class Global {
 
                 for (let i = 1; i < splitMessage.length; i++)
                 {
+                    // @ts-ignore
                     interaction.channel.send(splitMessage[i]);
                 }
             } else {
@@ -130,7 +131,7 @@ export abstract class Global {
         }
     }
 
-    static async readJsonFile(path) {
+    static async readJsonFile(path: string) {
         try {
             const file = await fsPromises.readFile(path, {encoding: "utf8"});
             return JSON.parse(file);
@@ -140,7 +141,7 @@ export abstract class Global {
         }
     }
 
-    static readJsonFileSync(path) {
+    static readJsonFileSync(path: string) {
         try {
             const file = fs.readFileSync(path, {encoding: "utf8"});
             return JSON.parse(file);

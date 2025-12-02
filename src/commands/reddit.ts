@@ -4,6 +4,7 @@
 
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+// @ts-ignore
 import validator from 'validator';
 import cp from 'child_process';
 import path from "path";
@@ -67,6 +68,7 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     private async getRandomLink(interaction: ChatInputCommandInteraction, searchLimit, subredditList: string[]) {
         using perfCounter = this.runtimeData().getPerformanceCounter("replyRandomLink(): ");
 
@@ -93,6 +95,7 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     private _slashCommand;
     slashCommand() {
         return this._slashCommand;
@@ -113,6 +116,7 @@ class RedditLinkCommand extends DiscordBotCommand {
             // Check if blacklisted
             let isBlacklistedChannel: boolean = false;
             this.blacklist.forEach(blacklisted => {
+                // @ts-ignore
                 if (interaction.channel.name === blacklisted) {
                     isBlacklistedChannel = true;
                 }
@@ -129,6 +133,7 @@ class RedditLinkCommand extends DiscordBotCommand {
             if (this.whitelist.length > 0) {
                 isWhitelisted = false;
                 this.whitelist.every(whitelisted => {
+                    // @ts-ignore
                     if (interaction.channel.name === whitelisted) {
                         isWhitelisted = true;
                         return false;
@@ -148,6 +153,7 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     constructor(linkData) {
         super(linkData.name);
 
@@ -185,6 +191,7 @@ class RedditLinkCommand extends DiscordBotCommand {
 import { Global } from "../global.js"
 
 class RedditLinkPoster {
+    // @ts-ignore
     #redditLinks;
     #redditLinkCommands: RedditLinkCommand[] = [];
 
@@ -196,6 +203,7 @@ class RedditLinkPoster {
     }
 
     generateSlashCommands() {
+        // @ts-ignore
         this.#redditLinks.forEach(linkData => {
             this.#redditLinkCommands.push(new RedditLinkCommand(linkData));
         });

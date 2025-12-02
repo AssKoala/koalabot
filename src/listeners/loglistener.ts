@@ -12,7 +12,9 @@ class LogListener implements DiscordMessageCreateListener {
         const standardMessage = LoggerConcrete.getStandardDiscordMessageFormat(message);
 
 		runtimeData.logger().logDiscordMessage(standardMessage);
+        // @ts-ignore
         runtimeData.channelLogger().logDiscordMessage(standardMessage);
+        // @ts-ignore
         runtimeData.guildLogger().logDiscordMessage(standardMessage);
     }
 }

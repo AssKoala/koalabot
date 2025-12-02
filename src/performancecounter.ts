@@ -18,7 +18,9 @@ Symbol.dispose ??= Symbol('Symbol.dispose')
 // </polyfill>
 
 export class PerformanceCounter implements Disposable {
+    // @ts-ignore
     #description: string;
+    // @ts-ignore
     #start: number;
 
     constructor(desc: string, start: number = performance.now()) {

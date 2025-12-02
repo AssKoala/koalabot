@@ -22,6 +22,7 @@ class OpenAiCompletionsV1Test extends OpenAiCompletionsV1Compatible {
     }
 }
 
+// @ts-ignore
 let mockApi: OpenAiCompletionsV1Test = null;
 const constants = {
     MAX_MESSAGES: 10,
@@ -52,6 +53,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    // @ts-ignore
     mockApi = null;
 });
 

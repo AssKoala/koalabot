@@ -20,12 +20,12 @@ import { CommandManager } from "./commandmanager.js";
 import { ListenerManager } from "./listenermanager.js";
 
 export class Bot {
-	private _client: Client = null;
-	client() { return this._client; }
+	private _client?: Client = undefined;
+	client() { return this._client!; }
 
-	private _koalaBotSystem: KoalaBotSystemDiscord = null;
+	private _koalaBotSystem?: KoalaBotSystemDiscord = undefined;
 	koalaBotSystem(): KoalaBotSystemDiscord {
-		return this._koalaBotSystem;
+		return this._koalaBotSystem!;
 	}
 
 	constructor() {
@@ -113,12 +113,12 @@ export class Bot {
 	}
 
 	async onClientReady() {
-		Global.logger().logInfo(`Logged in as ${this.client().user.tag}!`);
+		Global.logger().logInfo(`Logged in as ${this.client().user!.tag}!`);
 
 		try {
 			const rebooted = this.hasRebooted();
 			if (rebooted != null) {
-				const textChannel = this._client.channels.cache.get(rebooted.channelId) as TextChannel;
+				const textChannel = this.client().channels.cache.get(rebooted.channelId) as TextChannel;
 				if (textChannel != null) {
 					textChannel.send(`<@${rebooted.memberId}>: It is by your hand that I am once again given flesh.  What is a man? A miserable pile of secrets!`);
 				}

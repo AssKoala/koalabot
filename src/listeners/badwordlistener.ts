@@ -45,6 +45,7 @@ class BadWordEvent implements IBadWordEvent {
 
 class BadWordTracker {
     private badWordEvents: IBadWordEvent[];
+    // @ts-ignore
     private longestStreak: number;
 
     constructor(badWordEvents: IBadWordEvent[] = []) {
@@ -161,10 +162,13 @@ class HumanReadableTimestamp {
 }
 
 class BadWordListener implements WordListener {
+    // @ts-ignore
     private _badword: string;
+    // @ts-ignore
     private readonly trackingChannels: string[];
     private lastUsedMap: Map<string, BadWordTracker> = new Map<string, BadWordTracker>();
     private enabled: boolean = true;
+    // @ts-ignore
     private responseType: BadWordResponseType;
 
     private fileOpHandle: Promise<any> = Promise.resolve();
@@ -225,19 +229,25 @@ class BadWordListener implements WordListener {
         if (!this.enabled) return;
 
         if (this.trackingChannels.includes(message.channelId) && message.content.toLowerCase().includes(this._badword.toLowerCase())) {
+            // @ts-ignore
             const newEvent = new BadWordEvent(message.member.user.id, message.member.user.username);
+            // @ts-ignore
             let tracker: BadWordTracker = null;
 
             if (!this.lastUsedMap.has(message.channelId)) { // It's the first event
                 this.lastUsedMap.set(message.channelId, new BadWordTracker());
+                // @ts-ignore
                 this.lastUsedMap.get(message.channelId).addEvent(newEvent);
+                // @ts-ignore
                 tracker = this.lastUsedMap.get(message.channelId);
             } else {    // It's not the first event
                 const currentTime = newEvent.timestamp;
+                // @ts-ignore
                 tracker = this.lastUsedMap.get(message.channelId);
                 let isNewRecord: boolean = false;
 
                 // Check if this is a new record
+                // @ts-ignore
                 let diff = currentTime - tracker.last().timestamp;
                 if (diff > tracker.getLongestStreak()) {
                     isNewRecord = true;

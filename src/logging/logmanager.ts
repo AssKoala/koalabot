@@ -31,9 +31,9 @@ export class LogManager {
         return `${this.logBaseDir}/${this.globalLogFileName}`;
     }
 
-    getOwningGuildId(channelId: string) {
+    getOwningGuildId(channelId: string): string {
         if (this.channelToGuildMap.has(channelId)) {
-            return this.channelToGuildMap[channelId];
+            return this.channelToGuildMap.get(channelId)!;
         } else {
             return "";
         }
@@ -89,10 +89,12 @@ export class LogManager {
     }
 
     getChannelLogger(channelId: string): LoggerConcrete {
+        // @ts-ignore
         return this.channelLoggerMap.get(channelId);
     }
 
     getGuildLogger(guildId: string): LoggerConcrete {
+        // @ts-ignore
         return this.guildLoggerMap.get(guildId);
     }
 

@@ -4,6 +4,7 @@ import { OllamaHelper } from "../ollamahelper.js";
 export class OllamaCompletions extends OpenAiCompletionsV1Compatible {
     
     public async getCompletion(): Promise<any> {
+        // @ts-ignore
         return OllamaHelper.getInterface().chat.completions.create({
             model: this.getAiModel,
             messages: this.getMessageDataRaw(),
@@ -16,7 +17,7 @@ export class OllamaCompletions extends OpenAiCompletionsV1Compatible {
         return (await this.getCompletion()).message.content;
     }
 
-    public static create(aiModel, maxMessages, maxTokens, systemPrompt = "You are a helpful assistant.") {
+    public static create(aiModel: string, maxMessages: number, maxTokens: number, systemPrompt = "You are a helpful assistant.") {
         return new OllamaCompletions(aiModel, maxMessages, maxTokens, systemPrompt);
     }
 }

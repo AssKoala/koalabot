@@ -1,6 +1,6 @@
 # KoalaBot
 
-Simple, turnkey discord bot to do various stuff that was once handled by IRC bots but also does other, new things good too. Like integrate with ChatGPT.
+Simple, turnkey discord bot to do various stuff that was once handled by IRC bots but also does other, new things good too.  Like ChatGPT and others, it supports that.
 
 The bot is made to be extensible by using the API functionality to do pretty much whatever you want for slash commands.  There's probably a lot of stuff you can't do, but what you _can_ do can be done really well.
 

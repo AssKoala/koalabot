@@ -11,6 +11,7 @@ class GrokHelper {
                 baseURL: "https://api.x.ai/v1",
             });
 
+            // @ts-ignore
             GrokHelper.grok = grok;
         }
         catch (e) {

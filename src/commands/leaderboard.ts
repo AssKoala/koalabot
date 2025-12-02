@@ -18,7 +18,7 @@ class ProfanityStats {
     }
 
     add(profanity: string) {
-        this._profanityMap.set(profanity, this._profanityMap.get(profanity) + 1);
+        this._profanityMap.set(profanity, this._profanityMap.get(profanity)! + 1);
     }
 
     get(profanity: string) {
@@ -48,6 +48,7 @@ class ProfanityLeaderboard {
     
     addMessageToProfanityLeaderboard(discordStenographerMsg: DiscordStenographerMessage)
     {
+        // @ts-ignore
         let result = [];
 
         try {
@@ -59,21 +60,22 @@ class ProfanityLeaderboard {
                 this._leaderboardMap.set(guildId, new Map<string, ProfanityStats>());
             }
 
-            let profanityLeaders = this._leaderboardMap.get(guildId);
+            let profanityLeaders = this._leaderboardMap.get(guildId)!;
 
             if (!profanityLeaders.has(author)) {
                 profanityLeaders.set(author, new ProfanityStats());
+                // @ts-ignore
                 profanities.forEach(profanity => {
-                    profanityLeaders.get(author).set(profanity.profanity, 0);
+                    profanityLeaders.get(author)!.set(profanity.profanity, 0);
                 });
             }        
 
-            profanities.forEach(profanity => {
+            profanities.forEach((profanity: any) => {
                 let currentLeader = this.getProfanityLeader(guildId, profanityLeaders, profanity.profanity);
 
-                profanity.matches.every(regex => {
+                profanity.matches.every((regex: string) => {
                     if (discordStenographerMsg.message.toLowerCase().match(regex) != null) {
-                        profanityLeaders.get(author).add(profanity.profanity);
+                        profanityLeaders.get(author)!.add(profanity.profanity);
                         return false;
                     }
                     return true;
@@ -92,9 +94,11 @@ class ProfanityLeaderboard {
             result = [];
         }
 
+        // @ts-ignore
         return result;
     }
 
+    // @ts-ignore
     getProfanityLeader(guildId, profanityLeaders, profanity, perCapita = false, ignoreList = [])
     {
         try {
@@ -103,6 +107,7 @@ class ProfanityLeaderboard {
             let leaderMessageCount = 0;
 
             for (const [author, profanityStats] of profanityLeaders) {
+                // @ts-ignore
                 if (ignoreList.includes(author)) continue;
 
                 const authorTotalMessages = Stenographer.getMessageCount(guildId, author);
@@ -131,6 +136,7 @@ class ProfanityLeaderboard {
         return { "leader": "error", "count": 0 };
     };
 
+    // @ts-ignore
     async showProfanityLeaderboard(interaction, perCapita = false)
     {
         try {
@@ -141,12 +147,16 @@ class ProfanityLeaderboard {
             let outputString =
                 "```Profanity Leaderboard " + `${perCapitaString}\n`
                 + "-------------------------\n";
+            
+            // @ts-ignore
             profanities.forEach(profanity => {
+                // @ts-ignore
                 const lead = this.getProfanityLeader(interaction.guildId, profanityLeaders, profanity.profanity, perCapita, [Global.settings().get("BOT_NAME")] );
 
                 outputString += `${profanity.profanity}(s):`.padEnd(12, " ");
 
                 if (lead.count != 0) {
+                    // @ts-ignore
                     const perCapitaValue = lead["count"] / lead["total"] * 100;
 
                     if (perCapita) outputString += `${lead["leader"]} with ${perCapitaValue.toPrecision(2)}%\n`;
@@ -164,6 +174,7 @@ class ProfanityLeaderboard {
         }
     }
 
+    // @ts-ignore
     updateProfanityLeaderboard(message)
     {
         using perfCounter = Global.getPerformanceCounter("updateProfanityLeaderboard(): ");
@@ -189,6 +200,7 @@ class ProfanityLeaderboard {
                     }
                 });
 
+                // @ts-ignore
                 let convertToOutput = function (items) {
                     // Remove trailing , and front whitespace then split
                     items = items.substring(0, items.length - 1).split(',');
@@ -216,6 +228,7 @@ class ProfanityLeaderboard {
         
     }
 
+    // @ts-ignore
     async handleDisplayLeaderboardCommand(interaction, options)
     {
         try {
@@ -239,14 +252,17 @@ class ProfanityLeaderboard {
         }
     }
 
+    // @ts-ignore
     async handleDisplayCustomLeaderboardCommand(interaction, options, ignoreList = [])
     {
         try {
             const guildId = interaction.guildId;
 
+            // @ts-ignore
             let profanity;
             let perCapita = false;
 
+            // @ts-ignore
             options.forEach((opt) => {
                 switch (opt.name) {
                     case `profanity`:
@@ -261,10 +277,13 @@ class ProfanityLeaderboard {
                 }
             });
 
+            // @ts-ignore
             let profanityMatches = [];
             profanityMatches[0] = profanity;
 
+            // @ts-ignore
             profanities.every(entry => {
+                // @ts-ignore
                 if (entry.profanity === profanity) {
                     profanityMatches = entry.matches;
                     return false;
@@ -272,6 +291,7 @@ class ProfanityLeaderboard {
                 return true;
             });
 
+            // @ts-ignore
             let customLeaders = [];
             const messages = Stenographer.getGuildMessages(guildId);
 
@@ -279,13 +299,18 @@ class ProfanityLeaderboard {
             messages.forEach(discordMsg => {
                 const author = discordMsg.author;
 
+                // @ts-ignore
                 if (!ignoreList.includes(author)) {
+                    // @ts-ignore
                     if (!(author in customLeaders)) {
+                        // @ts-ignore
                         customLeaders[author] = 0;
                     }
         
+                    // @ts-ignore
                     profanityMatches.every(regex => {
                         if (discordMsg.message.toLowerCase().match(regex) != null) {
+                            // @ts-ignore
                             customLeaders[author]++;
                             return false;
                         }
@@ -296,7 +321,9 @@ class ProfanityLeaderboard {
 
             // Sort the totals for the leaderboard
             let sortedLeaders = [];
+            // @ts-ignore
             for (const key of Object.keys(customLeaders)) {
+                // @ts-ignore
                 const count = customLeaders[key];
                 if (count > 0)
                     sortedLeaders.push({ "author": key, "count": count });
@@ -341,6 +368,7 @@ class LeaderboardCommand extends DiscordBotCommand {
     private _profanityLeaderboard: ProfanityLeaderboard = new ProfanityLeaderboard();
     profanityLeaderboard() { return this._profanityLeaderboard; }
 
+    // @ts-ignore
     async handle(interaction)
     {
         using perfCounter = Global.getPerformanceCounter("handleLeaderboardCommand(): ");
@@ -356,6 +384,7 @@ class LeaderboardCommand extends DiscordBotCommand {
                         await this._profanityLeaderboard.handleDisplayLeaderboardCommand(interaction, interaction.options.data[i].options);
                         break;
                     case 'custom':
+                        // @ts-ignore
                         await this._profanityLeaderboard.handleDisplayCustomLeaderboardCommand(interaction, interaction.options.data[i].options, ["BOOBS", "BOOBS (Test)"]);
                         break;
                     default:
@@ -428,6 +457,7 @@ registerDiscordBotCommand(leaderboardInstance, false);
 leaderboardInstance.profanityLeaderboard().recalculateProfanityLeaders();
 
 class LeaderboardMessageListener implements DiscordMessageCreateListener {
+    // @ts-ignore
     async onMessageCreate(runtimeData, message) {
         await leaderboardInstance.profanityLeaderboard().updateProfanityLeaderboard(message);
     }

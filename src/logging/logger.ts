@@ -1,10 +1,10 @@
 import winston from 'winston';
-import { Message } from 'discord.js';
+import * as Discord from 'discord.js';
 import { LogLevel, Logger } from '../api/koalabotsystem.js'
 
 
 export class LoggerConcrete implements Logger {
-    static getStandardDiscordMessageFormat(message: Message)
+    static getStandardDiscordMessageFormat(message: Discord.Message)
     {
         return `${message.author.username}<@${message.author.id}>: ${message.content}`;
     }
@@ -72,16 +72,17 @@ export class LoggerConcrete implements Logger {
     }
 
     /* Log function */
-    logDiscordMessage(message)
+    logDiscordMessage(message: string)
     {
         try {
+            // @ts-ignore
             this._logger.discord_message(message);
         } catch (e) {
             console.log(`[PANIC] Failed to log discord message ${message}!!`);
         }
     }
 
-    logInfo(message)
+    logInfo(message: string)
     {
         try {
             this._logger.info(message);
@@ -90,7 +91,7 @@ export class LoggerConcrete implements Logger {
         }
     }
 
-    logDebug(message)
+    logDebug(message: string)
     {
         try {
             this._logger.debug(message);
@@ -99,7 +100,7 @@ export class LoggerConcrete implements Logger {
         }
     }
 
-    logWarning(message)
+    logWarning(message: string)
     {
         try {
             this._logger.warning(message);
@@ -108,7 +109,8 @@ export class LoggerConcrete implements Logger {
         }
     }
 
-    logFatal(message, shouldThrow = true) {
+    logFatal(message: string, shouldThrow: boolean = true) {
+        // @ts-ignore
         this._logger.fatal(message);
         if (shouldThrow) {
             throw new Error(message);
@@ -123,7 +125,7 @@ export class LoggerConcrete implements Logger {
         }
     }
 
-    async logErrorAsync(message: string, discordReply = null, editReply = false)
+    async logErrorAsync(message: string, discordReply: Discord.ChatInputCommandInteraction | undefined = undefined, editReply = false)
     {
         try {
             this._logger.error(message);

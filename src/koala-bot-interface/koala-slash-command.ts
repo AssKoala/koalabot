@@ -4,21 +4,27 @@ export class KoalaSlashCommandRequest {
 
     private static fromDiscordSubcommand(interaction: ChatInputCommandInteraction): KoalaSlashCommandRequest 
     {
+        // @ts-ignore
         if (interaction.options["_subcommand"]) {
             let subRequest = new KoalaSlashCommandRequest(interaction);
 
+            // @ts-ignore
             subRequest.name = interaction.options["_subcommand"];
             subRequest.group = interaction.options.data[0].name;
 
+            // @ts-ignore
             for (let i = 0; i < interaction.options.data[0].options[0].options.length; i++) {
+                // @ts-ignore
                 const name = interaction.options.data[0].options[0].options[i].name;
+                // @ts-ignore
                 const value = interaction.options.data[0].options[0].options[i].value;
-
+                // @ts-ignore
                 subRequest.options.set(name, value);
             }
 
             return subRequest;
         } else {
+            // @ts-ignore
             return null;
         }
     }
@@ -33,16 +39,19 @@ export class KoalaSlashCommandRequest {
         for (let i = 0; i < interaction.options.data.length; i++) {
             const name = interaction.options.data[i].name;
             const value = interaction.options.data[i].value;
-
+            // @ts-ignore
             request.options.set(name, value);
         }
 
         return request;
     }
 
+    // @ts-ignore
     private constructor(interaction: ChatInputCommandInteraction = null) {
         this.name = "";
+        // @ts-ignore
         this.subcommand = null;
+        // @ts-ignore
         this.group = null;
         this.options = new Map<string, string | number | boolean>();
         this.platformData = interaction;
@@ -74,6 +83,7 @@ export class KoalaSlashCommandRequest {
     private options: Map<string, string | number | boolean>;
 
     public setOptionValue(key: string, newValue: string | number | boolean = "") {
+        // @ts-ignore
         this.options[key] = newValue;
     }
 

@@ -15,6 +15,7 @@ export class DiscordNativeChoice<T> implements Discord.APIApplicationCommandOpti
 export type DiscordNativeObjectType = Discord.SlashCommandStringOption | Discord.SlashCommandBooleanOption | Discord.SlashCommandIntegerOption;
 
 export class DiscordBotSlashCommandArgument extends KoalaBotSlashCommand.KoalaBotSlashCommandArgument {
+    // @ts-ignore
     appendDiscordCommand(command) {
         const nativeObject = this.asNativeObject();
 
@@ -36,39 +37,49 @@ export class DiscordBotSlashCommandArgument extends KoalaBotSlashCommand.KoalaBo
         }
     }
 
+    // @ts-ignore
     private configureChoices<T>(nativeObject) {
         if (this.getChoices().length > 0) {
             nativeObject.setChoices(this.getNativeChoices<T>());
         }
     }
 
+    // @ts-ignore
     private configureAutocomplete(nativeObject) {
         if (this.hasOption("autocomplete")) {
+            // @ts-ignore
             nativeObject.setAutocomplete(this.getOption("autocomplete").value as boolean);
         }
     }
 
+    // @ts-ignore
     private configureNumericalConstraints<T>(nativeObject) {
         if (this.hasOption("minValue")) {
+            // @ts-ignore
             nativeObject.setMinValue(this.getOption("minValue").value as T);
         }
 
         if (this.hasOption("maxValue")) {
+            // @ts-ignore
             nativeObject.setMaxValue(this.getOption("maxValue").value as T);
         }
     }
 
+    // @ts-ignore
     private configureStringConstraints(nativeObject) {
         if (this.hasOption("minLength")) {
+            // @ts-ignore
             nativeObject.setMinLength(this.getOption("minLength").value as number);
         }
 
         if (this.hasOption("maxLength")) {
+            // @ts-ignore
             nativeObject.setMaxLength(this.getOption("maxLength").value as number);
         }
     }
 
     asNativeObject() {
+        // @ts-ignore
         let nativeObject: DiscordNativeObjectType = null;
 
         switch(this.getDataType()) {
@@ -143,6 +154,7 @@ export class DiscordBotSlashSubcommand extends KoalaBotSlashCommand.KoalaBotSlas
         }
     }
 
+    // @ts-ignore
     appendDiscordCommand(discordBuilder) {
         let subcommand = new Discord.SlashCommandSubcommandBuilder();
 
@@ -158,6 +170,7 @@ export class DiscordBotSlashSubcommand extends KoalaBotSlashCommand.KoalaBotSlas
 }
 
 export class DiscordBotSlashCommand extends KoalaBotSlashCommand.KoalaBotSlashCommand {
+    // @ts-ignore
     constructor(name: string = undefined, description: string = undefined) {
         super(name, description);
 

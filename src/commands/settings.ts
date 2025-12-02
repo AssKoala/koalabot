@@ -11,6 +11,7 @@ import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from "../a
  * Sets the user's location and saves it off
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
+// @ts-ignore
 async function setUserLocation(interaction)
 {
     try {
@@ -46,6 +47,7 @@ async function setUserLocation(interaction)
  * Sets the user's preferred temperature units and saves that to disk
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
+// @ts-ignore
 async function setPreferredUnits(interaction)
 {
     try {
@@ -80,6 +82,7 @@ async function setPreferredUnits(interaction)
  * Prints the user's existing settings out, if they exist
  * @param {Discord.interaction} interaction - interaction to reply to
  */
+// @ts-ignore
 async function getUserSettings(interaction)
 {
     try {
@@ -102,6 +105,7 @@ async function getUserSettings(interaction)
  * Set the user settings using the interaction object
  * @param {Discord.interaction} interaction 
  */
+// @ts-ignore
 async function setUserSettings(interaction)
 {
     try {
@@ -114,11 +118,13 @@ async function setUserSettings(interaction)
                 break;
         }
     } catch (e) {
+        // @ts-ignore
         await Global.logger().logErrorAsync(e, interaction);
     }
 }
 
 class SettingsCommand extends DiscordBotCommand {
+    // @ts-ignore
     async handle(interaction) {
         using perfCounter = Global.getPerformanceCounter("handleSettingsCommand(): ");
 

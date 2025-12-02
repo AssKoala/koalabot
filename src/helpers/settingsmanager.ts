@@ -7,7 +7,7 @@ class Setting {
     readonly description: string;
     readonly required: boolean;
 
-    constructor(moduleName, name, defaultValue, description, required) {
+    constructor(moduleName: string, name: string, defaultValue: string, description: string, required: boolean) {
         this.moduleName = moduleName;
         this.name = name;
         this.defaultValue = defaultValue;
@@ -17,7 +17,7 @@ class Setting {
 }
 
 export class SettingsManager {
-    private registeredSettings: Setting[] = [];
+    private registeredSettings: Map<string, Setting> = new Map<string, Setting>();
 
     constructor() {
         dotenv.config();
@@ -25,15 +25,15 @@ export class SettingsManager {
 
     register(moduleName:string, settingName:string, defaultValue:string, description:string, required:boolean = false) {
         // .env settings are just the setting name, but module name is used for logging/docs
-        if (settingName in this.registeredSettings) {
+        if (this.registeredSettings.has(settingName)) {
             throw RangeError(`SettingsManager.register: ${moduleName}::${settingName} already exists!`);
         } else {
-            this.registeredSettings[settingName] = new Setting(moduleName, settingName, defaultValue, description, required);
+            this.registeredSettings.set(settingName, new Setting(moduleName, settingName, defaultValue, description, required));
         }
     }
 
     getAllSettings() {
-        return Object.keys(this.registeredSettings);
+        return Array.from(this.registeredSettings.keys());
     }
 
     search(searchString: string) {
@@ -41,7 +41,7 @@ export class SettingsManager {
     }
 
     set(settingName: string, value: string): boolean {
-        if (settingName in this.registeredSettings) {
+        if (this.registeredSettings.has(settingName)) {
             process.env[settingName] = value;
             return true;
         }
@@ -49,34 +49,38 @@ export class SettingsManager {
     }
 
     get(settingName: string): string {
-        if (!(settingName in this.registeredSettings)) {
-            if (this.has(settingName)) {
+        if (!(this.registeredSettings.has(settingName))) {
+            if (this.isInEnvironment(settingName)) {
                 throw RangeError(`SettingsManager.get: ${settingName} is not registered, but has value ${process.env[settingName]} in .env!`)
             } else {
                 throw RangeError(`SettingsManager.get: ${settingName} is not registered and doesn't exist!`);
             }
         }
 
-        if (this.has(settingName)) {
-            return process.env[settingName];
+        if (this.isInEnvironment(settingName)) {
+            return process.env[settingName]!;
         }
-
-        if (this.registeredSettings[settingName].required) {
-            throw Error(`${settingName} missing. Description: ${this.registeredSettings[settingName].description}`);
+        
+        if (this.registeredSettings.get(settingName)!.required) {
+            throw Error(`${settingName} missing. Description: ${this.registeredSettings.get(settingName)!.description}`);
         } else {
             if (process.env["DEBUG_ENABLE"] == 'true') {
-                console.log(`${settingName} missing, using default: ${this.registeredSettings[settingName].defaultValue}`);
+                console.log(`${settingName} missing, using default: ${this.registeredSettings.get(settingName)!.defaultValue}`);
             }
         }
-
-        return this.registeredSettings[settingName].defaultValue;
+        
+        return this.registeredSettings.get(settingName)!.defaultValue;
     }
 
     isRegistered(settingName: string): boolean {
         return (settingName in this.registeredSettings);
     }
 
-    has(settingName): boolean {
+    has(settingName: string): boolean {
+        return this.registeredSettings.has(settingName);
+    }
+
+    isInEnvironment(settingName: string): boolean {
         return (settingName in process.env);
     }
 
@@ -101,9 +105,11 @@ export class SettingsManager {
         return toRet;
     }
 
+    // @ts-ignore
     private getReadmeSettingsString(map): string {
         let toRet: string = "";
 
+        // @ts-ignore
         map.forEach(([key, setting]) => {
             const docs = this.getSettingDocs(setting as Setting);
             toRet += docs + "\n";
@@ -113,14 +119,17 @@ export class SettingsManager {
     }
 
     getReadmeSettingsDocs(): string {
+        // @ts-ignore
         let moduleSorted = [];
         let toRet: string = "";
 
-        Object.entries(this.registeredSettings).forEach(([key, setting]) => {
+        this.registeredSettings.forEach((setting, key) => {
+            // @ts-ignore
             if (!(setting.moduleName in moduleSorted)) {
+                // @ts-ignore
                 moduleSorted[setting.moduleName] = [];
             }
-
+            // @ts-ignore
             moduleSorted[setting.moduleName].push(setting);
         });
 
@@ -128,9 +137,11 @@ export class SettingsManager {
         toRet += "#### Global settings" + "\n\n";
         toRet += `| Name | DefaultValue | Required | Description |\n`;
         toRet += `| ---- | ------------ | -------- | ----------- |\n`;
+        // @ts-ignore
         toRet += this.getReadmeSettingsString(Object.entries(moduleSorted["global"])) + "\n\n";
 
         // Then the rest of the settings in whatever order
+        // @ts-ignore
         Object.entries(moduleSorted).forEach(([key, settings]) => {
             if (!(key === "global")) {
                 toRet += `#### ${key} settings` + "\n\n";

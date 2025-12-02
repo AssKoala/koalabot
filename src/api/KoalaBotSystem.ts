@@ -16,9 +16,9 @@ export interface Logger {
     logInfo(message: string): void;
     logDebug(message: string): void;
     logWarning(message: string): void;
-    logFatal(message: string, shouldThrow: boolean);
-    logError(message: string);
-    logErrorAsync(message: string, discordReply, editReply: boolean): Promise<void>;
+    logFatal(message: string, shouldThrow: boolean) : void;
+    logError(message: string) : void;
+    logErrorAsync(message: string, discordReply: any, editReply: boolean): Promise<void>;
 }
 
 /*

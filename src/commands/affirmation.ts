@@ -6,7 +6,7 @@ import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashComma
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 
 class AffirmationCommand extends DiscordBotCommand  {
-    private affirmationData = null;
+    private affirmationData: any = undefined;
     
     async loadData(affirmationFilePath: string) {
         this.affirmationData = await this.runtimeData().helpers().readJsonFile(affirmationFilePath);
@@ -14,7 +14,8 @@ class AffirmationCommand extends DiscordBotCommand  {
 
     getAffirmationCount(): number {
         try {
-            return this.affirmationData.length;
+            if (this.affirmationData) return this.affirmationData.length;
+            else throw new Error("Affirmation data not loaded");
         } catch (e) {
             this.runtimeData().logger().logErrorAsync(`Failed to retrieve affirmation count, got ${e}`);
             return 0;

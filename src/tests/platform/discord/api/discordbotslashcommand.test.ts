@@ -42,6 +42,7 @@ describe('DiscordBotSlashCommand', () => {
             });
 
             afterAll(() => {
+                // @ts-ignore
                 commandArg = null;
             });
         });
@@ -56,6 +57,7 @@ describe('DiscordBotSlashCommand', () => {
             });
 
             afterAll(() => {
+                // @ts-ignore
                 commandArg = null;
             });
         });
@@ -89,8 +91,11 @@ describe('DiscordBotSlashCommand', () => {
         });
 
         afterEach(() => {
+            // @ts-ignore
             command = null;
+            // @ts-ignore
             argString = null;
+            // @ts-ignore
             argBoolean = null;
             discordCommand = null;
         });
@@ -223,13 +228,21 @@ describe('DiscordBotSlashCommand', () => {
         });
 
         afterEach(() => {
+            // @ts-ignore
             command = null;
+            // @ts-ignore
             argString = null;
+            // @ts-ignore
             argBoolean = null;
+            // @ts-ignore
             discordCommand = null;
+            // @ts-ignore
             subcommandA = null;
+            // @ts-ignore
             subcommandB = null;
+            // @ts-ignore
             groupA = null;
+            // @ts-ignore
             groupB = null;
         });
 

@@ -55,6 +55,7 @@ namespace MessageResponderInternal {
                 const search = new (<any>MessageResponderInternal)[data.className](data.id, data.searchText);
                 return search;
             } catch (e) {
+                // @ts-ignore
                 return null;
             }
         }
@@ -67,6 +68,7 @@ namespace MessageResponderInternal {
         className: string;
         private lastQuery;
 
+        // @ts-ignore
         constructor(id: string, query: string, initialSearchText) {
             this.id = id;
             this.query = query;
@@ -75,6 +77,7 @@ namespace MessageResponderInternal {
             this.lastQuery = 0;
         }
 
+        // @ts-ignore
         async getResponseType(runtimeData: DiscordBotRuntimeData, message: Message) {
             try {
                 let shouldQuery = false;
@@ -109,11 +112,14 @@ namespace MessageResponderInternal {
 
                     const responseText = completion.choices[0].message.content;
 
+                    // @ts-ignore
                     if (responseText.toLowerCase().includes("positive")) {
                         response = MessageResponseType.Positive;
-                    } else if (responseText.toLowerCase().includes("negative")) {
+                    } // @ts-ignore 
+                    else if (responseText.toLowerCase().includes("negative")) {
                         response = MessageResponseType.Negative;
-                    } else if (responseText.toLowerCase().includes("neutral")) {
+                    } // @ts-ignore 
+                    else if (responseText.toLowerCase().includes("neutral")) {
                         response = MessageResponseType.Neutral;
                     }
                 }
@@ -129,6 +135,7 @@ namespace MessageResponderInternal {
                 const search = new (<any>MessageResponderInternal)[data.className](data.id, data.query, data.initialSearchText);
                 return search;
             } catch (e) {
+                // @ts-ignore
                 return null;
             }
         }
@@ -162,6 +169,7 @@ namespace MessageResponderInternal {
                 const action = new (<any>MessageResponderInternal)[data.className](data.id, data.reaction);
                 return action;
             } catch (e) {
+                // @ts-ignore
                 return null;
             }
         }
@@ -212,6 +220,7 @@ namespace MessageResponderInternal {
                 const action = new (<any>MessageResponderInternal)[data.className](data.id, data.positiveReaction, data.negativeReaction, data.neutralReaction);
                 return action;
             } catch (e) {
+                // @ts-ignore
                 return null;
             }
         }
@@ -221,6 +230,7 @@ namespace MessageResponderInternal {
         search: MessageResponseSearch;
         action: MessageResponseAction;
 
+        // @ts-ignore
         constructor(search, action) {
             this.search = search;
             this.action = action;
@@ -235,8 +245,10 @@ namespace MessageResponderInternal {
 }
 
 export class MessageResponder implements DiscordMessageCreateListener {
+    // @ts-ignore
     private dataSet: MessageResponderInternal.MessageResponseDataSet;
 
+    // @ts-ignore
     constructor(filePath: string = null) {
         try {
             GetKoalaBotSystem().getLogger().logInfo(`Loading message responder dataset from: ${filePath}`);
@@ -246,6 +258,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
                 if (data != null) {
                     this.dataSet = new MessageResponderInternal.MessageResponseDataSet();
     
+                    // @ts-ignore
                     data.searches.forEach(search => {
                         const newSearch = (<any>MessageResponderInternal)[search.className].Create(search);
                         if (newSearch != null) {
@@ -255,6 +268,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
                         }
                     });
     
+                    // @ts-ignore
                     data.actions.forEach(action => {
                         const newAction = (<any>MessageResponderInternal)[action.className].Create(action);
                         if (newAction != null) {
@@ -264,6 +278,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
                         }
                     });
     
+                    // @ts-ignore
                     data.rules.forEach(rule => {
                         let search = this.dataSet.searches.find(search => search.id == rule.searchid);
                         let action = this.dataSet.actions.find(action => action.id == rule.actionid);

@@ -30,6 +30,7 @@ export class WordTracker implements DiscordMessageCreateListener {
     private trackedWords: TrackedWordConcrete[] = [];
     private listeners: Map<string, WordListener[]> = new Map<string, WordListener[]>();
 
+    // @ts-ignore
     constructor(filePath: string = null) {
         if (filePath != null) {
             const data = Global.readJsonFileSync(filePath);
@@ -60,18 +61,22 @@ export class WordTracker implements DiscordMessageCreateListener {
 
     public registerListener(listener: WordListener, word: string): boolean {
         if (this.listeners.has(word)) {
+            // @ts-ignore
             this.listeners.get(word).push(listener);
             return true;
         }
 
         return false;
     }
-
+    
+    // @ts-ignore
     onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
+        // @ts-ignore
         if (message.author.bot) return; // Ignore bot messages
 
         this.trackedWords.forEach(word => {
             if (word.isInMessage(message.content)) {
+                // @ts-ignore
                 this.listeners.get(word.word).forEach(listener => {
                     listener.onWordDetected(runtimeData, word, message);
                 });

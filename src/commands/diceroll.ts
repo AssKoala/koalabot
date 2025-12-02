@@ -10,7 +10,7 @@ import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../a
 
 class DiceRollCommand extends DiscordBotCommand {
     
-    async handle(interaction)
+    async handle(interaction: any)
     {
         using perfCounter = this.runtimeData().getPerformanceCounter("handleDicerollCommand(): ");
 

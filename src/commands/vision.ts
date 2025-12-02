@@ -3,13 +3,13 @@
 */
 
 import { Global } from '../global.js';
-import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
+import { SlashCommandBuilder, AttachmentBuilder, Utils, ChatInputCommandInteraction } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 
 class VisionCommand extends DiscordBotCommand {
     
-    async handle(interaction) {
+    async handle(interaction: ChatInputCommandInteraction) {
         using perfCounter = Global.getPerformanceCounter("handleVisionCommand(): ");
 
         try {
@@ -25,16 +25,16 @@ class VisionCommand extends DiscordBotCommand {
 
                 switch (name) {
                     case 'detail':
-                        detail = interaction.options.data[i].value;
+                        detail = interaction.options.data[i].value!.toString();
                         break;
                     case 'image_url':
-                        url = interaction.options.data[i].value;
+                        url = interaction.options.data[i].value!.toString();
                         break;
                     case 'query':
-                        query = interaction.options.data[i].value;
+                        query = interaction.options.data[i].value!.toString();
                         break;
                     case 'ai_model':
-                        model = interaction.options.data[i].value;
+                        model = interaction.options.data[i].value!.toString();
                         break;
                     default:
                         Global.logger().logErrorAsync(`handleVisionCommand::unknown option ${name}`);
@@ -50,6 +50,8 @@ class VisionCommand extends DiscordBotCommand {
                         "content": [
                             { "type": "text", "text": `${query}` },
                             {
+
+                                // @ts-ignore
                                 "type": "image_url",
                                 "image_url": {
                                     "url": `${url}`,

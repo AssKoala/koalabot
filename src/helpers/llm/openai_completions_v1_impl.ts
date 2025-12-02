@@ -17,6 +17,7 @@ export class OpenAiCompletionsV1 extends OpenAiCompletionsV1Compatible {
 
         return this.getInterface().chat.completions.create({
                     model: this.getAiModel(),
+                    // @ts-ignore
                     messages: compData
                 });
     }
@@ -25,6 +26,7 @@ export class OpenAiCompletionsV1 extends OpenAiCompletionsV1Compatible {
         return (await this.getCompletion()).choices[0].message.content;
     }
 
+    // @ts-ignore
     public static create(aiModel, maxMessages, maxTokens, systemPrompt =  "You are a helpful assistant.") {
         return new OpenAiCompletionsV1(aiModel, maxMessages, maxTokens, systemPrompt);
     }

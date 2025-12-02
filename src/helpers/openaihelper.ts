@@ -2,7 +2,7 @@ import { Global } from '../global.js';
 import { OpenAI } from 'openai';
 
 class OpenAIHelper {
-    static #openai = null;
+    private static openai: OpenAI;
 
     static init() {
         try {
@@ -10,7 +10,7 @@ class OpenAIHelper {
                 apiKey: Global.settings().get(`OPENAI_API_KEY`)
             });
 
-            OpenAIHelper.#openai = openai;
+            OpenAIHelper.openai = openai;
         }
         catch (e) {
             Global.logger().logErrorAsync(`Failed to initialize OpenAI Object, got ${e}`);
@@ -18,7 +18,7 @@ class OpenAIHelper {
     }
 
     static getInterface() {
-        return OpenAIHelper.#openai;
+        return OpenAIHelper.openai;
     }
 
 }

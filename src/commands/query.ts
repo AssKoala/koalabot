@@ -9,6 +9,7 @@ import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../a
 
 class QueryCommand extends DiscordBotCommand {
 
+    // @ts-ignore
     async handle(interaction) {
         using perfCounter = Global.getPerformanceCounter("handleQueryCommand(): ");
 
@@ -42,6 +43,7 @@ class QueryCommand extends DiscordBotCommand {
         }        
     }
 
+    // @ts-ignore
     async handleChatModelQuery(interaction, question, ai_model) {
         try {
             const completion = await OpenAIHelper.getInterface().chat.completions.create({
@@ -61,10 +63,12 @@ class QueryCommand extends DiscordBotCommand {
         }
     }
 
+    // @ts-ignore
     async handleDavinciQuery(interaction, question) {
         try {
             const model = `text-davinci-003`;
 
+            // @ts-ignore
             const completion = await OpenAIHelper.getInterface().createCompletion({
                 model: `${model}`,
                 prompt: `${Global.settings().get("QUERY_PROMPT_HEADER")} ${question}`,

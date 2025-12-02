@@ -11,3 +11,4 @@ build
 deploy
 deploy-logs
 data
+environment

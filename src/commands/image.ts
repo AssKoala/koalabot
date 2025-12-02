@@ -58,7 +58,7 @@ class ImageGenerationData {
 
         this.base_images = [];
 
-        let base_images = request.getSubcommand().getOptionValueString("base_images", null);
+        let base_images = request.getSubcommand().getOptionValueString("base_images", undefined);
 
         if (base_images != null) {
             const base_images_array = base_images.split('|');
@@ -121,8 +121,8 @@ class OpenAI {
                         model: `${imageGenData.model}`,
                         prompt: `${imageGenData.getGeneratedPrompt()}`,
                         n: 1,
-                        size: `${imageGenData.size}`,
-                        quality: `${imageGenData.quality}`,
+                        size: `${imageGenData.size}` as any,
+                        quality: `${imageGenData.quality}` as any,
                     });
                     break;
 
@@ -133,9 +133,9 @@ class OpenAI {
                         response = await OpenAIHelper.getInterface().images.generate({
                             model: `${imageGenData.model}`,
                             prompt: `${imageGenData.getGeneratedPrompt()}`,
-                            size: `${imageGenData.size}`,
-                            quality: quality,
-                            background: `${imageGenData.transparency}`,
+                            size: `${imageGenData.size}` as any,
+                            quality: quality as any,
+                            background: `${imageGenData.transparency}` as any,
                         });
                     } else {
                         let baseImageFileList = [];                  
@@ -157,9 +157,9 @@ class OpenAI {
                         response = await OpenAIHelper.getInterface().images.edit({
                             model: `${imageGenData.model}`,
                             prompt: `${imageGenData.getGeneratedPrompt()}`,
-                            size: `${imageGenData.size}`,
-                            quality: quality,
-                            background: `${imageGenData.transparency}`,
+                            size: `${imageGenData.size}` as any,
+                            quality: quality as any,
+                            background: `${imageGenData.transparency}` as any,
                             image: images
                         });
 
@@ -170,7 +170,7 @@ class OpenAI {
                     break;
             }
             
-            Global.logger().logInfo(`image::getImageUrl(): [Asked] _${imageGenData.getGeneratedPrompt()}_ [Used] _${response.data[0].revised_prompt}_ [Got] _${image_url}_`);
+            Global.logger().logInfo(`image::getImageUrl(): [Asked] _${imageGenData.getGeneratedPrompt()}_ [Used] _${response!.data![0].revised_prompt}_ [Got] _${image_url}_`);
         } catch (e) {
             error = e;
             await Global.logger().logErrorAsync(`Exception occurred during image gen, asked: _${imageGenData.getGeneratedPrompt()}_, got _${e}_`, interaction, true);
@@ -190,9 +190,9 @@ class OpenAI {
         await dl.start();
 
         const downloaded_fullpath = dl.getDownloadPath();
-        const downloaded_filename = downloaded_fullpath.split("/").at(-1).split(`\\`).at(-1);
+        const downloaded_filename = downloaded_fullpath.split("/").at(-1)!.split(`\\`).at(-1);
 
-        return new ImageDownloadedFileInfo(downloaded_fullpath, downloaded_filename);
+        return new ImageDownloadedFileInfo(downloaded_fullpath, downloaded_filename!);
     } // downloadUrlToFile
 
     private static async downloadBufferToFile(image_bytes: Buffer, download_dir: string = Global.settings().get("TEMP_PATH")) {
@@ -208,22 +208,22 @@ class OpenAI {
         return new ImageDownloadedFileInfo(downloadPath, downloadFileName);
     } // downloadUrlToFile
 
-    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
+    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo | undefined> {
         try {
             const result = await OpenAI.getImageResponse(imageGenData, interaction);
 
             if (result.error != null) {
-                if (result.error.status == 400) {
-                    Global.logger().logErrorAsync(`Got Nannied for prompt: _${imageGenData.getGeneratedPrompt()}_ with reason: _${result.error.message}_`, interaction, true);
+                if ((result.error as any).status == 400) {
+                    Global.logger().logErrorAsync(`Got Nannied for prompt: _${imageGenData.getGeneratedPrompt()}_ with reason: _${(result.error as any).message}_`, interaction, true);
                 } else {
                     Global.logger().logErrorAsync(`Error getting image URL, got error _${result.error}_`, interaction, true);
                 }
             } else if (imageGenData.model == 'dall-e-3') {
-                const downloadedFileinfo = await OpenAI.downloadUrlToFile(result.response.data[0].url);
+                const downloadedFileinfo = await OpenAI.downloadUrlToFile(result!.response!.data![0].url!);
                 return downloadedFileinfo;
             } else if (imageGenData.model == 'gpt-image-1') {
-                const image_b64 = result.response.data[0].b64_json;
-                const image_bytes = Buffer.from(image_b64, "base64");
+                const image_b64 = result.response!.data![0].b64_json;
+                const image_bytes = Buffer.from(image_b64!, "base64");
 
                 const downloadedFileinfo = await OpenAI.downloadBufferToFile(image_bytes);
                 return downloadedFileinfo;
@@ -232,12 +232,12 @@ class OpenAI {
             await Global.logger().logErrorAsync(`Error generating OpenAI image: _${e}_`, interaction, true);
         }
 
-        return null;
+        return undefined;
     } // download
 } // class OpenAI
 
 class StableDiffusion {
-    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
+    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo | undefined> {
         try {
             const payload = {
                 "prompt": imageGenData.getGeneratedPrompt(),
@@ -270,12 +270,12 @@ class StableDiffusion {
             await Global.logger().logErrorAsync(`Got error calling stable diffusion api: ${e}`, interaction, true);
         }
 
-        return null;
+        return undefined;
     } // download
 } // class StableDiffusion
 
 class GetimgAi {
-    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo> {
+    static async download(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction): Promise<ImageDownloadedFileInfo | undefined> {
         try {
             const url = 'https://api.getimg.ai/v1/flux-schnell/text-to-image';
             const options = {
@@ -320,12 +320,12 @@ class GetimgAi {
         } catch (e) {
             await Global.logger().logErrorAsync(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
         }
-        return null;
+        return undefined;
     }
 }
 
 class ImageCommand extends DiscordBotCommand {
-    async handle(interaction) {
+    async handle(interaction: ChatInputCommandInteraction): Promise<void> {
         using perfCounter = Global.getPerformanceCounter("handleImageCommand(): ");
     
         try {
@@ -334,7 +334,7 @@ class ImageCommand extends DiscordBotCommand {
             const slashCommandInfo = KoalaSlashCommandRequest.fromDiscordInteraction(interaction);
             const imageGenData = new ImageGenerationData(slashCommandInfo);
     
-            let downloadedFileInfo: ImageDownloadedFileInfo = null;
+            let downloadedFileInfo: ImageDownloadedFileInfo | undefined;
     
             switch (imageGenData.model) {
                 case 'dall-e-3':
@@ -388,22 +388,27 @@ class ImageCommand extends DiscordBotCommand {
         }
     } // handleImageCommand
 
+    // @ts-ignore
     private appendGptImageSubCommand(imageCommand) {
         return imageCommand
+                    // @ts-ignore
                     .addSubcommandGroup((group) =>
                         group
                             .setName('gpt-image-1')
                             .setDescription('Generate an image using GPT Image')
+                            // @ts-ignore
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate')
                                     .setDescription('Generate an image using GPT Image')
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
@@ -416,6 +421,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_quality')
@@ -428,6 +434,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('transparency')
@@ -438,6 +445,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('base_images')
@@ -448,22 +456,27 @@ class ImageCommand extends DiscordBotCommand {
                     );
     }
 
+    // @ts-ignore
     private appendDalleSubCommand(imageCommand) {
         return imageCommand
+                    // @ts-ignore
                     .addSubcommandGroup((group) =>
                         group
                             .setName('dall-e-3')
                             .setDescription('Generate an image using Dall-E')
+                            // @ts-ignore
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate')
                                     .setDescription('Generate an image using Dall-E')
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
@@ -475,6 +488,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_quality')
@@ -485,6 +499,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('force_prompt')
@@ -499,13 +514,14 @@ class ImageCommand extends DiscordBotCommand {
                     );
     }
 
+    // @ts-ignore
     private appendStableDiffusionSubCommand(imageCommand) {
         // Pull in checkpoints dynamically for use in the slash command we send to discord
         const checkpoints = this.runtimeData().settings().get("SD_CHECKPOINTS").split(',');
 
-        let choices = [];
+        let choices: any = [];
 
-        const getEntry = function (checkpointString) {
+        const getEntry = function (checkpointString: string) {
             let split = checkpointString.split('(');
             let name = ''
             let value = '';
@@ -527,26 +543,31 @@ class ImageCommand extends DiscordBotCommand {
         });
 
         return imageCommand
+                    // @ts-ignore
                     .addSubcommandGroup((group) =>
                         group
                             .setName('stablediffusion')
                             .setDescription('Generate an image using Stable Diffusion')
+                            // @ts-ignore
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate')
                                     .setDescription('Generate an image using Stable Diffusion')
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true)
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
                                             .setDescription('Image size to generate (1024x1024 default)')
                                             .setRequired(false)
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('sd_model_checkpoint')
@@ -560,28 +581,34 @@ class ImageCommand extends DiscordBotCommand {
                     );
     }
 
+    // @ts-ignore
     private appendGetimgAiFluxSubCommand(imageCommand) {
         return imageCommand
+                    // @ts-ignore
                     .addSubcommandGroup((group) =>
                         group
                             .setName('getimgai')
                             .setDescription('Generate an image using getimg.ai')
+                            // @ts-ignore
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate_flux')
                                     .setDescription('Generate an image using getimg.ai')
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true)
                                     )
+                                    // @ts-ignore
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
                                             .setDescription('Image size to generate (1024x1024 default, range 256-1280x256-1280)')
                                             .setRequired(false)
                                     )
+                                    // @ts-ignore
                                     .addIntegerOption((option) =>
                                         option
                                             .setName("steps")
@@ -590,6 +617,7 @@ class ImageCommand extends DiscordBotCommand {
                                             .setMinValue(1)
                                             .setMaxValue(4)
                                     )
+                                    // @ts-ignore
                                     .addIntegerOption((option) =>
                                         option
                                             .setName("seed")

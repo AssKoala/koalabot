@@ -5,7 +5,7 @@ import { GetKoalaBotSystem } from '../../api/koalabotsystem.js';
  */
 export class DiscordStenographerMessage
 {
-    constructor(guildId: string, channelId: string, author: string, authorId: string, message: string, timestamp)
+    constructor(guildId: string, channelId: string, author: string, authorId: string, message: string, timestamp: number)
     {
         this.guildId = guildId;
         this.channelId = channelId;
@@ -27,7 +27,7 @@ export class DiscordStenographerMessage
         return `${this.author}<@${this.authorId}>: ${this.message}`;
     }
 
-    static createFromJsonLog(guildId, channelId, jsonLog)
+    static createFromJsonLog(guildId: string, channelId: string, jsonLog: any)
     {
         let messages = [];
         try {
@@ -46,7 +46,7 @@ export class DiscordStenographerMessage
         return messages;
     }
 
-    static createFromJsonLogObject(guildId, channelId, jsonLogObject)
+    static createFromJsonLogObject(guildId: string, channelId: string, jsonLogObject: any)
     {
         try {
             return DiscordStenographerMessage.parseFromStandardMessageFormat(guildId, channelId, jsonLogObject.message);

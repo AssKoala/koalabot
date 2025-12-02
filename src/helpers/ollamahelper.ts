@@ -8,6 +8,7 @@ class OllamaHelper {
         try {
             const ollama = new Ollama({ host: Global.settings().get(`OLLAMA_SERVER_ADDRESS`) });
 
+            // @ts-ignore
             OllamaHelper.ollama = ollama;
         }
         catch (e) {

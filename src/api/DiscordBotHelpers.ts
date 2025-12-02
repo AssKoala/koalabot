@@ -16,11 +16,11 @@ export class DiscordBotHelpers
         if (enableTiming) {
             this._perfCounterFunction = this.getPerformanceCounterReal;
         } else {
-            this._perfCounterFunction = function (){};
+            this._perfCounterFunction = function (){ return undefined; };
         }
     }
 
-    private splitMessage(message: string, size = 2000): string | string[]
+    public splitMessage(message: string, size = 2000): string | string[]
     {
         if (message.length <= size)
         {
@@ -48,7 +48,15 @@ export class DiscordBotHelpers
 
                 for (let i = 1; i < splitMessage.length; i++)
                 {
-                    interaction.channel.send(splitMessage[i]);
+                    if (interaction.channel == null) {
+                        this.logger.logErrorAsync(`Failed to send split message, interaction channel is null`);
+                        return;
+                    } else if (!('send' in interaction.channel)) {
+                        this.logger.logErrorAsync(`Failed to send split message, interaction channel lacks send method`);
+                        return;
+                    } else {
+                        interaction.channel.send(splitMessage[i]);
+                    }
                 }
             } else {
                 interaction.editReply(message);
@@ -68,7 +76,7 @@ export class DiscordBotHelpers
         }
     }
 
-    private _perfCounterFunction;
+    private _perfCounterFunction: (description: string) => PerformanceCounter | undefined;
     private getPerformanceCounterReal(description: string) {
         return new PerformanceCounter(description);
     }
@@ -87,7 +95,7 @@ export class DiscordBotHelpers
      * @param description Performance counter name/description string, e.g. `space::foo::doThing(${someVar})`
      * @returns 
      */
-    getPerformanceCounter(description: string): PerformanceCounter {
+    getPerformanceCounter(description: string): PerformanceCounter | undefined {
         return this._perfCounterFunction(description);
     }
 }

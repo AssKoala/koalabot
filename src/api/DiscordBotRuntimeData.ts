@@ -15,13 +15,13 @@ export class DiscordBotRuntimeData {
         return this._logger;
     }
 
-    private readonly _channelLogger: LoggerConcrete;
-    channelLogger(): LoggerConcrete {
+    private readonly _channelLogger?: LoggerConcrete;
+    channelLogger(): LoggerConcrete | undefined {
         return this._channelLogger;
     }
 
-    private readonly _guildlogger: LoggerConcrete;
-    guildLogger(): LoggerConcrete {
+    private readonly _guildlogger?: LoggerConcrete;
+    guildLogger(): LoggerConcrete | undefined{
         return this._guildlogger;
     }
 
@@ -44,7 +44,7 @@ export class DiscordBotRuntimeData {
         return this.helpers().getPerformanceCounter(description);
     }
 
-    constructor(bot: Bot, logger: LoggerConcrete, guildLogger: LoggerConcrete, channelLogger: LoggerConcrete, settings: SettingsManager) {
+    constructor(bot: Bot, logger: LoggerConcrete, settings: SettingsManager, guildLogger?: LoggerConcrete, channelLogger?: LoggerConcrete) {
         this._logger = logger;
         this._channelLogger = channelLogger;
         this._guildlogger = guildLogger;

@@ -12,6 +12,7 @@ export class OpenAIResponsesV1CompatibleResponse {
     private response: any;
     private api: OpenAIResponsesV1Compatible;
 
+    // @ts-ignore
     constructor(api, response) {
         this.response = response;
         this.api = api;
@@ -28,6 +29,7 @@ export class OpenAIResponsesV1CompatibleResponse {
     public getImageData(): GeneratedImageData | undefined {
         try {
             const imageCompletion = this.response.output
+                    // @ts-ignore
                     .filter((output) => output.type === "image_generation_call");
 
             const imageData = imageCompletion[0].result;
@@ -46,14 +48,17 @@ export class OpenAIResponsesV1CompatibleResponse {
 
     public getMessageText(): string {
         try {
+            // @ts-ignore
             const messageData = this.response.output.filter((output) => output.type === "message")[0].content[0].text;
 
             if (messageData.length > 0) {
                 return messageData;
             }
         } catch {
-            return undefined;
+            
         }
+
+        return "";
     }
 }
 
@@ -64,6 +69,7 @@ export abstract class OpenAIResponsesV1Compatible extends OpenAiCompletionsV1Com
 export class OpenAIResponsesV1 extends OpenAiCompletionsV1Compatible {
 
     public async getCompletion(): Promise<OpenAIResponsesV1CompatibleResponse> {
+        // @ts-ignore
         const completion = await OpenAIHelper.getInterface().responses.create({
             model: this.getAiModel(),
             instructions: this.getSystemPrompt(),
@@ -88,4 +94,5 @@ export class OpenAIResponsesV1 extends OpenAiCompletionsV1Compatible {
     }
 }
 
+OpenAiCompletionsV1Compatible.addCompletionsCompatibleApi("gpt-5.1", OpenAIResponsesV1.create);
 OpenAiCompletionsV1Compatible.addCompletionsCompatibleApi("gpt-5", OpenAIResponsesV1.create);
