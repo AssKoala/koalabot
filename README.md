@@ -6,7 +6,7 @@ The bot is made to be extensible by using the API functionality to do pretty muc
 
 ## Running using Docker
 - Install Docker Engine: https://docs.docker.com/engine/install/
-- Create basic env file with required settings (see below).
+- Create override config with required settings (see below).
 - Copy [Example compose.yml](compose.yml) somewhere locally.
 - Modify the compose.yml to meet your specific needs.  See docker compose documentation: https://docs.docker.com/compose/
 - Run bot: ```docker compose -f compose.yml up -d```
@@ -24,7 +24,7 @@ volumes:
 ## configuration
 All bot features can be configured by overriding the various options listed in *config/default.json5*.
 
-The particularly confidential options can also be overridden via environment variables.  See *config/custom-environment-variables.json5* the full list.
+The particularly confidential (and required) options can also be overridden via environment variables.  See *config/custom-environment-variables.json5* the full list.
 
 ## High level program flow
 
