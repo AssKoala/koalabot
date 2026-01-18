@@ -6,12 +6,8 @@ services:
     environment:
       - NODE_ENV=production
     volumes:
-      - ./environment/test/env.txt:/app/.env
-    # .env settings must match the right side for mapped paths
-    #   e.g. if .env has DATA_PATH=/data and LOG_PATH=./logs
-    #        then volumes are: 
-    #           - /path/to/data:/data
-    #           - /path/to/logs:/app/logs
+      # override config settings, necessary for sensitive settings such as API keys
+      - ./production.json5:/app/config/production.json5
       - ./data:/data
       - ./logs:/logs
       - ./temp:/temp
