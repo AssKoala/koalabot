@@ -22,7 +22,9 @@ volumes:
 ```
 
 ## configuration
-All bot features can be configured by overriding the various options listed in config/default.json5.  The particularly confidential options can also be overridden via environment variables.  See config/custom-environment-variables the full list.
+All bot features can be configured by overriding the various options listed in *config/default.json5*.
+
+The particularly confidential options can also be overridden via environment variables.  See *config/custom-environment-variables.json5* the full list.
 
 ## High level program flow
 
