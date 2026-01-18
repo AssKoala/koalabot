@@ -3,9 +3,14 @@
 */
 
 import dotenv from "dotenv"
-import { Global } from './../global.js'
 import { SlashCommandBuilder } from 'discord.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from "../api/discordbotcommand.js";
+import { getCommonLogger } from '../logging/logmanager.js'
+import { PerformanceCounter } from "../performancecounter.js";
+import { UserSettingsManager } from "../app/user/usersettingsmanager.js";
+import { GetKoalaBotSystem } from '../api/koalabotsystem.js';
+import * as Discord from 'discord.js';
+import config from 'config';
 
 /**
  * Sets the user's location and saves it off
@@ -22,7 +27,7 @@ async function setUserLocation(interaction)
         {
             await interaction.editReply('You gotta specify a location after set_location, buddy');
         } else {
-            let userData = Global.userSettings().get(interaction.user.username, true);
+            let userData = UserSettingsManager.get().get(interaction.user.username);
 
             if (userData) {
                 if (userData.weatherSettings.location === "") {
@@ -32,13 +37,13 @@ async function setUserLocation(interaction)
                 }
                 
                 userData.weatherSettings.location = newLocation;
-                Global.userSettings().set(userData, true);
+                UserSettingsManager.get().set(userData, true);
             } else {
                 await interaction.editReply(`Failed to create user data, something has gone wrong, check the logs!`);
             }
         }
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to set user location, got ${e}`);
+        getCommonLogger().logErrorAsync(`Failed to set user location, got ${e}`);
     }
     
 }
@@ -55,7 +60,7 @@ async function setPreferredUnits(interaction)
         if (interaction.options.data[0].options.length < 1)
         {
             const str = 'Interaction did not contain unit data'
-            Global.logger().logErrorAsync(str);
+            getCommonLogger().logErrorAsync(str);
             await interaction.editReply(str);
         } else {
             // Assume the position element is the one we want
@@ -67,14 +72,60 @@ async function setPreferredUnits(interaction)
             {
                 await interaction.editReply(`Maybe try using real units not whatever the hell ${preferred_units} is, friend`);
             } else {
-                let userData = Global.userSettings().get(interaction.user.username, true);
+                let userData = UserSettingsManager.get().get(interaction.user.username);
                 await interaction.editReply(`Setting your preferred units to ${preferred_units} from ${userData.weatherSettings.preferredUnits}`);
                 userData.weatherSettings.preferredUnits = preferred_units;
-                Global.userSettings().set(userData, true);
+                UserSettingsManager.get().set(userData, true);
             }
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to set preferred units, got error ${e}`, interaction);
+        await getCommonLogger().logErrorAsync(`Failed to set preferred units, got error ${e}`, interaction);
+    }
+}
+
+async function setPreferredAiModel(interaction: Discord.ChatInputCommandInteraction)
+{
+    try {
+        const aiModel = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
+
+        let userData = UserSettingsManager.get().get(interaction.user.username);
+        await interaction.editReply(`Setting your preferred AI model to ${aiModel} from ${userData.chatSettings.preferredAiModel}`);
+        userData.chatSettings.preferredAiModel = aiModel;
+        UserSettingsManager.get().set(userData, true);
+    } catch (e) {
+        await getCommonLogger().logErrorAsync(`Failed to set preferred AI model, got error ${e}`, interaction);
+    }
+}
+
+async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteraction)
+{
+    try {
+        const customPrompt = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
+        const customUsername = interaction!.options!.data![0]!.options![0]!.options![1]?.value! as string | undefined;
+        let userToLoad = interaction.user.username;
+
+        // If they are trying to set a different user's prompt, make sure they are sudo
+        if (customUsername && customUsername !== interaction.user.username) {
+            const sudoList = config.get<string>('Global.sudoList').split(',').map(id => id.trim());
+            if (!sudoList.includes(interaction.user.id)) {
+                await interaction.editReply(`${interaction.user.username} is not in the Global.sudoList. This incident will be reported.`);
+                return;
+            }
+
+            if (UserSettingsManager.get().has(customUsername) === false) {
+                await interaction.editReply(`User *${customUsername}* doesn't exist, cannot set custom prompt for them.`);
+                return;
+            }
+
+            userToLoad = customUsername;
+        }
+
+        let userData = UserSettingsManager.get().get(userToLoad);
+        await interaction.editReply(`**Setting *${userToLoad}*'s custom AI prompt to** *${customPrompt}* **from** *${userData.chatSettings.customPrompt}*`);
+        userData.chatSettings.customPrompt = customPrompt;
+        UserSettingsManager.get().set(userData, true);
+    } catch (e) {
+        await getCommonLogger().logErrorAsync(`Failed to set custom AI prompt, got error ${e}`, interaction);
     }
 }
 
@@ -86,18 +137,37 @@ async function setPreferredUnits(interaction)
 async function getUserSettings(interaction)
 {
     try {
-        const userData = Global.userSettings().get(interaction.user.username);
+        let userNameToGet;
+        
+        if (interaction.options._subcommand === 'yours') {
+            userNameToGet = interaction.user.username;
+        } else if (interaction.options._subcommand === 'someones') {
+            userNameToGet = interaction.options.data[0].options[0].options[0].value;
 
-        if (userData) {
-            await interaction.editReply(`Your settings:\n`
-                + `location: ${userData.weatherSettings.location}\n`
-                + `preferred_units: ${userData.weatherSettings.preferredUnits}`
-            );
+            if (!UserSettingsManager.get().has(userNameToGet)) {
+                await interaction.editReply(`User *${userNameToGet}* doesn't exist, cannot get their settings.`);
+                return;
+            }
         } else {
-            await interaction.editReply(`LOL you don't have any options saved, loser.`);
+            await interaction.editReply(`Interaction did not contain valid subcommand: ${interaction.options._subcommand}`);
+            return;
         }
+        const userData = UserSettingsManager.get().get(userNameToGet);
+
+        const preferredUnits = userData.weatherSettings.preferredUnits.charAt(0).toUpperCase() 
+                                + userData.weatherSettings.preferredUnits.slice(1);
+
+        await interaction.editReply(`${userNameToGet}'s settings:\n`
+            + `* **Location**: ${userData.weatherSettings.location}\n`
+            + `* **Preferred Units**: ${preferredUnits}\n`
+            + `* **Preferred Ai Model**: ${userData.chatSettings.preferredAiModel}\n`
+            + `  * **Available models**: ${config.get<string>('Chat.AiModels.enabledModels')}\n`
+            + `  * **Default model**: ${config.get<string>('Chat.aiModel')}\n`
+            + `* **Custom Prompt**: ${userData.chatSettings.customPrompt}\n`
+            + `  * **Default Prompt**: ${config.get<string>('Chat.systemPrompt')}`
+        );
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to get user settings, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`getUserSettings(): Failed to get user settings, got ${e}`, interaction, true);
     }
 }
 
@@ -116,24 +186,33 @@ async function setUserSettings(interaction)
             case 'location':
                 await setUserLocation(interaction);
                 break;
+            case 'preferred_ai_model':
+                await setPreferredAiModel(interaction);
+                break;
+            case 'custom_prompt':
+                await setCustomAiPrompt(interaction);
+                break;
+            default:
+                getCommonLogger().logErrorAsync(`Failed to find response for settings set subcommand(${interaction.options._subcommand})`, interaction);
+                break;
         }
     } catch (e) {
         // @ts-ignore
-        await Global.logger().logErrorAsync(e, interaction);
+        await getCommonLogger().logErrorAsync(e, interaction);
     }
 }
 
 class SettingsCommand extends DiscordBotCommand {
     // @ts-ignore
     async handle(interaction) {
-        using perfCounter = Global.getPerformanceCounter("handleSettingsCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleSettingsCommand(): ");
 
         try {
             await interaction.deferReply();
 
             if (interaction.options.data.length < 1) {
                 const str = `Interaction data missing, got length: ${interaction.options.data.length}`;
-                Global.logger().logErrorAsync(str);
+                getCommonLogger().logErrorAsync(str);
                 await interaction.editReply(str);
             }
 
@@ -145,11 +224,11 @@ class SettingsCommand extends DiscordBotCommand {
                     await setUserSettings(interaction);
                     break;
                 default:
-                    Global.logger().logErrorAsync(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
+                    getCommonLogger().logErrorAsync(`Failed to find response for settings command with subcommand(${interaction.options._subcommand})`);
                     break;
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Failed to handle settings command, got error: ${e}`, interaction);
+            await getCommonLogger().logErrorAsync(`Failed to handle settings command, got error: ${e}`, interaction);
         }
     }
 
@@ -189,13 +268,57 @@ class SettingsCommand extends DiscordBotCommand {
                                         )
                                         .setRequired(true),
                                 )
-                            )
+                        )
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('preferred_ai_model')
+                                .setDescription('Preferred AI model')
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('preferred_ai_model')
+                                        .setDescription(`Ai Model (${config.get<string>('Chat.AiModels.enabledModels')})`)
+                                        .setRequired(true),
+                                )
+                        )
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('custom_prompt')
+                                .setDescription('Custom AI prompt to use (e.g. You are a helpful assistant...)')
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('custom_prompt')
+                                        .setDescription('Custom AI prompt to use (e.g. You are a helpful assistant...)')
+                                        .setRequired(true),
+                                )
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('username')
+                                        .setDescription('[SUDO REQUIRED] Username to set for')
+                                )
+                        )
                 )
                 // get command
-                .addSubcommand(subcommand =>
-                    subcommand
+                .addSubcommandGroup((group) =>
+                    group
                         .setName('get')
-                        .setDescription('Retrieve your settings')
+                        .setDescription('Get options')
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('yours')
+                                .setDescription('Get your settings')
+                        )
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('someones')
+                                .setDescription('Get someone else\'s settings')
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('username')
+                                        .setDescription('Username to get settings for.  Empty for self.')
+                                        .setRequired(true),
+                                )
+                        )
+                        
                 )
         ;
 

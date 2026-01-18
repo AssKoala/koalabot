@@ -1,6 +1,7 @@
 import { SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { DiscordBotRuntimeData } from './discordbotruntimedata.js';
-import { Global } from '../global.js';
+import { Bot } from '../bot.js'
+import { getCommonLogger } from '../logging/logmanager.js'
 
 /**
  * Holds the common command information for all commands to be compatible with the DiscordBotCommand interface.
@@ -11,6 +12,10 @@ export class BasicCommand {
     private _runtimeData?: DiscordBotRuntimeData;
     runtimeData() {
         return this._runtimeData!;
+    }
+
+    logger() {
+        return this._runtimeData!.logger();
     }
 
     private readonly _name: string;
@@ -60,15 +65,15 @@ export abstract class DiscordBotCommand extends BasicCommand {
  */
 export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldDeferReply: boolean = true): boolean {
     try {
-        if (Global.bot().client().commands.has(botCommand.name())) {
-            Global.logger().logErrorAsync(`Cannot register ${botCommand.name()}, name is already registered!`);
+        if (Bot.get().client().commands.has(botCommand.name())) {
+            getCommonLogger().logErrorAsync(`Cannot register ${botCommand.name()}, name is already registered!`);
             return false;
         } else {
-            Global.logger().logDebug(`Registering ${botCommand.name()}, name is available.`);
+            getCommonLogger().logDebug(`Registering ${botCommand.name()}, name is available.`);
          
             // Initialize the command with the runtime information, this has to go before ANY use of the object
             // The command isn't fully constructed as a Discord bot object until it's initialized.
-            botCommand.initCommand(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings()));
+            botCommand.initCommand(new DiscordBotRuntimeData(Bot.get(), getCommonLogger()));
 
             const newCommand = {
                 data: botCommand.get(),
@@ -82,12 +87,12 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
             }
 
             // Add the command to the command list
-            Global.bot().client().commands.set(newCommand.data.name, newCommand);
+            Bot.get().client().commands.set(newCommand.data.name, newCommand);
             
             return true;
         }
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to registerDiscordBotCommand(${botCommand}, ${shouldDeferReply}), got error: ${e}`);
+        getCommonLogger().logErrorAsync(`Failed to registerDiscordBotCommand(${botCommand.get().name}, ${shouldDeferReply}), got error: ${e}`);
     }
 
     return false;

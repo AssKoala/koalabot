@@ -1,68 +1,73 @@
-import { Global } from './global.js';
+import { PerformanceCounter } from './performancecounter.js';
+import { getCommonLogger } from './logging/logmanager.js'
+import { Bot } from './bot.js'
 import { Client, REST, Routes } from 'discord.js';
+import config from 'config';
 
 export abstract class CommandManager {
 
     static async importCommands() {
+        using _impComm = PerformanceCounter.Create(`CommandManager::import()`);
+        
         try {
             // Load the dynamically defined commands from the .env file
-            const autoCommands = Global.settings().get("COMMAND_LIST").split(",");
-            const commandPath = Global.settings().get("COMMAND_PATH");
+            const autoCommands = config.get<string>("Global.commandList").split(",");
+            const commandPath = config.get<string>("Global.commandPath");
 
             for (const command of autoCommands) 
             {
                 if (!command) {
-                    Global.logger().logInfo("Skipping empty command definition");
+                    getCommonLogger().logInfo("Skipping empty command definition");
                     continue;
                 }
 
-                using perfCounter = Global.getPerformanceCounter(`importCommands::import(${command})`);
+                using _importInd = PerformanceCounter.Create(`importCommands::import(${command})`);
     
                 const modulePath = `./${commandPath}/${command}.js`;
 
                 try {
                     await import(modulePath);
-                    Global.logger().logInfo(`Successfully Loaded ${modulePath}, registering command`);
+                    getCommonLogger().logInfo(`Successfully Loaded ${modulePath}, registering command`);
                 }
                 catch (e) {
-                    Global.logger().logErrorAsync(`Failed to load module ${modulePath}, got error ${e}`);
+                    getCommonLogger().logErrorAsync(`Failed to load module ${modulePath}, got error ${e}`);
                 }
             }
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to import all commands, got error ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to import all commands, got error ${e}`);
         }
     }
 
     static async register(client: Client) {
-        using perfCounter = Global.getPerformanceCounter("registerCommands(): ");
+        using perfCounter = PerformanceCounter.Create("CommandManager::register(): ");
 
         if (!client) {
-            Global.logger().logErrorAsync("Trying to register without a valid client");
+            getCommonLogger().logErrorAsync("Trying to register without a valid client");
         }
     
         try {
             await this.importCommands();    
         } catch (e) {
-            Global.logger().logErrorAsync("Error registering commands, got: " + e);
+            getCommonLogger().logErrorAsync("Error registering commands, got: " + e);
         }
     }
 
     static getCommandsJSON(): string[] {
         let commands: string[] = [];
-        Global.bot().client().commands.forEach(entry => {
+        Bot.get().client().commands.forEach(entry => {
             commands.push(entry.data.toJSON());
         })
         return commands;
     }
 
     static async deployDiscordSlashCommands(clearExisting:boolean = false, deployGuild:boolean = false, deployGlobal:boolean = false) {
-        using perfCounter = Global.getPerformanceCounter(`CommandManager::deployDiscordSlashCommands(${clearExisting}, ${deployGuild}, ${deployGlobal})`);
+        using perfCounter = PerformanceCounter.Create(`CommandManager::deployDiscordSlashCommands(${clearExisting}, ${deployGuild}, ${deployGlobal})`);
 
         try {
             // Discord information
-            const clientId =  Global.settings().getDiscordAppId();
-            const guildIdList =  Global.settings().getDiscordGuildIdList();
-            const token =  Global.settings().getDiscordKey();
+            const clientId =  config.get<string>("Discord.appId");
+            const guildIdList =  config.get<string>("Discord.guildIds").split(",");
+            const token =  config.get<string>("Discord.token");
 
             // Our existing command list for this instance
             const commands = CommandManager.getCommandsJSON();
@@ -72,25 +77,25 @@ export abstract class CommandManager {
 
             if (clearExisting) {
                 if (deployGlobal) {
-                    Global.logger().logInfo("Clearing Global Discord Commands");
+                    getCommonLogger().logInfo("Clearing Global Discord Commands");
 
                     rest.put(Routes.applicationCommands(clientId), { body: [] })
-                        .then(() => Global.logger().logInfo('Successfully deleted all Global application commands.'))
+                        .then(() => getCommonLogger().logInfo('Successfully deleted all Global application commands.'))
                         .catch(console.error);
                 }
 
                 if (deployGuild) {
                     guildIdList.forEach(guildId => {
-                        Global.logger().logInfo(`Clearing slash commands from guild: ${guildId}`);
+                        getCommonLogger().logInfo(`Clearing slash commands from guild: ${guildId}`);
 
                         rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] })
-                            .then(() => Global.logger().logInfo(`Successfully deleted all guild commands from guild: ${guildId}`))
+                            .then(() => getCommonLogger().logInfo(`Successfully deleted all guild commands from guild: ${guildId}`))
                             .catch(console.error);
                     });
                 }
             }
 
-            Global.logger().logInfo(`Started refreshing ${commands.length} application (/) commands.`);
+            getCommonLogger().logInfo(`Started refreshing ${commands.length} application (/) commands.`);
 
             // Deploy commands globally
             if (deployGlobal) {
@@ -99,7 +104,7 @@ export abstract class CommandManager {
                     { body: commands },
                 );
         
-                Global.logger().logInfo(`[GLOBAL] Successfully reloaded ${data.length} GLOBAL application (/) commands.`);
+                getCommonLogger().logInfo(`[GLOBAL] Successfully reloaded ${data.length} GLOBAL application (/) commands.`);
             }
 
             // Deploy guild commands
@@ -110,11 +115,11 @@ export abstract class CommandManager {
                         { body: commands },
                     );
 
-                    Global.logger().logInfo(`[GUILD: ${guildId}] Successfully reloaded ${data.length} application (/) commands.`);
+                    getCommonLogger().logInfo(`[GUILD: ${guildId}] Successfully reloaded ${data.length} application (/) commands.`);
                 }
             }
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to deploy commands, got error ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to deploy commands, got error ${e}`);
         }
     }
 }

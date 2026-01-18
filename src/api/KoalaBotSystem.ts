@@ -1,4 +1,4 @@
-import { Global } from "../global.js";
+import { Bot } from '../bot.js'
 import { DiscordMessageCreateListener, WordListener } from "./discordmessagelistener.js";
 
 export enum LogLevel {
@@ -27,14 +27,14 @@ export interface Logger {
     Use this to avoid direct dependencies outside the api folder that could break between versions.
 */
 export interface KoalaBotSystem {
-    getEnvironmentVariable(key: string): string;
+    getConfigVariable(key: string): string;
     getLogger(): Logger;
     registerDiscordMessageCreateListener(listener: DiscordMessageCreateListener): void;
     registerWordListener(listener: WordListener, word: string): void;
 }
 
 let internalKoalaBotSystem = function(): KoalaBotSystem {
-    return Global.bot().koalaBotSystem();
+    return Bot.get().koalaBotSystem();
 };
 
 export function SetKoalaBotSystem(koalaBotSystem: KoalaBotSystem) {

@@ -1,14 +1,30 @@
 {
 	"version": "2.0.0",
 	"tasks": [
+        {
+            "label": "KoalaBot Prelaunch",
+            "dependsOn": [
+                "Generate Version File",
+                "tsc: build - tsconfig.json"
+            ],
+        },
 		{
+            "label": "tsc: build - tsconfig.json",
 			"type": "typescript",
 			"tsconfig": "tsconfig.json",
 			"problemMatcher": [
 				"$tsc"
 			],
 			"group": "build",
-			"label": "tsc: build - tsconfig.json"
-		}
+            "detail": "Builds the TypeScript project"
+		},
+        {
+            "label": "Generate Version File",
+            "type": "npm",
+            "script": "generate-version-info",
+            "problemMatcher": [],
+            "group": "build",
+            "detail": "Generates the version.json file in the dist folder"
+        }
 	]
 }

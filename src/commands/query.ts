@@ -2,16 +2,20 @@
 	Ask AI a question without context
 */
 
-import { Global } from '../global.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import { PerformanceCounter } from '../performancecounter.js';
+import { getCommonLogger } from '../logging/logmanager.js'
+import { DiscordPlatform } from '../platform/discord/discordplatform.js';
+
+import config from 'config';
 
 class QueryCommand extends DiscordBotCommand {
 
     // @ts-ignore
     async handle(interaction) {
-        using perfCounter = Global.getPerformanceCounter("handleQueryCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleQueryCommand(): ");
 
         try {
             await interaction.deferReply();
@@ -35,11 +39,11 @@ class QueryCommand extends DiscordBotCommand {
                     await this.handleChatModelQuery(interaction, question, model);
                 }
             } catch (e) {
-                await Global.logger().logErrorAsync(`Exception during query for ${question}, got error ${e}`, interaction, true);
+                await getCommonLogger().logErrorAsync(`Exception during query for ${question}, got error ${e}`, interaction, true);
             }
         } catch (e) {
 
-            await Global.logger().logErrorAsync(`Top level exception during query command, got error ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Top level exception during query command, got error ${e}`, interaction, true);
         }        
     }
 
@@ -53,13 +57,13 @@ class QueryCommand extends DiscordBotCommand {
                 ]
             });
             const responseText = completion.choices[0].message.content;
-            Global.logger().logInfo(`Asked: ${question}, got: ${responseText}`);
+            getCommonLogger().logInfo(`Asked: ${question}, got: ${responseText}`);
 
             //await interaction.editReply(`Query \"${question}\": ${responseText}`);
-            await Global.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
+            await DiscordPlatform.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
         }
         catch (e) {
-            await Global.logger().logErrorAsync(`Failed to get chat reply for ${question}, got error ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Failed to get chat reply for ${question}, got error ${e}`, interaction, true);
         }
     }
 
@@ -71,25 +75,25 @@ class QueryCommand extends DiscordBotCommand {
             // @ts-ignore
             const completion = await OpenAIHelper.getInterface().createCompletion({
                 model: `${model}`,
-                prompt: `${Global.settings().get("QUERY_PROMPT_HEADER")} ${question}`,
+                prompt: `${question}`,
                 stream: false,
                 max_tokens: 4000,
             });
 
             const responseText = completion.data.choices[0].text;
 
-            Global.logger().logInfo(`Asked: ${question}, got: ${responseText}`);
-            await Global.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
+            getCommonLogger().logInfo(`Asked: ${question}, got: ${responseText}`);
+            await DiscordPlatform.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
         } catch (e) {
 
-            await Global.logger().logErrorAsync(`Failed to get davinci reply for ${question}, got error ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Failed to get davinci reply for ${question}, got error ${e}`, interaction, true);
         }
     }
 
     get() {
         const queryCommand = new SlashCommandBuilder()
             .setName(this.name())
-            .setDescription(`Ask ${Global.settings().get("BOT_NAME")} a question`)
+            .setDescription(`Ask ${config.get<string>("Global.botName")} a question`)
             .addStringOption((option) =>
                 option
                     .setName('question')

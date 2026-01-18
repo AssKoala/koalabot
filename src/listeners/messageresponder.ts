@@ -1,9 +1,10 @@
 import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/discordmessagelistener.js";
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
 import { Message } from 'discord.js';
-import { Global } from "../global.js";
 import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
 import { OpenAIHelper } from '../helpers/openaihelper.js';
+import { readJsonFileSync } from '../sys/jsonreader.js'
+import config from 'config';
 
 namespace MessageResponderInternal {
     export enum MessageResponseType {
@@ -95,17 +96,12 @@ namespace MessageResponderInternal {
                     const currentTime = Date.now();
                     const timeSinceLastQuery = currentTime - this.lastQuery;
 
-                    // Rate limit to once every 30 seconds
-                    const rateLimit = parseInt(GetKoalaBotSystem().getEnvironmentVariable("MESSAGE_RESPONDER_AI_COOLDOWN_MS"));
+                    const rateLimit = parseInt(GetKoalaBotSystem().getConfigVariable("Listeners.MessageResponder.aiCooldownMs"));
 
                     if (timeSinceLastQuery < rateLimit) return MessageResponseType.None;
 
-                    const completion = await OpenAIHelper.getInterface().chat.completions.create({
-                        model: "chatgpt-4o-latest",
-                        messages: [
-                            { "role": "user", "content": `${this.query}: ${message.content}` }
-                        ]
-                    });
+                    const completion = await OpenAIHelper.simpleQuery(config.get<string>("Chat.aiModelNano"), 
+                                                                    `${this.query}: ${message.content}`);
                     
                     // Reset the query timer
                     this.lastQuery = Date.now();
@@ -253,7 +249,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
         try {
             GetKoalaBotSystem().getLogger().logInfo(`Loading message responder dataset from: ${filePath}`);
             if (filePath != null) {
-                const data = Global.readJsonFileSync(filePath);
+                const data = readJsonFileSync(filePath);
     
                 if (data != null) {
                     this.dataSet = new MessageResponderInternal.MessageResponseDataSet();
@@ -300,7 +296,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
         }
     }
     
-    async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
+    async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
         try {
             if (message.author.bot) return;
 
@@ -314,4 +310,4 @@ export class MessageResponder implements DiscordMessageCreateListener {
     }
 }
 
-GetKoalaBotSystem().registerDiscordMessageCreateListener(new MessageResponder(`${GetKoalaBotSystem().getEnvironmentVariable("DATA_PATH")}/${GetKoalaBotSystem().getEnvironmentVariable("MESSAGE_RESPONDER_DATASET_FILENAME")}`));
+GetKoalaBotSystem().registerDiscordMessageCreateListener(new MessageResponder(`${GetKoalaBotSystem().getConfigVariable("Global.dataPath")}/${GetKoalaBotSystem().getConfigVariable("Listeners.MessageResponder.datasetFilename")}`));

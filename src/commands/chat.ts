@@ -1,14 +1,15 @@
 /*
     AI chatbot functionality
 */
-
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 
 import * as Discord from 'discord.js';
 import { AttachmentBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder, ChatInputCommandInteraction, Message } from 'discord.js';
-import { Stenographer, DiscordStenographerMessage } from '../app/stenographer/discordstenographer.js';
+import { Stenographer } from '../app/stenographer/discordstenographer.js';
+import { DiscordStenographerMessage } from "../app/stenographer/discordstenographermessage.js";
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
+import { PerformanceCounter } from '../performancecounter.js';
 
 // Import all the modules we support (TODO make it a config)
 import { OpenAiCompletionsV1Compatible } from '../helpers/llm/openai_completions_v1.js';
@@ -21,7 +22,10 @@ import "../helpers/llm/openai_completions_v1_impl.js";
 import "../helpers/llm/openai_responses_v1.js";
 import { rm } from 'node:fs/promises';
 
-import { LlmDictTool } from '../helpers/llm/tools/dicttool.js';
+import { LlmDictTool } from '../llm/tools/dicttool.js';
+
+import config from 'config';
+
 
 abstract class ChatResponse {
     botId?: string;
@@ -253,17 +257,17 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                     if (imageData != undefined) {
                         this.runtimeData().logger().logInfo(`ChatCommand::handleInternal() Results contain image data, responding with image.`);
 
+                        const TITLE_MAX_LEN = config.get<number>("Discord.attachmentTitleMaxLength");
+                        const DESCR_MAX_LEN = config.get<number>("Discord.attachmentDescriptionMaxLength");
+
                         const image = new Discord.AttachmentBuilder(imageData.imageBytes, {
                             name: 'image.png',
-                            description: imageData.revisedPrompt
+                            description: imageData.revisedPrompt.substring(0, DESCR_MAX_LEN)
                         });
-
-                        const TITLE_MAX_LEN = 256;
-                        const DESCR_MAX_LEN = 4096;
 
                         const embed = new Discord.EmbedBuilder();
                         embed.setTitle(requestData.question!.trim().substring(0, TITLE_MAX_LEN));
-                        if (this.runtimeData().settings().get("CHAT_ENABLE_LONG_DESCRIPTION") == 'true') {
+                        if (config.get("Chat.enableLongDescription")) {
                             const text = "-# " + imageData.revisedPrompt;
                             embed.setDescription(text.substring(0, DESCR_MAX_LEN));
                         }
@@ -293,7 +297,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
     }
 
     async handle(interaction: ChatInputCommandInteraction): Promise<void>  {
-        using perfCounter = this.runtimeData().getPerformanceCounter("handleChatCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleChatCommand(): ");
 
         try {
             this.runtimeData().logger().logInfo(`ChatCommand::handle() start processing slash command from ${interaction.user.username} in channel ${interaction.channelId}`);
@@ -310,11 +314,11 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
             requestData.useGuildLogs = slashCommandRequest.getOptionValueBoolean("use_guild_log", true);
             requestData.userId = interaction.member!.user.id;
             requestData.userName = interaction.member!.user.username;
-            requestData.prompt = slashCommandRequest.getOptionValueString('ai_prompt', this.runtimeData().settings().get("CHAT_PROMPT_INSTRUCTIONS"));
+            requestData.prompt = slashCommandRequest.getOptionValueString('ai_prompt', config.get("Chat.systemPrompt"));
             requestData.question = `${interaction.member!.user.username}: ${slashCommandRequest.getOptionValueString('response')}`;
-            requestData.maxTokens = slashCommandRequest.getOptionValueNumber('token_count', parseInt(this.runtimeData().settings().get("GPT_TOKEN_COUNT")));
-            requestData.ai_model = slashCommandRequest.getOptionValueString('ai_model', this.runtimeData().settings().get("CHAT_DEFAULT_MODEL"));
-            requestData.maxMessages = parseInt(this.runtimeData().settings().get("GPT_MAX_MESSAGES")) || 2048;
+            requestData.maxTokens = slashCommandRequest.getOptionValueNumber('token_count', parseInt(config.get("Chat.maxTokenCount")));
+            requestData.ai_model = slashCommandRequest.getOptionValueString('ai_model', config.get("Chat.aiModel"));
+            requestData.maxMessages = parseInt(config.get("Chat.maxMessages")) || 2048;
             requestData.responsePrepend = `Query \"${requestData.question}\":`;
 
             let aiApi: AiApi;
@@ -323,13 +327,13 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
             if (requestData.ai_model.includes('claude')) {
                 aiApi = AiApi.Anthropic;
 
-                if (!this.runtimeData().settings().has("ANTHROPIC_API_KEY")) {
+                if (!config.has("APIKey.anthropic")) {
                     await this.runtimeData().logger().logErrorAsync(`Cannot use Claude without ANTHROPIC_API_KEY`, interaction, true);
                 }
             } else if (requestData.ai_model.includes('gpt') || requestData.ai_model.includes('o1')) {
                 aiApi = AiApi.OpenAI;
 
-                if (!this.runtimeData().settings().has("OPENAI_API_KEY")) {  // Same for ChatGPT
+                if (!config.has("APIKey.openai")) {  // Same for ChatGPT
                     await this.runtimeData().logger().logErrorAsync(`Cannot use ChatGPT without OPENAI_API_KEY`, interaction, true);
                 }
             } else if (requestData.ai_model.includes('llama')) {
@@ -337,7 +341,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
             } else if (requestData.ai_model.includes('grok')) {
                 aiApi = AiApi.Grok;
 
-                if (!this.runtimeData().settings().has("GROK_API_KEY")) {  // Same for Grok
+                if (!config.has("APIKey.grok")) {  // Same for Grok
                     await this.runtimeData().logger().logErrorAsync(`Cannot use ChatGPT without GROK_API_KEY`, interaction, true);
                 }
             } else {
@@ -356,16 +360,19 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
         try {
             channel.sendTyping();
         } catch (e) {
-            this.runtimeData().logger().logErrorAsync(`ChatCommand::onMessageCreate() error sending typing indicator, got ${e}`);
+            this.runtimeData().logger().logErrorAsync(`ChatCommand::onDiscordMessageCreate() error sending typing indicator, got ${e}`);
         }
     }
 
-    async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
-        using perfCounter = this.runtimeData().getPerformanceCounter("handleChatCommand(): ");
+    async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
+        // If experimental chat is enabled, early out and stop handling chat requests
+        if (config.get("Developer.Flags.enableExperimentalChatSystem")) return;
+
+        using perfCounter = PerformanceCounter.Create("handleChatCommand(): ");
 
         try {
             if (!message.author.bot && message.mentions.has(this.runtimeData().bot().client().user!.id)) {
-                this.runtimeData().logger().logInfo(`ChatCommand::onMessageCreate() start message processing from ${message.author.username} in channel ${message.channelId}`);
+                this.runtimeData().logger().logInfo(`ChatCommand::onDiscordMessageCreate() start message processing from ${message.author.username} in channel ${message.channelId}`);
 
                 this.sendTypingIndicator(message.channelId);
 
@@ -379,28 +386,28 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                 requestData.useGuildLogs = false;
                 requestData.userId = message.author.id;
                 requestData.userName = message.author.username;
-                requestData.prompt = this.runtimeData().settings().get("CHAT_PROMPT_INSTRUCTIONS");
+                requestData.prompt = config.get("Chat.systemPrompt");
                 requestData.question = message.content.replace(`<@${requestData.botId}>`,'');
-                requestData.maxTokens = parseInt(this.runtimeData().settings().get("GPT_TOKEN_COUNT"));
-                requestData.ai_model = this.runtimeData().settings().get("CHAT_DEFAULT_MODEL");
-                requestData.maxMessages = parseInt(this.runtimeData().settings().get("GPT_MAX_MESSAGES")) || 2048;
+                requestData.maxTokens = parseInt(config.get("Chat.maxTokenCount"));
+                requestData.ai_model = config.get("Chat.aiModel");
+                requestData.maxMessages = parseInt(config.get("Chat.maxMessages")) || 2048;
                 requestData.stripBotNameFromResponse = true;
 
                 await this.handleInternal(requestData, AiApi.OpenAI);
             }
         } catch (e) {
-            this.runtimeData().logger().logErrorAsync(`Chat::onMessageCreate() error, got ${e}`);
+            this.runtimeData().logger().logErrorAsync(`Chat::onDiscordMessageCreate() error, got ${e}`);
         }
     }
 
     get(): SlashCommandOptionsOnlyBuilder {
         const chatCommand = new SlashCommandBuilder()
                         .setName(this.name())
-                        .setDescription(`Chat with ${this.runtimeData().settings().get("BOT_NAME")}`)
+                        .setDescription(`Chat with ${config.get("Global.botName")}`)
                         .addStringOption((option) =>
                             option
                                 .setName('response')
-                                .setDescription(`Response to ${this.runtimeData().settings().get("BOT_NAME")}`)
+                                .setDescription(`Response to ${config.get("Global.botName")}`)
                                 .setRequired(true),
                         )
                         .addStringOption((option) =>
@@ -420,6 +427,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                                 .setName('ai_model')
                                 .setDescription('AI Model to use')
                                 .addChoices(
+                                    { name: 'gpt-5.2', value: 'gpt-5.2' },
                                     { name: 'gpt-5.1', value: 'gpt-5.1' },
                                     { name: 'gpt-5', value: 'gpt-5' },
                                     { name: 'gpt-5-chat-latest', value: 'gpt-5-chat-latest' },
@@ -441,7 +449,7 @@ class ChatCommand extends DiscordBotCommand implements DiscordMessageCreateListe
                         .addBooleanOption((option) => 
                             option
                                 .setName('use_guild_log')
-                                .setDescription(`Use logs from all channels in server, not just channel. Default is true for /chat, false for @${this.runtimeData().settings().get("BOT_NAME")}`)
+                                .setDescription(`Use logs from all channels in server, not just channel. Default is true for /chat, false for @${config.get("Global.botName")}`)
                                 .setRequired(false),
                         )
                         .addStringOption((option) => 

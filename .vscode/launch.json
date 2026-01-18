@@ -1,9 +1,19 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "address": "192.168.10.69",
+            "localRoot": "${workspaceFolder}/dist",
+            "name": "Attach to BOOBS",
+            "port": 9229,
+            "preLaunchTask": "tsc: build - tsconfig.json",
+            "remoteRoot": "/app/dist",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
         {
             "type": "node",
             "request": "launch",
@@ -11,10 +21,12 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "preLaunchTask": "tsc: build - tsconfig.json",
+            "preLaunchTask": "KoalaBot Prelaunch",
             "program": "${workspaceFolder}/src/main.ts",
             "outputCapture": "std",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"],
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ],
             "envFile": "${workspaceFolder}/environment/test/env.txt"
         },
         {
@@ -24,30 +36,57 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "preLaunchTask": "tsc: build - tsconfig.json",
+            "preLaunchTask": "KoalaBot Prelaunch",
             "program": "${workspaceFolder}/src/doc/generatedocs.ts",
             "outputCapture": "std",
-            "outFiles": ["${workspaceFolder}/build/**/*.js"]
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ]
         },
         {
-            "name": "Jest file",
             "type": "node",
             "request": "launch",
-            "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/jest",
+            "name": "Run current file (TS/JS)",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "KoalaBot Prelaunch",
+            "program": "${file}",
+            "outputCapture": "std",
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "On-Demand Generate Version File",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/scripts/generateVersionFile.js",
+            "args": ["${workspaceFolder}/dist/version.json"],
+            "outputCapture": "std",
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ]
+        },
+        {
+            "name": "vitest file",
+            "type": "node",
+            "request": "launch",
+            "preLaunchTask": "KoalaBot Prelaunch",
+            "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/vitest",
             "args": [
-                "${fileBasenameNoExtension}",
-                "--runInBand",
-                "--watch",
-                "--coverage=false",
-                "--no-cache"
+                "run",
+                "--testTimeout=0",
+                "--no-file-parallelism",
+                "${fileBasenameNoExtension}"
             ],
             "cwd": "${workspaceRoot}",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "sourceMaps": true,
-            "windows": {
-                "program": "${workspaceFolder}/node_modules/jest/bin/jest"
-            },
-        }
+            "sourceMaps": true
+        },
     ]
 }

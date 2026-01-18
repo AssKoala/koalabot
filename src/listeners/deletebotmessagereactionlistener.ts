@@ -4,7 +4,7 @@ import { ListenerManager } from "../listenermanager.js"
 
 class DeleteBotMessageReactionListener implements DiscordReactionAddListener {
     // @ts-ignore
-    async onMessageReactionAdd(runtimeData, reaction, user) {
+    async onDiscordMessageReactionAdd(runtimeData, reaction, user) {
         // Ignore bot's reactions
 		if (user.bot) return;
 

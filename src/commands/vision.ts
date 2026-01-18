@@ -2,15 +2,18 @@
 	AI Vision processing (view images and describe them)
 */
 
-import { Global } from '../global.js';
 import { SlashCommandBuilder, AttachmentBuilder, Utils, ChatInputCommandInteraction } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import config from 'config';
+import { PerformanceCounter } from '../performancecounter.js';
+import { getCommonLogger } from '../logging/logmanager.js';
+import { DiscordPlatform } from '../platform/discord/discordplatform.js'
 
 class VisionCommand extends DiscordBotCommand {
     
     async handle(interaction: ChatInputCommandInteraction) {
-        using perfCounter = Global.getPerformanceCounter("handleVisionCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleVisionCommand(): ");
 
         try {
             await interaction.deferReply();
@@ -37,7 +40,7 @@ class VisionCommand extends DiscordBotCommand {
                         model = interaction.options.data[i].value!.toString();
                         break;
                     default:
-                        Global.logger().logErrorAsync(`handleVisionCommand::unknown option ${name}`);
+                        getCommonLogger().logErrorAsync(`handleVisionCommand::unknown option ${name}`);
                         break;
                 }
             }
@@ -66,9 +69,9 @@ class VisionCommand extends DiscordBotCommand {
 
             const responseText = response.choices[0].message.content;
 
-            await Global.editAndSplitReply(interaction, `Query: \"${query}\" Image: ${url}: ${responseText}`);
+            await DiscordPlatform.editAndSplitReply(interaction, `Query: \"${query}\" Image: ${url}: ${responseText}`);
         } catch (e) {
-            await Global.logger().logErrorAsync(`Top level exception during vision, got error ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Top level exception during vision, got error ${e}`, interaction, true);
         }
 
         
@@ -77,7 +80,7 @@ class VisionCommand extends DiscordBotCommand {
     get() {
         const visionCommand = new SlashCommandBuilder()
             .setName(this.name())
-            .setDescription(`Ask ${Global.settings().get("BOT_NAME")} to analyze an image`)
+            .setDescription(`Ask ${config.get<string>("Global.botName")} to analyze an image`)
             .addStringOption((option) =>
                 option
                     .setName('image_url')

@@ -2,7 +2,6 @@
     Allows querying the bot for system stuff.
 */
 
-import { Global } from '../global.js';
 import { SlashCommandBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import { Stenographer } from '../app/stenographer/discordstenographer.js'
 import { getAffirmationCount } from './affirmation.js'
@@ -14,10 +13,14 @@ import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotc
 import crypto from 'crypto'
 import fsPromise from 'node:fs/promises'
 import { GetBadWordSaveFileName, GetBadWordSaveFilePath, GetBadWordSaveFolder } from '../listeners/badwordlistener.js';
+import config from 'config';
+import { getCommonLogger, LogManager } from '../logging/logmanager.js';
+import { PerformanceCounter } from '../performancecounter.js';
+import { DiscordPlatform } from '../platform/discord/discordplatform.js'
 
 class Administration {
     static isSuper(memberId: string): boolean {
-        const superUsers = Global.settings().get("SUDO_LIST").split(",");
+        const superUsers = config.get<string>("Global.sudoList").split(",");
 
         let isSuper: boolean = false;
 
@@ -52,9 +55,9 @@ async function showMemoryStats(interaction)
             + `Affirmations:     ${getAffirmationCount()}\n`
             + "```";
 
-        await Global.editAndSplitReply(interaction, outputString);
+        await DiscordPlatform.editAndSplitReply(interaction, outputString);
     } catch (e) {
-        await Global.logger().logErrorAsync(`Exception getting memory stats, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Exception getting memory stats, got ${e}`, interaction, true);
     }
 }
 
@@ -93,9 +96,9 @@ async function showCpuStats(interaction)
             + `cpu (system):  ${endCpu["system"]}\n`
             + "```";
 
-        await Global.editAndSplitReply(interaction, outputString);
+        await DiscordPlatform.editAndSplitReply(interaction, outputString);
     } catch (e) {
-        await Global.logger().logErrorAsync(`Exception getting cpu stats, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Exception getting cpu stats, got ${e}`, interaction, true);
     }
 }
 
@@ -108,34 +111,34 @@ async function reboot(interaction) {
         }
         
         // write file to reboot spot 
-        const targetFile = Global.settings().get("REBOOT_FILE");
+        const targetFile = config.get<string>("Global.rebootFile");
 
-        Global.logger().logWarning(`Attempting to reboot, writing to ${targetFile}`);
+        getCommonLogger().logWarning(`Attempting to reboot, writing to ${targetFile}`);
         await interaction.editReply(`Attempting to reboot, writing to ${targetFile}`);
 
         fs.writeFile(targetFile, `${interaction.member.id}:${interaction.channelId}`, err => {
             if (err) {
-                Global.logger().logWarning(`Reboot Failed! Failed to write reboot info to ${targetFile}, got ${err}`);
+                getCommonLogger().logWarning(`Reboot Failed! Failed to write reboot info to ${targetFile}, got ${err}`);
                 interaction.editReply(`Reboot Failed! Failed to write reboot info to ${targetFile}, got ${err}`);
                 return false;
             } else {
-                Global.logger().logWarning(`Wrote reboot info to ${targetFile}`);
+                getCommonLogger().logWarning(`Wrote reboot info to ${targetFile}`);
                 process.exit();
                 return true;
             }
         });
 
     } catch (e) {
-        await Global.logger().logWarning(`Failed to restart, got ${e}`);
+        await getCommonLogger().logWarning(`Failed to restart, got ${e}`);
     }
 }
 
 // @ts-ignore
 async function showVersionInformation(interaction) {
     try {
-        interaction.editReply(`Version: ${VersionInformation.versionNumber}`);
+        interaction.editReply(`**Version**: ${VersionInformation.get().getVersionString()}`);
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to get version info, got ${e}`, interaction, true);
+        getCommonLogger().logErrorAsync(`Failed to get version info, got ${e}`, interaction, true);
     }
 }
 
@@ -156,7 +159,7 @@ class SystemCommand extends DiscordBotCommand {
                 await showVersionInformation(interaction);
                 break;
             default:
-                Global.logger().logErrorAsync(`Unknown core subcommand(${coreCommandName}.)`, interaction, true);
+                getCommonLogger().logErrorAsync(`Unknown core subcommand(${coreCommandName}.)`, interaction, true);
         }
     }
 
@@ -174,7 +177,7 @@ class SystemCommand extends DiscordBotCommand {
                     break;
             }
         } catch (e) {   
-            await Global.logger().logErrorAsync(`Top level exception during system command, got error ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Top level exception during system command, got error ${e}`, interaction, true);
         }
     }
 
@@ -200,7 +203,7 @@ class SystemCommand extends DiscordBotCommand {
                         pasteDirectly = parameter.value;
                         break;
                     default:
-                        Global.logger().logErrorAsync(`Unexpected option found in system: ${parameter.name}`);
+                        getCommonLogger().logErrorAsync(`Unexpected option found in system: ${parameter.name}`);
                         break;
                 }
             }
@@ -208,7 +211,7 @@ class SystemCommand extends DiscordBotCommand {
             let tailOutput = null;
 
             try {
-                const data = fs.readFileSync(Global.logManager().getGlobalLogFullPath(), 'utf8');
+                const data = fs.readFileSync(LogManager.get().getCommonLogFullPath(), 'utf8');
 
                 const lines = data.split(EOL);
 
@@ -218,12 +221,12 @@ class SystemCommand extends DiscordBotCommand {
                 }
 
                 if (pasteDirectly) {
-                    await Global.editAndSplitReply(interaction, `Last ${count} lines from log:${EOL}${tailOutput}`);
+                    await DiscordPlatform.editAndSplitReply(interaction, `Last ${count} lines from log:${EOL}${tailOutput}`);
                 } else {
                     // Store the data into a temp file to attach to discord
                     // @ts-ignore
                     const hash = crypto.createHash('md5').update(tailOutput).digest("hex");
-                    const filePath = `${Global.settings().get("TEMP_PATH")}/${hash}.txt`;
+                    const filePath = `${config.get<string>("Global.tempPath")}/${hash}.txt`;
 
                     // @ts-ignore
                     fs.writeFileSync(filePath, tailOutput, 'utf8');
@@ -243,15 +246,15 @@ class SystemCommand extends DiscordBotCommand {
                     try {
                         await fsPromise.rm(filePath);
                     } catch (e) {
-                        Global.logger().logErrorAsync(`Failed to delete temporary logfile, might need manual cleanup, got ${e}`);
+                        getCommonLogger().logErrorAsync(`Failed to delete temporary logfile, might need manual cleanup, got ${e}`);
                     }
                 }
             }
             catch (e) {
-                Global.logger().logErrorAsync(`Failed to read log file, got ${e}`, interaction, true);
+                getCommonLogger().logErrorAsync(`Failed to read log file, got ${e}`, interaction, true);
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Top level error tailing the log, got ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Top level error tailing the log, got ${e}`, interaction, true);
         }
     }
 
@@ -285,26 +288,28 @@ class SystemCommand extends DiscordBotCommand {
 
                     if (variableName == "") {
                         // List all when a value isnt provided.
-                        messageResponse = `Listing registered settings:\n`;
+                        // messageResponse = `Listing registered settings:\n`;
 
-                        this.runtimeData().settings().getAllSettings().forEach(setting => {
-                            messageResponse += `- ${setting}\n`;
-                        });
+                        // this.runtimeData().settings().getAllSettings().forEach(setting => {
+                        //     messageResponse += `- ${setting}\n`;
+                        // });
+                        messageResponse = "Not implemented.";
                     } else {
-                        if (this.runtimeData().settings().has(variableName)) {
-                            const variableValue = this.runtimeData().settings().get(variableName);
+                        if (config.has(variableName)) {
+                            const variableValue = config.get<string>(variableName);
                             messageResponse = `${variableName}=${variableValue}`;
                         } else {
-                            const potential = this.runtimeData().settings().search(variableName);
+                            messageResponse = `${variableName} not found, check spelling.`;
+                            // const potential = this.runtimeData().settings().search(variableName);
     
-                            if (potential.length > 0) {
-                                messageResponse = `${variableName} not found, did you mean:\n`;
-                                potential.forEach((value) => {
-                                    messageResponse += `- ${value}\n`; 
-                                });
-                            } else {
-                                messageResponse = `${variableName} not found and no alternatives found with that substring.`;
-                            }                        
+                            // if (potential.length > 0) {
+                            //     messageResponse = `${variableName} not found, did you mean:\n`;
+                            //     potential.forEach((value) => {
+                            //         messageResponse += `- ${value}\n`; 
+                            //     });
+                            // } else {
+                            //     messageResponse = `${variableName} not found and no alternatives found with that substring.`;
+                            // }                        
                         }
                     }                    
                 }
@@ -312,32 +317,33 @@ class SystemCommand extends DiscordBotCommand {
 
                 case 'set':
                 {
-                    let variableName;
-                    let variableValue;
+                    // let variableName;
+                    // let variableValue;
 
-                    const options = interaction.options.data[0].options[0].options;
+                    // const options = interaction.options.data[0].options[0].options;
 
-                    for (let i = 0; i < options.length; i++) {
-                        switch (options[i].name) {
-                            case 'name':
-                                variableName = options[i].value;
-                                break;
-                            case 'value':
-                                variableValue = options[i].value; 
-                                break;
-                            default:
-                                break;
-                        }
-                    }
+                    // for (let i = 0; i < options.length; i++) {
+                    //     switch (options[i].name) {
+                    //         case 'name':
+                    //             variableName = options[i].value;
+                    //             break;
+                    //         case 'value':
+                    //             variableValue = options[i].value; 
+                    //             break;
+                    //         default:
+                    //             break;
+                    //     }
+                    // }
 
-                    if (this.runtimeData().settings().has(variableName)) {
-                        messageResponse = `${variableName} was ${this.runtimeData().settings().get(variableName)}, setting to ${variableValue}`;
-                        const result = this.runtimeData().settings().set(variableName, variableValue);
+                    // if (config.has(variableName)) {
+                    //     messageResponse = `${variableName} was ${this.runtimeData().settings().get(variableName)}, setting to ${variableValue}`;
+                    //     const result = this.runtimeData().settings().set(variableName, variableValue);
 
-                        messageResponse = (result ? "SUCCESS: " : "FAILED: ") + messageResponse;
-                    } else {
-                        messageResponse = `${variableName} not found or not registered. Check spelling or use get to find the right name.`;
-                    }                    
+                    //     messageResponse = (result ? "SUCCESS: " : "FAILED: ") + messageResponse;
+                    // } else {
+                    //     messageResponse = `${variableName} not found or not registered. Check spelling or use get to find the right name.`;
+                    // }
+                    messageResponse = "Not implemented.";
                 }
                 break;
 
@@ -394,13 +400,13 @@ class SystemCommand extends DiscordBotCommand {
                     await interaction.editReply(messageResponse);
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Top level error handling badword command, got ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Top level error handling badword command, got ${e}`, interaction, true);
         }
     }
 
     // @ts-ignore
     async handle(interaction) {
-        using perfCounter = Global.getPerformanceCounter("handleSystemCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleSystemCommand(): ");
 
         // This function must defer the interaction if needed, it's not autodeferred.
 
@@ -423,11 +429,11 @@ class SystemCommand extends DiscordBotCommand {
                     await this.handleBadWordSubcommand(interaction);
                     break;
                 default:
-                    Global.logger().logErrorAsync(`Unimplemented system command option: ${interaction.options._group}`, interaction, true);
+                    getCommonLogger().logErrorAsync(`Unimplemented system command option: ${interaction.options._group}`, interaction, true);
                     break;
             }
         } catch (e) {   
-            await Global.logger().logErrorAsync(`Top level exception during system command, got error ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Top level exception during system command, got error ${e}`, interaction, true);
         }
     }
 

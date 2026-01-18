@@ -6,18 +6,12 @@ import { PerformanceCounter } from "../performancecounter.js";
 export class DiscordBotHelpers
 {
     private logger: LoggerConcrete;
-    constructor(logger: LoggerConcrete, enableTiming: boolean) {
+    constructor(logger: LoggerConcrete) {
         if (logger == null) {
             throw new Error("DiscordHelperFunctions class requires a valid Logger instance");
         }
 
         this.logger = logger;        
-
-        if (enableTiming) {
-            this._perfCounterFunction = this.getPerformanceCounterReal;
-        } else {
-            this._perfCounterFunction = function (){ return undefined; };
-        }
     }
 
     public splitMessage(message: string, size = 2000): string | string[]
@@ -74,28 +68,5 @@ export class DiscordBotHelpers
             this.logger.logErrorAsync(`Failed to load ${path}, got ${e}`);
             return null;
         }
-    }
-
-    private _perfCounterFunction: (description: string) => PerformanceCounter | undefined;
-    private getPerformanceCounterReal(description: string) {
-        return new PerformanceCounter(description);
-    }
-
-    /**
-     * Returns a disposable Performance Counter.
-     * 
-     * Use like this to add performance counters to your code:
-     * 
-     * // Block I want to time
-     * {
-     *    const perf = getPerformanceCounter();
-     *    // ... Stuff ...
-     * } // Counter will calculate time when leaving the block
-     * 
-     * @param description Performance counter name/description string, e.g. `space::foo::doThing(${someVar})`
-     * @returns 
-     */
-    getPerformanceCounter(description: string): PerformanceCounter | undefined {
-        return this._perfCounterFunction(description);
     }
 }

@@ -6,12 +6,13 @@ import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-com
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { getRandomValues } from 'node:crypto';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { PerformanceCounter } from '../performancecounter.js';
 
 class CoinFlipCommand extends DiscordBotCommand {
 
     async handle(interaction: ChatInputCommandInteraction)
     {
-        using perfCounter = this.runtimeData().getPerformanceCounter(`handleCoinflipCommand(): `);
+        using perfCounter = PerformanceCounter.Create(`handleCoinflipCommand(): `);
 
         try {
             await interaction.deferReply();

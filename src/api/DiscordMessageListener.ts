@@ -2,11 +2,11 @@ import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 import { Message, MessageReaction, PartialMessageReaction, User, PartialUser } from 'discord.js';
 
 export interface DiscordMessageCreateListener {
-    onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void>;
+    onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void>;
 }
 
 export interface DiscordReactionAddListener {
-    onMessageReactionAdd(runtimeData: DiscordBotRuntimeData, reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void>;
+    onDiscordMessageReactionAdd(runtimeData: DiscordBotRuntimeData, reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void>;
 }
 
 export interface TrackedWord {

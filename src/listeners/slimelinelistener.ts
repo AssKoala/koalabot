@@ -3,23 +3,45 @@ import { Message } from 'discord.js'
 import { ListenerManager } from "../listenermanager.js"
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 
+import config from 'config';
+
 class SlimelineListener implements DiscordMessageCreateListener {
-    async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
+
+    private responseList: ((message: Message) => void)[] = [];
+
+    constructor() {
+        if (config.has("TwoCpu.guildId")) {
+            if (config.has("TwoCpu.skullUserId")) {
+                this.responseList.push((message: Message) => {
+                    if (message.guildId == config.get<string>("TwoCpu.guildId") && message.content.includes('@slimeline')) {
+                        message.reply(`Hey <@${config.get<string>("TwoCpu.skullUserId")}>, ${message.author.username} wants you!`);
+                    }
+                });
+            }
+
+            if (config.has("TwoCpu.gigaUserId")) {
+                this.responseList.push((message: Message) => {
+                    if (message.guildId == config.get<string>("TwoCpu.guildId") && message.content.includes('@cuck')) {
+                        message.reply(`Hey <@${config.get<string>("TwoCpu.gigaUserId")}>, ${message.author.username} wants you!`);
+                    }
+                });
+            }
+        }
+    }
+
+    async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
         if (message.author.bot) return;
 
-        try {
-            if (message.guildId == process.env["TWOCPU_GUILD_ID"] && message.content.includes('@slimeline')) {
-                message.reply(`Hey <@${process.env["SKULL_USER_ID"]}>, ${message.author.username} wants you!`);
+        this.responseList.forEach((func) => {
+            try {
+                func(message);
+            } catch (e) {
+                runtimeData.logger().logError(`Failed to reply to lister, got ${e}`);
             }
-
-            if (message.guildId == process.env["TWOCPU_GUILD_ID"] && message.content.includes('@cuck')) {
-                message.reply(`Hey <@${process.env["GIGA_USER_ID"]}>, ${message.author.username} wants you!`);
-            }
-        } catch (e) {
-            runtimeData.logger().logErrorAsync(`Failed to reply to lister, got ${e}`);
-        }
+        });
         
     }
 }
 
 ListenerManager.registerMessageCreateListener(new SlimelineListener());
+

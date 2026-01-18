@@ -4,11 +4,14 @@
 
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import { PerformanceCounter } from '../performancecounter.js';
+
 // @ts-ignore
 import validator from 'validator';
 import cp from 'child_process';
 import path from "path";
 import fs from "fs";
+import config from 'config';
 
 class RedditLinks {
     links: string[];
@@ -23,10 +26,10 @@ class RedditLinks {
 class RedditLinkCommand extends DiscordBotCommand {
     private async getLinks(searchLimit: string, timeFilter: string, subredditList: string[]) {
         try {    
-            const python = this.runtimeData().settings().get("PYTHON_BINARY");
+            const python = config.get<string>("Global.pythonBinary");
             const script = path.join(
-                this.runtimeData().settings().get("SCRIPT_PATH"),
-                this.runtimeData().settings().get("REDDIT_READER_SCRIPT_NAME"));
+                config.get<string>("Global.scriptPath"),
+                config.get<string>("Reddit.readerScriptName"));
 
             if (!fs.existsSync(script)) {
                 this.runtimeData().logger().logErrorAsync(`Cannot load reddit link script: ${script}`);
@@ -35,9 +38,9 @@ class RedditLinkCommand extends DiscordBotCommand {
     
             const args = [ 
                 script, 
-                this.runtimeData().settings().get("REDDIT_CLIENT_ID"), 
-                this.runtimeData().settings().get("REDDIT_CLIENT_SECRET"),
-                this.runtimeData().settings().get("REDDIT_USER_AGENT"),
+                config.get<string>("Reddit.clientId"), 
+                config.get<string>("Reddit.clientSecret"),
+                config.get<string>("Reddit.userAgent"),
                 searchLimit, 
                 timeFilter, ...subredditList 
             ];
@@ -70,7 +73,7 @@ class RedditLinkCommand extends DiscordBotCommand {
 
     // @ts-ignore
     private async getRandomLink(interaction: ChatInputCommandInteraction, searchLimit, subredditList: string[]) {
-        using perfCounter = this.runtimeData().getPerformanceCounter("replyRandomLink(): ");
+        using perfCounter = PerformanceCounter.Create("replyRandomLink(): ");
 
         try {
             let timeFilter = 'day';
@@ -188,7 +191,7 @@ class RedditLinkCommand extends DiscordBotCommand {
     }
 }
 
-import { Global } from "../global.js"
+import { readJsonFile } from '../sys/jsonreader.js'
 
 class RedditLinkPoster {
     // @ts-ignore
@@ -199,7 +202,7 @@ class RedditLinkPoster {
     }
 
     async init(configJsonFilePath: string) {
-        this.#redditLinks = await Global.readJsonFile(configJsonFilePath);
+        this.#redditLinks = await readJsonFile(configJsonFilePath);
     }
 
     generateSlashCommands() {
@@ -211,5 +214,5 @@ class RedditLinkPoster {
 }
 
 const redditLinkPoster = new RedditLinkPoster();
-await redditLinkPoster.init(`${Global.settings().get("DATA_PATH")}/redditlinks.json`);
+await redditLinkPoster.init(`${config.get<string>("Global.dataPath")}/redditlinks.json`);
 redditLinkPoster.generateSlashCommands();

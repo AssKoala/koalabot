@@ -14,12 +14,15 @@
 */
 
 import fetch from 'node-fetch';
-import { Global } from './../global.js'; 
 // @ts-ignore
 import validator from 'validator';
 import { SlashCommandBuilder } from "discord.js";
 
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { getCommonLogger } from '../logging/logmanager.js';
+import { PerformanceCounter } from '../performancecounter.js';
+import config from 'config';
+import { UserSettingsManager } from '../app/user/usersettingsmanager.js';
 
 /**
  * Map for type to excludes and print function
@@ -65,7 +68,7 @@ function getTemperatureString(temperatureKelvin)
         let temperatureCelsius = temperatureKelvin - 273.15;
         return celsiusToFahrenheit(temperatureCelsius) + 'F/' + temperatureCelsius.toFixed(0) + 'C';
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to convert temperature ${temperatureKelvin}, got ${e}`);
+        getCommonLogger().logErrorAsync(`Failed to convert temperature ${temperatureKelvin}, got ${e}`);
     }
 }
 
@@ -83,7 +86,7 @@ function degreesToCompass(degrees)
 
         return directions[val % 16];
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to convert ${degrees}, got ${e}`);
+        getCommonLogger().logErrorAsync(`Failed to convert ${degrees}, got ${e}`);
         return -1;
     }
 }
@@ -96,13 +99,13 @@ function degreesToCompass(degrees)
 function getUserPreferredUnits(interaction) 
 {
     try {
-        const userData = Global.userSettings().get(interaction.user.username);
+        const userData = UserSettingsManager.get().get(interaction.user.username);
 
         if (userData) {
             return userData.weatherSettings.preferredUnits;
         }
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to get preferred units, got ${e}`);
+        getCommonLogger().logErrorAsync(`Failed to get preferred units, got ${e}`);
     }
 
     return "rankine";
@@ -128,13 +131,13 @@ async function getWeatherLocation(interaction)
         }
 
         if (location === null) {
-            const userData = Global.userSettings().get(interaction.user.username);
+            const userData = UserSettingsManager.get().get(interaction.user.username);
 
             if (userData) { // if the user data exists, we can use that for the location if none was specified
                 try {
                     location = userData.weatherSettings.location;
                 } catch (e) {
-                    await Global.logger().logErrorAsync(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction, true);
+                    await getCommonLogger().logErrorAsync(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction, true);
                     return null;
                 }
             } else {
@@ -143,7 +146,7 @@ async function getWeatherLocation(interaction)
             }
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to get weather location, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to get weather location, got ${e}`, interaction, true);
     }
 
     return location;
@@ -158,7 +161,7 @@ async function getWeatherLocation(interaction)
 async function getWeatherLocationGoogleMapsAPI(interaction)
 {
     try {
-        const key = Global.settings().get("GOOGLE_MAPS_API_KEY");
+        const key = config.get<string>("APIKey.googleMaps");
         const location = await getWeatherLocation(interaction);
         if (!location) {
             return null;
@@ -166,7 +169,7 @@ async function getWeatherLocationGoogleMapsAPI(interaction)
 
         const query = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${key}`;
         if (!validator.isURL(query)) {
-            Global.logger().logWarning(`Location passed in does not appear to be properly useable as a URL: ${location}`);
+            getCommonLogger().logWarning(`Location passed in does not appear to be properly useable as a URL: ${location}`);
             await interaction.editReply("Whatever you wrote apparently doesn't work as a URL so maybe ask differently");
             return null;
         }
@@ -182,11 +185,11 @@ async function getWeatherLocationGoogleMapsAPI(interaction)
                 return null;
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Failed to get geocoded data, got error: ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Failed to get geocoded data, got error: ${e}`, interaction, true);
             return null;
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to get weather location using maps API, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to get weather location using maps API, got ${e}`, interaction, true);
     }
 
 }
@@ -203,26 +206,26 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
 {
     try {
         if (locationData.length != 3) {
-            await Global.logger().logErrorAsync(`Trying to print API with incorrect location data: ${locationData}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Trying to print API with incorrect location data: ${locationData}`, interaction, true);
             return null;
         }
 
         const city = locationData[0];
         const lat = locationData[1];
         const lon = locationData[2];
-        const key = Global.settings().get("OPEN_WEATHER_KEY");
+        const key = config.get<string>("APIKey.openWeather");
 
-        Global.logger().logInfo(`Getting weather for ${city} @ lat=${lat}&lon=${lon}`);
+        getCommonLogger().logInfo(`Getting weather for ${city} @ lat=${lat}&lon=${lon}`);
 
         // modify as we extend functionality
         const apiCall = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=${excludes}&appid=${key}`;
-        Global.logger().logInfo(`WeatherAPI Call: ${apiCall}`);
+        getCommonLogger().logInfo(`WeatherAPI Call: ${apiCall}`);
 
         try {
             const result = await fetch(apiCall);
             const weatherData = await result.json();
-            Global.logger().logInfo('Received JSON data: ');
-            Global.logger().logInfo(JSON.stringify(weatherData));
+            getCommonLogger().logInfo('Received JSON data: ');
+            getCommonLogger().logInfo(JSON.stringify(weatherData));
 
             return weatherData;
         } catch (e) {
@@ -230,15 +233,15 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
             if (e.message.includes('ETIMEDOUT')) {
                 await interaction.editReply('TImed out trying to get weather from One API, try again later');
             } else {
-                await interaction.editReply(`${Global.settings().get("BOT_NAME")} breakdown trying to get the weather, check logs`);
+                await interaction.editReply(`${config.get<string>("Global.botName")} breakdown trying to get the weather, check logs`);
             }
 
-            Global.logger().logErrorAsync(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction, true);
+            getCommonLogger().logErrorAsync(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction, true);
 
             return null;
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to get weather using one api, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to get weather using one api, got ${e}`, interaction, true);
     }
 }
 
@@ -269,7 +272,7 @@ async function printWeatherUsingOneApiv3(locationData, interaction)
             );
         } 
     } catch (e) {
-        await Global.logger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
@@ -279,7 +282,7 @@ async function printWeatherUsingOneApiv3(locationData, interaction)
  */
 // @ts-ignore
 async function handleWeatherCommand(interaction) {
-    using perfCounter = Global.getPerformanceCounter("handleWeatherCommand(): ");
+    using perfCounter = PerformanceCounter.Create("handleWeatherCommand(): ");
 
     try {
         await interaction.deferReply();
@@ -293,7 +296,7 @@ async function handleWeatherCommand(interaction) {
             printWeatherUsingOneApiv3(result, interaction);
         }        
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
     }
 
     
@@ -317,7 +320,7 @@ async function printHourlyForecast(locationData, interaction, weatherData) {
 
         await interaction.editReply(hourlyWeatherString);
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to generate hourly weather string, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to generate hourly weather string, got ${e}`, interaction, true);
     }
 }
 
@@ -373,7 +376,7 @@ async function printMinutelyForecast(locationData, interaction, weatherData) {
         await interaction.editReply(`**Minutely forecast for ${locationData[0]}** :: ` + messageStr);
     }
     catch (e) {
-        await Global.logger().logErrorAsync(`Failed to get minutely weather, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to get minutely weather, got ${e}`, interaction, true);
     }
 }
 
@@ -459,7 +462,7 @@ async function printDailyForecast(locationData, interaction, weatherData) {
 
         await interaction.editReply(dailyWeatherString);
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to generate daily weather data, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to generate daily weather data, got ${e}`, interaction, true);
     }
 }
 
@@ -483,7 +486,7 @@ async function printAlertForecast(locationData, interaction, weatherData) {
             await interaction.editReply(`No active alerts for ${locationData[0]}`);
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to process the alert forecast, got ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to process the alert forecast, got ${e}`, interaction, true);
     }
 }
 
@@ -502,7 +505,7 @@ function getForecastMapData(forecastType)
             }
         }
     } catch (e) {
-        Global.logger().logErrorAsync(`Failed to get forecast map data, got ${e}`);
+        getCommonLogger().logErrorAsync(`Failed to get forecast map data, got ${e}`);
     }
 
     return null;
@@ -523,10 +526,10 @@ async function printForecastUsingOneApiv3(locationData, interaction, forecastTyp
         if (weatherData) {
             await forecastMapData[2](locationData, interaction, weatherData);
         } else {
-            Global.logger().logInfo(`Failed to get forecast data`);
+            getCommonLogger().logInfo(`Failed to get forecast data`);
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
@@ -552,13 +555,13 @@ async function getForecastOptions(interaction)
                     location = interaction.options.data[i].value.trim();
                     break;
                 default:
-                    Global.logger().logWarning(`Got unexpected value in forecast interaction: ${interaction.options.data[i]}`);
+                    getCommonLogger().logWarning(`Got unexpected value in forecast interaction: ${interaction.options.data[i]}`);
             }
         }
 
         return [forecastType, location];
     } catch (e) {
-        await Global.logger().logErrorAsync(`Error getting forecast options, got: ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Error getting forecast options, got: ${e}`, interaction, true);
     }
 }
 
@@ -569,7 +572,7 @@ async function getForecastOptions(interaction)
 // @ts-ignore
 async function handleForecastCommand(interaction)
 {
-    using perfCounter = Global.getPerformanceCounter("handleForecastCommand(): ");
+    using perfCounter = PerformanceCounter.Create("handleForecastCommand(): ");
 
     try {
         await interaction.deferReply();
@@ -581,7 +584,7 @@ async function handleForecastCommand(interaction)
         if (!forecastOptions) {
             return;
         } else if (getForecastMapData(forecastOptions[0]) == null) {
-            await Global.logger().logErrorAsync(`Unexpected forecast type received: ${forecastOptions[0]}`);
+            await getCommonLogger().logErrorAsync(`Unexpected forecast type received: ${forecastOptions[0]}`);
             return;
         }
 
@@ -592,7 +595,7 @@ async function handleForecastCommand(interaction)
             printForecastUsingOneApiv3(result, interaction, forecastOptions[0]);
         }
     } catch (e) {
-        await Global.logger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
+        await getCommonLogger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
     }
 
     

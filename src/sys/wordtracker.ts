@@ -1,7 +1,7 @@
 import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/discordmessagelistener.js";
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
 import { Message } from 'discord.js';
-import { Global } from "../global.js";
+import { readJsonFileSync } from './jsonreader.js'
 
 class TrackedWordConcrete implements TrackedWord {
     word: string;           // human readable word
@@ -33,7 +33,7 @@ export class WordTracker implements DiscordMessageCreateListener {
     // @ts-ignore
     constructor(filePath: string = null) {
         if (filePath != null) {
-            const data = Global.readJsonFileSync(filePath);
+            const data = readJsonFileSync(filePath);
 
             if (data != null) {
                 this.trackWords(data);
@@ -70,7 +70,7 @@ export class WordTracker implements DiscordMessageCreateListener {
     }
     
     // @ts-ignore
-    onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
+    onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
         // @ts-ignore
         if (message.author.bot) return; // Ignore bot messages
 

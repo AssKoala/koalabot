@@ -4,11 +4,11 @@ import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 import path from "path";
 import fs from "fs";
 import fsPromises from "fs/promises";
-import { Global } from "../global.js";
 import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
+import { readJsonFileSync } from '../sys/jsonreader.js'
 
 export function GetBadWordSaveFolder() {
-    return path.join(GetKoalaBotSystem().getEnvironmentVariable("DATA_PATH"), GetKoalaBotSystem().getEnvironmentVariable("LISTENER_BADWORD_TRACKING_SAVE_DIR"))
+    return path.join(GetKoalaBotSystem().getConfigVariable("Global.dataPath"), GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.saveDir"));
 }
 
 export function GetBadWordSaveFileName(badword: string, channelId: string) {
@@ -185,7 +185,7 @@ class BadWordListener implements WordListener {
         try {
             this._badword = badword;
             this.responseType = responseType;
-            this.trackingChannels = GetKoalaBotSystem().getEnvironmentVariable("LISTENER_BADWORD_TRACKING_CHANNEL").split(",");
+            this.trackingChannels = GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.trackingChannelIds").split(",");
             
             const saveFolder = this.getBadWordSaveFolder();
 
@@ -200,7 +200,7 @@ class BadWordListener implements WordListener {
 
                     const filePath = this.getBadWordSaveFilePath(this._badword, channel);
                     if (fs.existsSync(filePath)) {
-                        const data = Global.readJsonFileSync(filePath);
+                        const data = readJsonFileSync(filePath);
         
                         if (data) {
                             this.lastUsedMap.set(channel, new BadWordTracker(data));
@@ -266,7 +266,7 @@ class BadWordListener implements WordListener {
 }
 
 try {
-    GetKoalaBotSystem().getEnvironmentVariable("LISTENER_BADWORDS").split(",").forEach(badword => {
+    GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.badwords").split(",").forEach(badword => {
         if (badword == 'retard') {
             GetKoalaBotSystem().registerWordListener(new BadWordListener(badword, BadWordResponseType.ALL), badword);
         } else {

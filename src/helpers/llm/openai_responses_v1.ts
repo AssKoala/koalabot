@@ -1,7 +1,7 @@
 import { OpenAIHelper } from '../openaihelper.js';
 import { OpenAiCompletionsV1Compatible, MessageDataType } from './openai_completions_v1.js';
 import { ImageDownloadedFileInfo, SystemHelpers } from '../systemhelpers.js';
-import { LlmDictTool } from './tools/dicttool.js';
+import { LlmDictTool } from '../../llm/tools/dicttool.js';
 
 export interface GeneratedImageData {
     imageBytes: Buffer;
@@ -94,5 +94,6 @@ export class OpenAIResponsesV1 extends OpenAiCompletionsV1Compatible {
     }
 }
 
+OpenAiCompletionsV1Compatible.addCompletionsCompatibleApi("gpt-5.2", OpenAIResponsesV1.create);
 OpenAiCompletionsV1Compatible.addCompletionsCompatibleApi("gpt-5.1", OpenAIResponsesV1.create);
 OpenAiCompletionsV1Compatible.addCompletionsCompatibleApi("gpt-5", OpenAIResponsesV1.create);

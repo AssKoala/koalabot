@@ -1,0 +1,30 @@
+{
+    "APIKey": {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "getimgai": "GETIMGAI_API_KEY",
+        "googleMaps": "GOOGLE_MAPS_API_KEY",
+        "grok": "GROK_API_KEY",
+        "ollama": "OLLAMA_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "openWeather": "OPENWEATHER_API_KEY",
+        "shortenUrl": "SHORTEN_URL_API_KEY"
+    },
+    "Discord": {
+        "token": "DISCORD_TOKEN",                                 
+        "appId": "DISCORD_APP_ID",                                 
+        "guildIds": "DISCORD_GUILD_ID",                              
+        "clearSlashCommandsOnStartup": "DISCORD_CLEAR_SLASH_COMMANDS",       
+        "deployGuildSlashCommandsOnStartup": "DISCORD_DEPLOY_GUILD_SLASH_COMMANDS", 
+        "deployGlobalSlashCommandsOnStartup": "DISCORD_DEPLOY_GLOBAL_SLASH_COMMANDS"
+    },
+    "Global": {
+        "dataPath": "DATA_PATH",
+        "logPath": "LOG_PATH",
+        "tempPath": "TEMP_PATH"
+    },
+    "Reddit": {
+        "clientId": "REDDIT_CLIENT_ID",
+        "clientSecret": "REDDIT_CLIENT_SECRET",
+        "userAgent": "REDDIT_USER_AGENT"
+    }
+}

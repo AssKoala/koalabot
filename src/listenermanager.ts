@@ -1,39 +1,61 @@
 import { DiscordMessageCreateListener, DiscordReactionAddListener } from './api/discordmessagelistener.js';
 import { Message, MessageReaction, PartialMessageReaction, User, PartialUser } from 'discord.js';
-import { Global } from './global.js';
 import { DiscordBotRuntimeData } from './api/discordbotruntimedata.js';
+import { getCommonLogger, LogManager } from './logging/logmanager.js'
+import { Bot } from './bot.js'
+import { PerformanceCounter } from './performancecounter.js';
+
+import config from 'config';
+
+// Listeners are processed by priority and then round-robin lists (assume random sorting)
+export const enum ListenerPriority {
+    Critical,
+    High,
+    Medium,
+    Low,
+    LISTENER_PRIORITY_COUNT
+}
 
 export abstract class ListenerManager {
-    static async importListeners() {
+
+    private static messageCreateHandlers: Map<ListenerPriority, DiscordMessageCreateListener[]> = new Map();
+	private static messageReactionAddHandlers: Map<ListenerPriority, DiscordReactionAddListener[]> = new Map();
+    
+    // Resets all handler lists to empty.  Also serves as an init to allocate all the internal objects.
+    static reset() {
+        for (let i = ListenerPriority.Critical; i < ListenerPriority.LISTENER_PRIORITY_COUNT; i++) {
+            this.messageCreateHandlers.set(i, []);
+            this.messageReactionAddHandlers.set(i, []);
+        }
+    }
+
+    static async importListeners() {    
         try {
             // Load the dynamically defined commands from the .env file
-            const autoListeners = Global.settings().get("LISTENER_LIST").split(",");
+            const autoListeners = config.get<string>("Listeners.listenerList").split(",");
 
             for (const listener of autoListeners) {
                 if (!listener) {
-                    Global.logger().logInfo("Skipping empty listener definition");
+                    getCommonLogger().logInfo("Skipping empty listener definition");
                     continue;
                 }
 
-                using perfCounter = Global.getPerformanceCounter(`importListeners::import(${listener})`);
+                using perfCounter = PerformanceCounter.Create(`importListeners::import(${listener})`);
 
                 const modulePath = `./listeners/${listener}.js`;
 
                 try {
                     await import(modulePath);
-                    Global.logger().logInfo(`Successfully Loaded ${modulePath}.`);
+                    getCommonLogger().logInfo(`Successfully Loaded ${modulePath}.`);
                 }
                 catch (e) {
-                    Global.logger().logErrorAsync(`Failed to load module ${modulePath}, got error ${e}`);
+                    getCommonLogger().logErrorAsync(`Failed to load module ${modulePath}, got error ${e}`);
                 }
             };
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to import all listeners, got error ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to import all listeners, got error ${e}`);
         }
     }
-
-    private static messageCreateHandlers: DiscordMessageCreateListener[] = [];
-	private static messageReactionAddHandlers: DiscordReactionAddListener[] = [];
 
 	/**
 	 * Register onMessageCreate listener to be called whenever a message is received by the bot.
@@ -45,8 +67,8 @@ export abstract class ListenerManager {
 	 * at the top of each handler, but maybe not.
 	 * @param listener Listener to register, if not unique, handler will get called twice.
 	 */
-	static registerMessageCreateListener(listener: DiscordMessageCreateListener): void {
-		ListenerManager.messageCreateHandlers.push(listener);
+	static registerMessageCreateListener(listener: DiscordMessageCreateListener, priority: ListenerPriority = ListenerPriority.Low): void {
+		ListenerManager.messageCreateHandlers.get(priority)!.push(listener);
 	}
 
 	/**
@@ -59,51 +81,55 @@ export abstract class ListenerManager {
 	 * at the top of the handler, but maybe not.
 	 * @param listener Listener to register, if not unique, handler will get called twice.
 	 */
-	static registerMessageReactionAddListener(listener: DiscordReactionAddListener): void {
-		ListenerManager.messageReactionAddHandlers.push(listener);
+	static registerMessageReactionAddListener(listener: DiscordReactionAddListener, priority: ListenerPriority = ListenerPriority.Low): void {
+		ListenerManager.messageReactionAddHandlers.get(priority)!.push(listener);
 	}
 
     static processMessageCreateListeners(message: Message) {
-		const logManager = Global.logManager();
+		const logManager = LogManager.get();
 
-		if (!logManager.hasChannelLogger(message.channelId)) {
+		if (!logManager.discordLogManager.hasChannelLogger(message.channelId)) {
             // @ts-ignore
-			const created = logManager.createLogger(message.guildId, message.channelId);
+			const created = logManager.discordLogManager.createLogger(message.guildId, message.channelId);
 
 			if (!created) {
-				Global.logger().logErrorAsync(`Failed to create logger for channel ${message.channelId}`);
+				getCommonLogger().logErrorAsync(`Failed to create logger for channel ${message.channelId}`);
 			}
 		}
 
         // @ts-ignore
-		const guildLogger = Global.logManager().getGuildLogger(message.guildId);
-		const channelLogger = Global.logManager().getChannelLogger(message.channelId);
+		const guildLogger = logManager.discordLogManager.getGuildLogger(message.guildId);
+		const channelLogger = logManager.discordLogManager.getChannelLogger(message.channelId);
 
-        ListenerManager.messageCreateHandlers.forEach(handler => {
-			const runtimeData = new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings(), guildLogger, channelLogger);
+        for (let i = 0; i < ListenerPriority.LISTENER_PRIORITY_COUNT; i++) {
+            ListenerManager.messageCreateHandlers.get(i)!.forEach(handler => {
+                const runtimeData = new DiscordBotRuntimeData(Bot.get(), getCommonLogger(), guildLogger, channelLogger);
 
-			try {
-				handler.onMessageCreate(runtimeData, message);
-			} catch (e) {
-				Global.logger().logErrorAsync(`Error in onMessageCreate listener ${handler}, got ${e}`);
-			}
-			
-		});
+                try {
+                    handler.onDiscordMessageCreate(runtimeData, message);
+                } catch (e) {
+                    getCommonLogger().logErrorAsync(`Error in onMessageCreate listener ${handler}, got ${e}`);
+                }
+                
+            });
+        }
     }
 
     static processMessageReactionAddListeners(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) 
 	{
-        // @ts-ignore
-		const guildLogger = Global.logManager().getGuildLogger(reaction.message.guildId);
-		const channelLogger = Global.logManager().getChannelLogger(reaction.message.channelId);
+		const guildLogger = LogManager.get().discordLogManager.getGuildLogger(reaction.message.guildId!);
+		const channelLogger = LogManager.get().discordLogManager.getChannelLogger(reaction.message.channelId!);
 
-        ListenerManager.messageReactionAddHandlers.forEach(handler => {
-			try {
-				handler.onMessageReactionAdd(new DiscordBotRuntimeData(Global.bot(), Global.logger(), Global.settings(), guildLogger, channelLogger), reaction, user);
-			} catch (e) {
-				Global.logger().logErrorAsync(`Error with onMessageReactionAdd listender for ${handler}, got ${e}`);
-			}
-		});
+        for (let i = 0; i < ListenerPriority.LISTENER_PRIORITY_COUNT; i++) {
+            ListenerManager.messageReactionAddHandlers.get(i)!.forEach(handler => {
+                try {
+                    handler.onDiscordMessageReactionAdd(new DiscordBotRuntimeData(Bot.get(), getCommonLogger(), guildLogger, channelLogger), reaction, user);
+                } catch (e) {
+                    getCommonLogger().logErrorAsync(`Error with onMessageReactionAdd listender for ${handler}, got ${e}`);
+                }
+            });
+        }
     }
 }
 
+ListenerManager.reset();

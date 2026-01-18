@@ -3,158 +3,82 @@
 */
 
 // Imports
-import { Global } from './global.js';
 import { KoalaBotSystemDiscord } from "./bot/KoalaBotSystemDiscord.js";
-import { 
-	Client, Collection, Events, 
-	GatewayIntentBits, Message, Interaction, PartialMessageReaction, 
-	MessageReaction, TextChannel, User, PartialUser, MessageFlags
-} from 'discord.js';
 
-import fs from 'fs'
+// LLM Chat Bot (TODO MOVE)
+import { OpenAIHelper } from './helpers/openaihelper.js';
+import { GrokHelper } from "./helpers/grokhelper.js";
+import { GeminiHelper } from "./helpers/geminihelper.js";
+import { LLMBotManager } from './llm/llmbot.js';
+import { OpenAIBot } from './llm/llmbots/openaibot.js';
+import { GrokBot } from './llm/llmbots/grokbot.js';
+import { GeminiBot } from "./llm/llmbots/geminibot.js";
 
-// Command setup
-import { CommandManager } from "./commandmanager.js";
+import config from 'config';
+import { LogManager } from './logging/logmanager.js';
 
-// Listener setup
-import { ListenerManager } from "./listenermanager.js";
+import { DiscordBot } from './platform/discord/discordbot.js'
 
 export class Bot {
-	private _client?: Client = undefined;
-	client() { return this._client!; }
+    private discordBot!: DiscordBot;
+	client() { return this.discordBot.client(); }
 
 	private _koalaBotSystem?: KoalaBotSystemDiscord = undefined;
 	koalaBotSystem(): KoalaBotSystemDiscord {
 		return this._koalaBotSystem!;
 	}
 
-	constructor() {
-		// init must be called.
+    private static instance: Bot;
+    public static get(): Bot { return Bot.instance; }
+    public static async init() {
+        Bot.instance = new Bot();
+        return Bot.instance.init();
+    }
+
+	private constructor() {        
 	}
 
-	async init(discordKey: string) {
-		this._client = new Client({
-			intents: [
-				GatewayIntentBits.Guilds,
-				GatewayIntentBits.GuildMessages,
-				GatewayIntentBits.GuildMessageReactions,
-				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildMembers,
-			],
-			autoReconnect: true,
-		});
+	async init() {      
+        // Create the discord bot
+        this.discordBot = new DiscordBot(LogManager.get().commonLogger);
+        await this.discordBot.init(config.get<string>("Discord.token"));
 
-		this._koalaBotSystem = new KoalaBotSystemDiscord();
+        // Initialize low level systems
+        OpenAIHelper.init();
+        GrokHelper.init();
+        GeminiHelper.init();
 
-		// Enable debug features?
-		if (Global.settings().get("DEBUG_ENABLE") == `true`)
-		{
-			Global.logger().logInfo("Enabling debug information");
-		
-			/**
-			 * Debug messagingtsc
-			 */
-			this.client().on('debug', Global.logger().logDebug);
-		}
-		else
-		{
-			Global.logger().logInfo("Debugging information disabled");
-		}
-
-		// Register all the event listeners
-		this.registerDiscordListeners();
-
-		// Create commands collection based on convention
-		this.client().commands = new Collection<any,any>();
-
-		// Register all the slash commands
-		await CommandManager.register(this.client());
-
-		// Tell Discord about the slash commands
-		await CommandManager.deployDiscordSlashCommands(
-			Global.settings().get("DISCORD_CLEAR_SLASH_COMMANDS").toLowerCase() == "true", 
-			Global.settings().get("DISCORD_DEPLOY_GUILD_SLASH_COMMANDS").toLowerCase() == "true", 
-			Global.settings().get("DISCORD_DEPLOY_GLOBAL_SLASH_COMMANDS").toLowerCase() == "true");
-
-		// Import all listeners
-		await ListenerManager.importListeners();
-
-		// Make the connection to Discord
-		this.client().login(discordKey);
+        // Create the discord system
+        this._koalaBotSystem = new KoalaBotSystemDiscord(LogManager.get().commonLogger);
 	}
 
-	private registerDiscordListeners() {
-		this.client().on(Events.ClientReady, () => this.onClientReady());
-		this.client().on(Events.InteractionCreate, (intr: Interaction) => this.onInteractionCreate(intr));
-		this.client().on(Events.MessageCreate, (message: Message) => this.onMessageCreate(message));
-		this.client().on(Events.MessageReactionAdd, 
-			(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => this.onMessageReactionAdd(reaction, user));
-		
-	}
+    public login() {
+        this.client().login(config.get<string>("Discord.token"));
+    }
 
-	async onInteractionCreate(interaction: Interaction) {
-		if (!interaction.isChatInputCommand()) return;
-		
-		Global.logger().logInfo(interaction.toString());
-	
-		const command = interaction.client.commands.get(interaction.commandName);
-	
-		if (!command) {
-			console.error(`No command matching ${interaction.commandName} was found.`);
-			return;
-		}
-	
-		try {
-			await command.execute(interaction);
-		} catch (error) {
-			console.error(error);
-			await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
-		}
-	}
+    public createSubBots() {
+        const availableModels = config.get<string>("Chat.AiModels.availableModels").split(",");
+        const enabledModels = config.get<string>("Chat.AiModels.enabledModels").split(",");
 
-	async onClientReady() {
-		Global.logger().logInfo(`Logged in as ${this.client().user!.tag}!`);
+        for (const model of availableModels) {
+            let llmBot: OpenAIBot | GrokBot | GeminiBot | null = null;
 
-		try {
-			const rebooted = this.hasRebooted();
-			if (rebooted != null) {
-				const textChannel = this.client().channels.cache.get(rebooted.channelId) as TextChannel;
-				if (textChannel != null) {
-					textChannel.send(`<@${rebooted.memberId}>: It is by your hand that I am once again given flesh.  What is a man? A miserable pile of secrets!`);
-				}
-			}
-		} catch (e) {
-			Global.logger().logWarning(`Failed to do reboot processing checks, error: ${e}`);
-		}
-	}
+            if (model.startsWith("gpt-5")) {
+                llmBot = new OpenAIBot(model);
+            } else if (model.startsWith("grok-4")) {
+                llmBot = new GrokBot(model);
+            } else if (model.startsWith("gemini")) {
+                llmBot = new GeminiBot(model);
+            } else {
+                LogManager.get().commonLogger.logWarning(`Bot::createSubBots(): Unknown LLM model ${model}, skipping registration.`);
+                continue;
+            }
 
-	async onMessageCreate(message: Message) {
-		ListenerManager.processMessageCreateListeners(message);
-	}
+            LLMBotManager.registerLLMBot(model, llmBot);
 
-	async onMessageReactionAdd(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) {
-		ListenerManager.processMessageReactionAddListeners(reaction, user);
-	}
-
-	private hasRebooted(clearStatus: boolean = true): { hasRebooted: boolean, memberId: string, channelId: string} {
-		let hasRebooted = false;
-
-		try {
-			const data = fs.readFileSync(Global.settings().get("REBOOT_FILE"), 'utf8');
-			const memberId = data.split(':')[0];
-			const channelId = data.split(':')[1];
-			hasRebooted = true;
-
-			if (clearStatus) {
-				fs.promises.unlink(Global.settings().get("REBOOT_FILE"));
-			}
-
-			return { hasRebooted, memberId, channelId };
-		}
-		catch (e) {
-			Global.logger().logInfo(`Reboot file not found, starting clean.`);
-		}
-
-		return { hasRebooted, memberId: "", channelId: "" };
-	}
+            // Enable or disable based on config
+            const isEnabled = enabledModels.includes(model);
+            LLMBotManager.setLLMBotEnabled(model, isEnabled);
+        }
+    }
 }

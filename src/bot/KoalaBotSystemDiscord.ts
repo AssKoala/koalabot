@@ -1,25 +1,29 @@
 import { DiscordMessageCreateListener, WordListener } from "../api/discordmessagelistener.js";
 import { KoalaBotSystem } from "../api/koalabotsystem.js";
-import { Global } from "../global.js";
 import { ListenerManager } from "../listenermanager.js";
 import { WordTracker } from "../sys/wordtracker.js";
+import { LogManager } from "../logging/logmanager.js";
+import { Logger } from '../api/koalabotsystem.js'
+import config from "config";
 
 export class KoalaBotSystemDiscord implements KoalaBotSystem {
     private _wordTracker: WordTracker;
+    private _logger: Logger;
 
-    constructor() {
+    constructor(logger: Logger) {
         // Create and register the word tracker
-        this._wordTracker = new WordTracker(`${Global.settings().get("DATA_PATH")}/${Global.settings().get("WORD_TRACKER_FILENAME")}`);
+        this._wordTracker = new WordTracker(`${config.get<string>("Global.dataPath")}/${config.get<string>("Listeners.WordTracker.fileName")}`);
         this.registerDiscordMessageCreateListener(this._wordTracker);
+        this._logger = logger;
     }
 
     // KoalaBotSystem
-    getEnvironmentVariable(key: string): string {
-        return Global.settings().get(key);
+    getConfigVariable(key: string): string {
+        return config.get<string>(key);
     }
 
     getLogger() {
-        return Global.logger();
+        return this._logger;
     }
 
     registerDiscordMessageCreateListener(listener: DiscordMessageCreateListener): void {

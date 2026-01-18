@@ -1,18 +1,19 @@
-import { Global } from '../global.js';
 import { Ollama } from 'ollama'
+import config from 'config';
+import { getCommonLogger } from '../logging/logmanager.js';
 
 class OllamaHelper {
     private static ollama = null;
 
     static init() {
         try {
-            const ollama = new Ollama({ host: Global.settings().get(`OLLAMA_SERVER_ADDRESS`) });
+            const ollama = new Ollama({ host: config.get<string>(`AiModel.Ollama.serverAddress`) });
 
             // @ts-ignore
             OllamaHelper.ollama = ollama;
         }
         catch (e) {
-            Global.logger().logErrorAsync(`Failed to initialize Anthropic Object, got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to initialize Anthropic Object, got ${e}`);
         }
     }
 

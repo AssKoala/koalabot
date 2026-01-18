@@ -5,6 +5,7 @@
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
 import { getRandomValues } from 'node:crypto';
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
+import { PerformanceCounter } from '../performancecounter.js';
 
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 
@@ -12,7 +13,7 @@ class DiceRollCommand extends DiscordBotCommand {
     
     async handle(interaction: any)
     {
-        using perfCounter = this.runtimeData().getPerformanceCounter("handleDicerollCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleDicerollCommand(): ");
 
         try {
             await interaction.deferReply();

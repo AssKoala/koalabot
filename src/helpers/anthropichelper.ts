@@ -1,5 +1,6 @@
-import { Global } from '../global.js';
 import Anthropic from '@anthropic-ai/sdk';
+import config from 'config';
+import { getCommonLogger } from '../logging/logmanager.js';
 
 class AnthropicHelper {
     private static anthropic = null;
@@ -7,14 +8,14 @@ class AnthropicHelper {
     static init() {
         try {
             const anthropic = new Anthropic({
-                apiKey: Global.settings().get(`ANTHROPIC_API_KEY`)
+                apiKey: config.get<string>(`APIKey.anthropic`)
             });
 
             // @ts-ignore
             AnthropicHelper.anthropic = anthropic;
         }
         catch (e) {
-            Global.logger().logErrorAsync(`Failed to initialize Anthropic Object, got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to initialize Anthropic Object, got ${e}`);
         }
     }
 

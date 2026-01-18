@@ -10,5 +10,6 @@ temp-images
 build
 deploy
 deploy-logs
+dist
 data
 environment

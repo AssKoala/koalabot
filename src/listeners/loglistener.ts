@@ -5,7 +5,7 @@ import { LoggerConcrete } from '../logging/logger.js'
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
 
 class LogListener implements DiscordMessageCreateListener {
-    async onMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
+    async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
         // Don't log empty messages
 		if (message.author.bot && message.content.length == 0) return;
 

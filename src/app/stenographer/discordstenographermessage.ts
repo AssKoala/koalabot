@@ -1,11 +1,8 @@
 import { GetKoalaBotSystem } from '../../api/koalabotsystem.js';
 
-/**
- * Discord Stenographer internally keeps messages using this data structure
- */
 export class DiscordStenographerMessage
 {
-    constructor(guildId: string, channelId: string, author: string, authorId: string, message: string, timestamp: number)
+    constructor(guildId: string, channelId: string, author: string, authorId: string, message: string, timestamp: number, imageUrl = "")
     {
         this.guildId = guildId;
         this.channelId = channelId;
@@ -13,14 +10,16 @@ export class DiscordStenographerMessage
         this.authorId = authorId;
         this.message = message;
         this.timestamp = timestamp;
+        this.imageUrl = imageUrl;
     }
 
-    readonly guildId;
-    readonly channelId;
-    readonly author;
-    readonly authorId;
-    readonly message;
-    readonly timestamp;
+    readonly guildId: string;
+    readonly channelId: string;
+    readonly author: string;
+    readonly authorId: string;
+    readonly message: string;
+    readonly timestamp: number;
+    readonly imageUrl: string;
 
     getStandardDiscordMessageFormat()
     {

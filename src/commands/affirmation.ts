@@ -1,9 +1,11 @@
 /*
     Daily affirmations module
 */
+import config from 'config';
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { PerformanceCounter } from '../performancecounter.js';
 
 class AffirmationCommand extends DiscordBotCommand  {
     private affirmationData: any = undefined;
@@ -23,7 +25,7 @@ class AffirmationCommand extends DiscordBotCommand  {
     }
 
     async handle(interaction: ChatInputCommandInteraction): Promise<void> {
-        using perfCounter = this.runtimeData().getPerformanceCounter("handleAffirmationCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleAffirmationCommand(): ");
 
         try {
             const index = Math.floor(Math.random() * this.affirmationData.length);
@@ -44,7 +46,7 @@ class AffirmationCommand extends DiscordBotCommand  {
 
 const affirmationCommand = new AffirmationCommand('affirmation');
 registerDiscordBotCommand(affirmationCommand, false);
-affirmationCommand.loadData(`${affirmationCommand.runtimeData().settings().get("DATA_PATH")}/affirmations.json`);
+affirmationCommand.loadData(`${config.get("Global.dataPath")}/affirmations.json`);
 
 // Used by system command
 function getAffirmationCount() {

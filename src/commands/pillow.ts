@@ -4,10 +4,11 @@
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { PerformanceCounter } from '../performancecounter.js';
 
 class PillowCommand extends DiscordBotCommand  {
     async handle(interaction: ChatInputCommandInteraction): Promise<void> {
-        using perfCounter = this.runtimeData().getPerformanceCounter("handlePillowCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handlePillowCommand(): ");
 
         try {
             await interaction.reply(`Thank you for yelling into the pillow.  This action helps everyone get through the day without toxicity.`);

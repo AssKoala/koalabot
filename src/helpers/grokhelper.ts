@@ -1,13 +1,14 @@
-import { Global } from '../global.js';
 import { OpenAI } from 'openai';
+import config from 'config';
+import { getCommonLogger } from '../logging/logmanager.js';
 
 class GrokHelper {
-    private static grok = null;
+    private static grok: OpenAI;
 
     static init() {
         try {
             const grok = new OpenAI({
-                apiKey: Global.settings().get(`GROK_API_KEY`),
+                apiKey: config.get(`APIKey.grok`),
                 baseURL: "https://api.x.ai/v1",
             });
 
@@ -15,15 +16,13 @@ class GrokHelper {
             GrokHelper.grok = grok;
         }
         catch (e) {
-            Global.logger().logErrorAsync(`Failed to initialize OpenAI Object, got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to initialize OpenAI Object, got ${e}`);
         }
     }
 
     static getInterface() {
-        return GrokHelper.grok;
+        return GrokHelper.grok!;
     }
 }
-
-GrokHelper.init();
 
 export { GrokHelper }

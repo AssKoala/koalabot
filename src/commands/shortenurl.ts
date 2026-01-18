@@ -4,7 +4,8 @@
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
-import { Global } from "../global.js";
+import { PerformanceCounter } from '../performancecounter.js';
+import config from 'config';
 
 export class ShortenUrlResult {
     // @ts-ignore
@@ -25,12 +26,12 @@ export class ShortenURLCommand extends DiscordBotCommand {
             let UrlToShorten = new URL(longUrl);
 
             
-            const url = `${Global.settings().get("SHORTEN_URL_SHLINK_BASE_ADDRESS")}/rest/v3/short-urls`;
+            const url = `${config.get<string>("ShortenUrl.shlinkBaseAddress")}/rest/v3/short-urls`;
             const options = {
                 method: 'POST',
                 headers: {
                     'accept': 'application/json',
-                    'X-Api-Key': `${Global.settings().get("SHORTEN_URL_API_KEY")}`,
+                    'X-Api-Key': `${config.get("APIKey.shortenUrl")}`,
                     'Content-Type': `application/json`
                 },
                 body: JSON.stringify(
@@ -57,7 +58,7 @@ export class ShortenURLCommand extends DiscordBotCommand {
     }
 
     async handle(interaction: ChatInputCommandInteraction): Promise<void> {
-        using perfCounter = this.runtimeData().getPerformanceCounter("handleShortenUrlCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleShortenUrlCommand(): ");
 
         try {
             let shortened = await ShortenURLCommand.shortenUrl(interaction.options.data[0].value as string);

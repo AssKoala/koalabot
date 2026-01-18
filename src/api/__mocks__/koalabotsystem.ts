@@ -21,7 +21,7 @@ class KoalaBotSystemMock implements KoalaBotSystem {
     registerDiscordMessageCreateListener(listener: DiscordMessageCreateListener): void {
         throw new Error("Method not implemented.");
     }
-    getEnvironmentVariable(key: string): string {
+    getConfigVariable(key: string): string {
         throw new Error("Method not implemented.");
     }
 }

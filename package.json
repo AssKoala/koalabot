@@ -6,8 +6,13 @@
   "author": "AssKoala",
   "type": "module",
   "dependencies": {
+    "@ai-sdk/xai": "^2.0.40",
     "@anthropic-ai/sdk": "^0.65.0",
+    "@google/genai": "^1.37.0",
+    "@types/config": "^3.3.5",
     "@types/node": "^24.6.2",
+    "ai": "^5.0.113",
+    "config": "^4.1.1",
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.3",
     "got": "^14.4.9",
@@ -16,26 +21,21 @@
     "ollama": "^0.6.0",
     "openai": "^6.0.1",
     "tiktoken": "^1.0.22",
-    "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "validator": "^13.15.15",
     "winston": "^3.18.3"
   },
   "scripts": {
     "build": "tsc -p .",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "prodstart": "node /bottymcbotface/bot/main.js",
-    "start": "npm run build -- -w"
+    "test": "vitest",
+    "start": "npm run build",
+    "generate-version-info": "node ./scripts/generateVersionFile.js ./dist/version.json"
   },
   "keywords": [],
   "license": "ISC",
   "devDependencies": {
-    "@jest/globals": "^30.2.0",
-    "@types/jest": "^30.0.0",
     "eslint": "^9.36.0",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.4.4",
-    "ts-jest-resolver": "^2.0.1",
-    "ts-node-dev": "^2.0.0"
+    "ts-node": "^10.9.2",
+    "vitest": "^4.0.16"
   }
 }

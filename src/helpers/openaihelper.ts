@@ -1,5 +1,6 @@
-import { Global } from '../global.js';
 import { OpenAI } from 'openai';
+import config from 'config';
+import { getCommonLogger } from '../logging/logmanager.js';
 
 class OpenAIHelper {
     private static openai: OpenAI;
@@ -7,13 +8,13 @@ class OpenAIHelper {
     static init() {
         try {
             const openai = new OpenAI({
-                apiKey: Global.settings().get(`OPENAI_API_KEY`)
+                apiKey: config.get(`APIKey.openai`)
             });
 
             OpenAIHelper.openai = openai;
         }
         catch (e) {
-            Global.logger().logErrorAsync(`Failed to initialize OpenAI Object, got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to initialize OpenAI Object, got ${e}`);
         }
     }
 
@@ -21,8 +22,17 @@ class OpenAIHelper {
         return OpenAIHelper.openai;
     }
 
-}
+    static async simpleQuery(aiModel: string, query: string) {
+        const completion = await OpenAIHelper.getInterface().chat.completions.create({
+            model: aiModel,
+            messages: [
+                { "role": "user", "content": query }
+            ]
+        });
 
-OpenAIHelper.init();
+        return completion;
+    }
+
+}
 
 export { OpenAIHelper }

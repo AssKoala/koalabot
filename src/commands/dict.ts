@@ -3,19 +3,33 @@
     and lookup definitions.
 */
 // TODO: Remove Global here -- legacy issues
-import { Global } from '../global.js';
-import fs from 'fs'
-import * as Discord from 'discord.js';
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import { readJsonFile } from '../sys/jsonreader.js'
+import { PerformanceCounter } from '../performancecounter.js';
+import { getCommonLogger } from '../logging/logmanager.js'
+import * as Discord from 'discord.js';
+import fs from 'fs'
 
-const dictDataPath = `${Global.settings().get("DATA_PATH")}/dictdata.json`
-const dictData = await Global.readJsonFile(dictDataPath);
+import config from 'config';
 
-class Dict {
+export class Dict {
+    private dictData: any;
+    private readonly dictDataPath: string;
+    
+    private static instance: Dict = new Dict();
+    private constructor(dataPath = `${config.get<string>("Global.dataPath")}/dictdata.json`) {
+        this.dictDataPath = dataPath;
+    }
 
-    static init() {
-        this.sortDictData();
+    static async init() {
+        // Register the command itself, we can load the rest after the fact
+        registerDiscordBotCommand(new DictCommand('dict'), false);
+        registerDiscordBotCommand(new DefineCommand('define'), false);
+        registerDiscordBotCommand(new IndexCommand('index'), false);
+
+        Dict.instance.dictData = await readJsonFile(Dict.instance.dictDataPath);
+        Dict.sortDictData();
     }
 
     /**
@@ -23,24 +37,24 @@ class Dict {
      * file has been edited outside the program
      */
     static sortDictData() {
-        using perfCounter = Global.getPerformanceCounter("sortDictData(): ");
+        using perfCounter = PerformanceCounter.Create("sortDictData(): ");
         try {
-            dictData.sort((a: any, b: any) => {
+            Dict.instance.dictData.sort((a: any, b: any) => {
                 //console.log(sortDictData(): `${a.entry} compareTo ${b.entry} == ${a.entry.localeCompare(b.entry)}`);
                 return a.entry.localeCompare(b.entry, undefined, { sensitivity: 'accent' })
             });
-            Global.logger().logInfo(`Sorted ${this.getDictDataEntryCount()} dictionary items.`);
+            getCommonLogger().logInfo(`Sorted ${this.getDictDataEntryCount()} dictionary items.`);
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to sort dict data, got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to sort dict data, got ${e}`);
         }
         
     }
 
     static getDictDataEntryCount() {
         try {
-            return dictData.length;
+            return Dict.instance.dictData.length;
         } catch (e) {
-            Global.logger().logErrorAsync(`dict data not defined, got ${e}`);
+            getCommonLogger().logErrorAsync(`dict data not defined, got ${e}`);
             return 0;
         }
     }
@@ -51,20 +65,20 @@ class Dict {
      * The data should flush out sorted, though it will be sorted on load just in case.
      */
     static async flushDictData() {
-        using perfCounter = Global.getPerformanceCounter("flushDictData(): ");
+        using perfCounter = PerformanceCounter.Create("flushDictData(): ");
         try {
-            const jsonString = JSON.stringify(dictData, null, 2);
-            fs.writeFile(dictDataPath, jsonString, err => {
+            const jsonString = JSON.stringify(Dict.instance.dictData, null, 2);
+            fs.writeFile(Dict.instance.dictDataPath, jsonString, err => {
                 if (err) {
-                    Global.logger().logErrorAsync(`Error flushing dict data file, got ${err}`);
+                    getCommonLogger().logErrorAsync(`Error flushing dict data file, got ${err}`);
                     return false;
                 } else {
-                    Global.logger().logInfo('Successfully wrote dict data');
+                    getCommonLogger().logInfo('Successfully wrote dict data');
                     return true;
                 }
             });
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to flush dict data to disk, got error ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to flush dict data to disk, got error ${e}`);
         }
         
     }
@@ -98,7 +112,7 @@ class Dict {
                 iterations++;
             }
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
         }
 
         return -1;
@@ -111,7 +125,7 @@ class Dict {
      */
     static findDictionaryEntry(entryName: any) {
         try {
-            let result = this.getIndexOf(dictData, entryName,
+            let result = this.getIndexOf(Dict.instance.dictData, entryName,
                 (x: any, y: any) => {
                     const left = x.entry;
                     const right = y;
@@ -122,10 +136,10 @@ class Dict {
                 });
 
             if (result != -1) {
-                return { "author": dictData[result].author, "definition": dictData[result].definition };
+                return { "author": Dict.instance.dictData[result].author, "definition": Dict.instance.dictData[result].definition };
             }
         } catch (e) {
-            Global.logger().logErrorAsync(`Failed to find dictionary entry ${entryName}, got ${e}`);
+            getCommonLogger().logErrorAsync(`Failed to find dictionary entry ${entryName}, got ${e}`);
         }
 
         return null;
@@ -136,7 +150,7 @@ class Dict {
      * @param {Discord.interaction} interaction - interaction message to reply to
      */
     static async handleDictCommand(interaction: Discord.ChatInputCommandInteraction) {
-        using perfCounter = Global.getPerformanceCounter("handleDictCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleDictCommand(): ");
 
         try {
             await interaction.deferReply();
@@ -144,7 +158,7 @@ class Dict {
             const slashCommandRequest = KoalaSlashCommandRequest.fromDiscordInteraction(interaction);
 
             if (interaction.options.data.length < 1) {
-                await Global.logger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction, true);
+                await getCommonLogger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction, true);
                 return;
             }
 
@@ -163,7 +177,7 @@ class Dict {
                 await interaction.editReply(`**DICT:** No definition for ${dictRequested}`);
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Failed to handle DICT command, got error: ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Failed to handle DICT command, got error: ${e}`, interaction, true);
         }
         
     }
@@ -173,17 +187,17 @@ class Dict {
      * @param {Discord.interaction} interaction - discord interaction to reply to
      */
     static async handleDefineCommand(interaction: Discord.ChatInputCommandInteraction) {
-        using perfCounter = Global.getPerformanceCounter("handleDefineCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleDefineCommand(): ");
 
         try {
             if (interaction.options.data.length < 1) {
-                await Global.logger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction);
+                await getCommonLogger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction);
                 return;
             }
 
             if (interaction.options.data.length < 2) {
                 await interaction.reply('Missing entries for define command, need phrase and definiton plzsir');
-                Global.logger().logWarning(`Failed to get data for define command, got ${interaction.options.data}`);
+                getCommonLogger().logWarning(`Failed to get data for define command, got ${interaction.options.data}`);
                 return;
             }
 
@@ -212,7 +226,7 @@ class Dict {
                     "definition": definition
                 }
 
-                dictData.push(newEntry);
+                Dict.instance.dictData.push(newEntry);
                 Dict.sortDictData(); // insertion sort would be faster but screw it I'm lazy
                 Dict.flushDictData();
 
@@ -221,7 +235,7 @@ class Dict {
                 await interaction.reply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry[1]} by ${existingEntry[0]}`);
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Failed to set definition, got error ${e}`, interaction);
+            await getCommonLogger().logErrorAsync(`Failed to set definition, got error ${e}`, interaction);
         }
 
         
@@ -232,14 +246,14 @@ class Dict {
      * @param {Discord.interaction} interaction - discord interaction to reply to
      */
     static async handleIndexCommand(interaction: Discord.ChatInputCommandInteraction) {
-        using perfCounter = Global.getPerformanceCounter("handleIndexCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleIndexCommand(): ");
 
         try {
             await interaction.deferReply();
 
             const search_string = interaction.options.data[0].value!.toString().trim().toLowerCase();
 
-            const matches = dictData.filter((entry: any) => entry.definition.toLowerCase().includes(search_string));
+            const matches = Dict.instance.dictData.filter((entry: any) => entry.definition.toLowerCase().includes(search_string));
 
             let outputString;
 
@@ -258,7 +272,7 @@ class Dict {
             await interaction.editReply(outputString);
 
         } catch (e) {
-            await Global.logger().logErrorAsync(`Failed to handle index command, got error ${e}`);
+            await getCommonLogger().logErrorAsync(`Failed to handle index command, got error ${e}`);
         }
 
         
@@ -334,10 +348,3 @@ class IndexCommand extends DiscordBotCommand {
         return indexCommand;
     }
 }
-
-Dict.init();
-registerDiscordBotCommand(new DictCommand('dict'), false);
-registerDiscordBotCommand(new DefineCommand('define'), false);
-registerDiscordBotCommand(new IndexCommand('index'), false);
-
-export { Dict }//sortDictData, getDictDataEntryCount }

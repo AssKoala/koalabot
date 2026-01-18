@@ -4,7 +4,6 @@
 
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 
-import { Global } from '../global.js';
 import { SlashCommandBuilder, AttachmentBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { OpenAIHelper } from '../helpers/openaihelper.js';
 import { DownloaderHelper } from 'node-downloader-helper';
@@ -12,8 +11,10 @@ import { mkdir, rm } from 'node:fs/promises';
 import { got } from 'got';
 import fs from 'node:fs';
 import crypto from 'crypto';
-
+import config from 'config';
 import { toFile } from "openai";
+import { PerformanceCounter } from '../performancecounter.js';
+import { getCommonLogger } from '../logging/logmanager.js';
 
 // For getimg.ai
 import fetch from 'node-fetch';
@@ -108,7 +109,7 @@ class ImageDownloadedFileInfo {
 
 class OpenAI {
     private static async getImageResponse(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction) {
-        using perfCounter = Global.getPerformanceCounter("image::getImageUrl(): ");
+        using perfCounter = PerformanceCounter.Create("image::getImageUrl(): ");
         let image_url = null;
         let error = null;
         let response = null;
@@ -170,10 +171,10 @@ class OpenAI {
                     break;
             }
             
-            Global.logger().logInfo(`image::getImageUrl(): [Asked] _${imageGenData.getGeneratedPrompt()}_ [Used] _${response!.data![0].revised_prompt}_ [Got] _${image_url}_`);
+            getCommonLogger().logInfo(`image::getImageUrl(): [Asked] _${imageGenData.getGeneratedPrompt()}_ [Used] _${response!.data![0].revised_prompt}_ [Got] _${image_url}_`);
         } catch (e) {
             error = e;
-            await Global.logger().logErrorAsync(`Exception occurred during image gen, asked: _${imageGenData.getGeneratedPrompt()}_, got _${e}_`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Exception occurred during image gen, asked: _${imageGenData.getGeneratedPrompt()}_, got _${e}_`, interaction, true);
         }
 
         return {
@@ -181,12 +182,12 @@ class OpenAI {
         };
     } // getImageUrl
 
-    private static async downloadUrlToFile(url: string, download_dir: string = Global.settings().get("TEMP_PATH")) {
+    private static async downloadUrlToFile(url: string, download_dir: string = config.get<string>("Global.tempPath")) {
         // Download the image temporarily
         await mkdir(download_dir, { recursive: true });
 
         const dl = new DownloaderHelper(url, download_dir);
-        dl.on('error', (err) => Global.logger().logErrorAsync(`Failed to download image from _${url}_ to _${download_dir}_, got error _${err}_`));
+        dl.on('error', (err) => getCommonLogger().logErrorAsync(`Failed to download image from _${url}_ to _${download_dir}_, got error _${err}_`));
         await dl.start();
 
         const downloaded_fullpath = dl.getDownloadPath();
@@ -195,7 +196,7 @@ class OpenAI {
         return new ImageDownloadedFileInfo(downloaded_fullpath, downloaded_filename!);
     } // downloadUrlToFile
 
-    private static async downloadBufferToFile(image_bytes: Buffer, download_dir: string = Global.settings().get("TEMP_PATH")) {
+    private static async downloadBufferToFile(image_bytes: Buffer, download_dir: string = config.get<string>("Global.tempPath")) {
         // Download the image temporarily
         await mkdir(download_dir, { recursive: true });
 
@@ -214,9 +215,9 @@ class OpenAI {
 
             if (result.error != null) {
                 if ((result.error as any).status == 400) {
-                    Global.logger().logErrorAsync(`Got Nannied for prompt: _${imageGenData.getGeneratedPrompt()}_ with reason: _${(result.error as any).message}_`, interaction, true);
+                    getCommonLogger().logErrorAsync(`Got Nannied for prompt: _${imageGenData.getGeneratedPrompt()}_ with reason: _${(result.error as any).message}_`, interaction, true);
                 } else {
-                    Global.logger().logErrorAsync(`Error getting image URL, got error _${result.error}_`, interaction, true);
+                    getCommonLogger().logErrorAsync(`Error getting image URL, got error _${result.error}_`, interaction, true);
                 }
             } else if (imageGenData.model == 'dall-e-3') {
                 const downloadedFileinfo = await OpenAI.downloadUrlToFile(result!.response!.data![0].url!);
@@ -229,7 +230,7 @@ class OpenAI {
                 return downloadedFileinfo;
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Error generating OpenAI image: _${e}_`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Error generating OpenAI image: _${e}_`, interaction, true);
         }
 
         return undefined;
@@ -249,25 +250,25 @@ class StableDiffusion {
                 }
             };
 
-            const address = Global.settings().has("SD_WEBUI_ADDRESS") ? Global.settings().get("SD_WEBUI_ADDRESS") : "127.0.0.0:7860"
+            const address = config.get("ImageGeneration.StableDiffusion.webUiAddress");
             const data = <any> await got.post(`http://${address}/sdapi/v1/txt2img`, { json: payload }).json();
 
             const hash = crypto.createHash('md5').update(data.images[0]).digest('hex');
             const filename = hash + '.png';
-            const fullpath = `${Global.settings().get("TEMP_PATH")}/${filename}`;
+            const fullpath = `${config.get<string>("Global.tempPath")}/${filename}`;
 
             const decoded = Buffer.from(data.images[0], "base64");
             try {
                 fs.writeFileSync(fullpath, decoded);
-                Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
+                getCommonLogger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
             } catch (e) {
-                await Global.logger().logErrorAsync(`Failed to write temp-image file, got ${e}`, interaction, true);
+                await getCommonLogger().logErrorAsync(`Failed to write temp-image file, got ${e}`, interaction, true);
             }
             
 
             return new ImageDownloadedFileInfo(fullpath, filename);
         } catch (e) {
-            await Global.logger().logErrorAsync(`Got error calling stable diffusion api: ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Got error calling stable diffusion api: ${e}`, interaction, true);
         }
 
         return undefined;
@@ -283,7 +284,7 @@ class GetimgAi {
                 headers: {
                     accept: 'application/json',
                     'content-type': 'application/json',
-                    authorization: `Bearer ${Global.settings().get("GETIMG_AI_API_KEY")}`
+                    authorization: `Bearer ${config.get<string>("APIKey.getimgai")}`
                 },
                 body: JSON.stringify(
                     {
@@ -303,22 +304,22 @@ class GetimgAi {
 
                 const hash = crypto.createHash('md5').update(responseData.image).digest('hex');
                 const filename = hash + '.png';
-                const fullpath = `${Global.settings().get("TEMP_PATH")}/${filename}`;
+                const fullpath = `${config.get<string>("Global.tempPath")}/${filename}`;
 
                 const decoded = Buffer.from(responseData.image, "base64");
                 try {
                     fs.writeFileSync(fullpath, decoded);
-                    Global.logger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
+                    getCommonLogger().logInfo(`Successfully wrote temp-image to ${fullpath}`);
                 } catch (e) {
-                    await Global.logger().logErrorAsync(`Failed to write temp-image file, got ${e}`, interaction, true);
+                    await getCommonLogger().logErrorAsync(`Failed to write temp-image file, got ${e}`, interaction, true);
                 }
                 
                 return new ImageDownloadedFileInfo(fullpath, filename, responseData.seed);
             } else {
-                await Global.logger().logErrorAsync(`Failed to download image from Getimg.Ai, got error code ${fetchResult.status}, see here: https://docs.getimg.ai/reference/errors`, interaction, true);
+                await getCommonLogger().logErrorAsync(`Failed to download image from Getimg.Ai, got error code ${fetchResult.status}, see here: https://docs.getimg.ai/reference/errors`, interaction, true);
             }
         } catch (e) {
-            await Global.logger().logErrorAsync(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
+            await getCommonLogger().logErrorAsync(`Got error calling getimg.ai flux api: ${e}`, interaction, true);
         }
         return undefined;
     }
@@ -326,7 +327,7 @@ class GetimgAi {
 
 class ImageCommand extends DiscordBotCommand {
     async handle(interaction: ChatInputCommandInteraction): Promise<void> {
-        using perfCounter = Global.getPerformanceCounter("handleImageCommand(): ");
+        using perfCounter = PerformanceCounter.Create("handleImageCommand(): ");
     
         try {
             await interaction.deferReply();
@@ -350,7 +351,7 @@ class ImageCommand extends DiscordBotCommand {
                     downloadedFileInfo = await GetimgAi.download(imageGenData, interaction);
                     break;
                 default:
-                    await Global.logger().logErrorAsync(`Unexpected model ${imageGenData.model}`, interaction, true);
+                    await getCommonLogger().logErrorAsync(`Unexpected model ${imageGenData.model}`, interaction, true);
                     return;
             }
     
@@ -364,8 +365,8 @@ class ImageCommand extends DiscordBotCommand {
 
                     const embed = {
                         
-                        title: `${this.runtimeData().settings().get("BOT_NAME")} x ${interaction.user.displayName}`.substring(0, 256),
-                        description: title.substring(0, 4096),
+                        title: `${config.get<string>("Global.botName")} x ${interaction.user.displayName}`.substring(0, 256),
+                        description: title.substring(0, 1024),
                         image: {
                             url: `attachment://${downloadedFileInfo.filename}`,
                         }
@@ -373,18 +374,18 @@ class ImageCommand extends DiscordBotCommand {
     
                     await interaction.editReply({ embeds: [embed], files: [file] });
                 } catch (e) {
-                    await Global.logger().logErrorAsync(`Failed to generate/post images, got ${e}`, interaction, true);
+                    await getCommonLogger().logErrorAsync(`Failed to generate/post images, got ${e}`, interaction, true);
                 }
     
                 try {
                     // Delete the file
                     await rm(downloadedFileInfo.fullpath);
                 } catch (e) {
-                    Global.logger().logErrorAsync(`Failed to delete image file, might need manual cleanup, got ${e}`);
+                    getCommonLogger().logErrorAsync(`Failed to delete image file, might need manual cleanup, got ${e}`);
                 }
             } 
         } catch (e) {
-            await Global.logger().logErrorAsync(`Top level exception during image, got error ${e}`, interaction, false);
+            await getCommonLogger().logErrorAsync(`Top level exception during image, got error ${e}`, interaction, false);
         }
     } // handleImageCommand
 
@@ -517,7 +518,7 @@ class ImageCommand extends DiscordBotCommand {
     // @ts-ignore
     private appendStableDiffusionSubCommand(imageCommand) {
         // Pull in checkpoints dynamically for use in the slash command we send to discord
-        const checkpoints = this.runtimeData().settings().get("SD_CHECKPOINTS").split(',');
+        const checkpoints = config.get<string>("ImageGeneration.StableDiffusion.checkpoints").split(',');
 
         let choices: any = [];
 
@@ -633,9 +634,9 @@ class ImageCommand extends DiscordBotCommand {
     get() {
         let imageCommand = new SlashCommandBuilder()
             .setName(this.name())
-            .setDescription(`Ask ${Global.settings().get("BOT_NAME")} to generate an image`);
+            .setDescription(`Ask ${config.get<string>("Global.botName")} to generate an image`);
 
-        const enabledSubCommands = this.runtimeData().settings().get("IMAGE_ENABLED_AI_LIST").split(',');
+        const enabledSubCommands = config.get<string>("ImageGeneration.enabledAiImageGenerators").split(',');
 
         enabledSubCommands.forEach((subcommand) => {
             switch (subcommand) {
@@ -652,7 +653,7 @@ class ImageCommand extends DiscordBotCommand {
                     imageCommand = this.appendGetimgAiFluxSubCommand(imageCommand);
                     break;
                 default:
-                    this.runtimeData().logger().logErrorAsync(`Unexpected option in IMAGE_ENABLED_AI_LIST: ${subcommand}`);
+                    this.runtimeData().logger().logErrorAsync(`Unexpected option in ImageGeneration.enabledAiImageGenerators: ${subcommand}`);
                     break;
             }
         });

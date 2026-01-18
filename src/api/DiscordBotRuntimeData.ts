@@ -1,8 +1,7 @@
 import { LoggerConcrete } from '../logging/logger.js';
 import { Bot } from '../bot.js';
-import { Global } from '../global.js'
 import { DiscordBotHelpers } from './discordbothelpers.js'
-import { SettingsManager } from '../helpers/settingsmanager.js'
+import config from 'config'
 
 /**
  * Simple class that will be passed to every command at registration time.
@@ -29,27 +28,21 @@ export class DiscordBotRuntimeData {
     bot(): Bot {
         return this._bot;
     }
+
+    botId(): string {
+        return this.bot().client().user!.id;
+    }
     
     private readonly _helpers;
     helpers(): DiscordBotHelpers {
         return this._helpers;
     }
 
-    private readonly _settings;
-    settings(): SettingsManager {
-        return this._settings;
-    }
-
-    getPerformanceCounter(description: string) {
-        return this.helpers().getPerformanceCounter(description);
-    }
-
-    constructor(bot: Bot, logger: LoggerConcrete, settings: SettingsManager, guildLogger?: LoggerConcrete, channelLogger?: LoggerConcrete) {
+    constructor(bot: Bot, logger: LoggerConcrete, guildLogger?: LoggerConcrete, channelLogger?: LoggerConcrete) {
         this._logger = logger;
         this._channelLogger = channelLogger;
         this._guildlogger = guildLogger;
         this._bot = bot;
-        this._settings = settings;
-        this._helpers = new DiscordBotHelpers(this.logger(), settings.get("TIMING_ENABLE") == 'true');
+        this._helpers = new DiscordBotHelpers(this.logger());
     }
 }
