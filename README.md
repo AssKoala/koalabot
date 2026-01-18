@@ -7,7 +7,7 @@ The bot is made to be extensible by using the API functionality to do pretty muc
 ## Running using Docker
 - Install Docker Engine: https://docs.docker.com/engine/install/
 - Create basic env file with required settings (see below).
-- Copy [Example compose.yml](buildsys/docker/compose.yml) somewhere locally.
+- Copy [Example compose.yml](compose.yml) somewhere locally.
 - Modify the compose.yml to meet your specific needs.  See docker compose documentation: https://docs.docker.com/compose/
 - Run bot: ```docker compose -f compose.yml up -d```
 
