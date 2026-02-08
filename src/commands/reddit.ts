@@ -6,7 +6,6 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import { PerformanceCounter } from '../performancecounter.js';
 
-// @ts-expect-error todo cleanup tech debt
 import validator from 'validator';
 import cp from 'child_process';
 import path from "path";
@@ -63,7 +62,7 @@ class RedditLinkCommand extends DiscordBotCommand {
     
             try { 
                 return new RedditLinks(filtered, childprocess.stderr.toString());
-            } catch (e) {
+            } catch {
                 return new RedditLinks(filtered);
             }                    
         } catch (e) {

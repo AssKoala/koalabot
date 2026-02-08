@@ -2,16 +2,16 @@
     Diceroll
 */
 
-import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { getRandomValues } from 'node:crypto';
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 import { PerformanceCounter } from '../performancecounter.js';
-
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import * as Discord from 'discord.js';
 
 class DiceRollCommand extends DiscordBotCommand {
     
-    async handle(interaction: any)
+    async handle(interaction: Discord.ChatInputCommandInteraction)
     {
         using perfCounter = PerformanceCounter.Create("handleDicerollCommand(): ");
 
@@ -21,7 +21,7 @@ class DiceRollCommand extends DiscordBotCommand {
             const slashCommandRequest = KoalaSlashCommandRequest.fromDiscordInteraction(interaction);
 
             const count = Math.min(Math.abs(slashCommandRequest.getOptionValueNumber('count', 1)), 16);
-            let sides = slashCommandRequest.getOptionValueNumber('sides', 6);
+            const sides = slashCommandRequest.getOptionValueNumber('sides', 6);
             
             const randArray = new Uint32Array(count);
             getRandomValues(randArray);

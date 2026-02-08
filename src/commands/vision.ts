@@ -2,9 +2,9 @@
 	AI Vision processing (view images and describe them)
 */
 
-import { SlashCommandBuilder, AttachmentBuilder, Utils, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { OpenAiApi } from '../llm/api/openai.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import config from 'config';
 import { PerformanceCounter } from '../performancecounter.js';
 import { getCommonLogger } from '../logging/logmanager.js';
@@ -69,7 +69,7 @@ class VisionCommand extends DiscordBotCommand {
 
             const responseText = response.choices[0].message.content;
 
-            await DiscordPlatform.editAndSplitReply(interaction, `Query: \"${query}\" Image: ${url}: ${responseText}`);
+            await DiscordPlatform.editAndSplitReply(interaction, `Query: "${query}" Image: ${url}: ${responseText}`);
         } catch (e) {
             await getCommonLogger().logErrorAsync(`Top level exception during vision, got error ${e}`, interaction, true);
         }

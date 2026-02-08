@@ -14,89 +14,63 @@
 */
 
 import fetch from 'node-fetch';
-// @ts-expect-error todo cleanup tech debt
 import validator from 'validator';
 import { SlashCommandBuilder } from "discord.js";
 
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { getCommonLogger } from '../logging/logmanager.js';
 import { PerformanceCounter } from '../performancecounter.js';
 import config from 'config';
 import { UserSettingsManager } from '../app/user/usersettingsmanager.js';
+import * as Discord from 'discord.js'
 
-/**
- * Map for type to excludes and print function
- */
-const forecastTypeMap = [ 
-    ["hourly", "minutely,current,daily,alerts", printHourlyForecast], 
-    ["minutely", "hourly,current,daily,alerts", printMinutelyForecast],
-    ["daily", "hourly,minutely,current,alerts", printDailyForecast],
-    ["alerts", "hourly,minutely,current,daily", printAlertForecast]
- ];
 
-const convertKelvinTo = [
-    // @ts-expect-error todo cleanup tech debt
-    [ "celsius",    'C', (x) => { return Number(x) - 273.15; } ],
-    // @ts-expect-error todo cleanup tech debt
-    [ "fahrenheit", 'F', (x) => { return ((Number(x) - 273.15) * (9/5)) + 32; } ],
-    // @ts-expect-error todo cleanup tech debt
-    [ "rankine",    'R', (x) => { return Number(x) * 1.8; } ],
-    // @ts-expect-error todo cleanup tech debt
-    [ "kelvin",     'K', (x) => { return Number(x); } ]
-];
+interface WeatherLocationData {
+    locationName: string;
+    latitude: string;
+    longitude: string;
+}
 
-/**
- * Convert C to F
- * @param {string} temperatureCelsius - The temperature in Celsius
- * @returns {string} The temperature in Fahrenheit
- */
-// @ts-expect-error todo cleanup tech debt
-function celsiusToFahrenheit(temperatureCelsius)
+interface ForecastMapData {
+    forecastType: string;
+    location: string;
+}
+
+function convertKelvinToPreferredUnits(temperatureKelvin: number, preferredUnits: string): number {
+    switch (preferredUnits) {
+        case "celsius":
+            return temperatureKelvin - 273.15;
+        case "fahrenheit":
+            return ((temperatureKelvin - 273.15) * (9/5)) + 32;
+        case "rankine":
+            return temperatureKelvin * 1.8;
+        case "kelvin":
+            return temperatureKelvin;
+        default:
+            return NaN;
+    }
+}
+
+function celsiusToFahrenheit(temperatureCelsius: number): string
 {
 	return (1.8 * Number(temperatureCelsius) + 32).toFixed(0);
 }
 
-/**
- * Get the temperature string formatted as expected for output (e.g. 86F/30C)
- * @param {string} temperatureKelvin - The temperature in Kelvin 
- * @returns {string} The temperature formatted for output
- */
-// @ts-expect-error todo cleanup tech debt
-function getTemperatureString(temperatureKelvin)
+function getTemperatureString(temperatureKelvin: number): string
 {
-    try {
-        let temperatureCelsius = temperatureKelvin - 273.15;
-        return celsiusToFahrenheit(temperatureCelsius) + 'F/' + temperatureCelsius.toFixed(0) + 'C';
-    } catch (e) {
-        getCommonLogger().logErrorAsync(`Failed to convert temperature ${temperatureKelvin}, got ${e}`);
-    }
+    const temperatureCelsius = temperatureKelvin - 273.15;
+    return celsiusToFahrenheit(temperatureCelsius) + 'F/' + temperatureCelsius.toFixed(0) + 'C';
 }
 
-/**
- * Convert 0-360 degrees into compass directions
- * @param {string} degrees - value in degrees (0-360)
- * @returns {string} compass direction of degrees passed in
- */
-// @ts-expect-error todo cleanup tech debt
-function degreesToCompass(degrees)
+function degreesToCompass(degrees: number): string
 {
-    try {
-        var val = <any> (Number(degrees) / 22.5 + 5).toFixed(0);
-        var directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    const val = Math.floor(Number(degrees) / 22.5 + 5);
+    const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 
-        return directions[val % 16];
-    } catch (e) {
-        getCommonLogger().logErrorAsync(`Failed to convert ${degrees}, got ${e}`);
-        return -1;
-    }
+    return directions[val % 16];
 }
 
-/**
- * Returns the user's preferred temperature units
- * @param {Discord.interaction} interaction - interaction sent to us from Discord API
- */
-// @ts-expect-error todo cleanup tech debt
-function getUserPreferredUnits(interaction) 
+function getUserPreferredUnits(interaction: Discord.ChatInputCommandInteraction): string
 {
     try {
         const userData = UserSettingsManager.get().get(interaction.user.username);
@@ -111,26 +85,19 @@ function getUserPreferredUnits(interaction)
     return "rankine";
 }
 
-/**
- * Gets the location requested by the user.  This is important since the location is optional.
- * Users can specify their location in the settings, so, if they don't specify a location, 
- * this will look it up and use it if it exists or tell them they're dumb if they haven't set it.
- * @param {*} interaction - discord interaction
- */
-// @ts-expect-error todo cleanup tech debt
-async function getWeatherLocation(interaction)
+async function getWeatherLocation(interaction: Discord.ChatInputCommandInteraction): Promise<string | undefined>
 {
-    let location = null;
+    let location = undefined;
 
     try {
         for (let i = 0; i < interaction.options.data.length; i++) {
             if (interaction.options.data[i].name == 'location') {
-                location = interaction.options.data[i].value.trim();
+                location = interaction.options!.data![i].value!.toString().trim();
                 break;
             }
         }
 
-        if (location === null) {
+        if (location === undefined) {
             const userData = UserSettingsManager.get().get(interaction.user.username);
 
             if (userData) { // if the user data exists, we can use that for the location if none was specified
@@ -138,11 +105,11 @@ async function getWeatherLocation(interaction)
                     location = userData.weatherSettings.location;
                 } catch (e) {
                     await getCommonLogger().logErrorAsync(`This is really bad, the user data is corrupted somehow! Got: ${e}`, interaction, true);
-                    return null;
+                    return undefined;
                 }
             } else {
                 await interaction.editReply('You need to either set your location with /settings or specify the location for the weather, pal.');
-                return null;
+                return undefined;
             }
         }
     } catch (e) {
@@ -152,41 +119,39 @@ async function getWeatherLocation(interaction)
     return location;
 }
 
-/**
- * Retrieve Geocode using Google Maps API
- * @param {Discord.interaction} interaction - Message sent to us from Discord API
- * @returns array containing [ {string}cityName, {string}latitude, {string}longitude ]
- */
-// @ts-expect-error todo cleanup tech debt
-async function getWeatherLocationGoogleMapsAPI(interaction)
+async function getWeatherLocationGoogleMapsAPI(interaction: Discord.ChatInputCommandInteraction): Promise<WeatherLocationData | undefined>
 {
     try {
-        const key = config.get<string>("APIKey.googleMaps");
+        const key = config.get("APIKey.googleMaps");
         const location = await getWeatherLocation(interaction);
         if (!location) {
-            return null;
+            return undefined;
         }
 
         const query = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${key}`;
         if (!validator.isURL(query)) {
             getCommonLogger().logWarning(`Location passed in does not appear to be properly useable as a URL: ${location}`);
             await interaction.editReply("Whatever you wrote apparently doesn't work as a URL so maybe ask differently");
-            return null;
+            return undefined;
         }
 
         try {
             const result = await fetch(query);
-            const locationData = <any> await result.json();
+            const locationData = <any> await result.json(); // eslint-disable-line @typescript-eslint/no-explicit-any
 
             if (locationData.results.length > 0) {
-                return [locationData.results[0].formatted_address, locationData.results[0].geometry.location.lat, locationData.results[0].geometry.location.lng];
+                return { 
+                    locationName: locationData.results[0].formatted_address, 
+                    latitude: locationData.results[0].geometry.location.lat, 
+                    longitude: locationData.results[0].geometry.location.lng 
+                };
             } else {
                 await interaction.editReply(`Failed to get any geocoordinate results for ${location}, try being more specific maybe?`);
-                return null;
+                return undefined;
             }
         } catch (e) {
             await getCommonLogger().logErrorAsync(`Failed to get geocoded data, got error: ${e}`, interaction, true);
-            return null;
+            return undefined;
         }
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to get weather location using maps API, got ${e}`, interaction, true);
@@ -194,26 +159,13 @@ async function getWeatherLocationGoogleMapsAPI(interaction)
 
 }
 
-/**
- * Get the weather data from the One API
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- * @param {string} excludes - Excludes to send to the one API to lower bandwidth usage
- * @returns the weather data in the One API v3 format or null on error.
- */
-// @ts-expect-error todo cleanup tech debt
-async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "alerts")
+async function getWeatherUsingOneApiv3(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, excludes = "alerts")
 {
     try {
-        if (locationData.length != 3) {
-            await getCommonLogger().logErrorAsync(`Trying to print API with incorrect location data: ${locationData}`, interaction, true);
-            return null;
-        }
-
-        const city = locationData[0];
-        const lat = locationData[1];
-        const lon = locationData[2];
-        const key = config.get<string>("APIKey.openWeather");
+        const city = locationData.locationName;
+        const lat = locationData.latitude;
+        const lon = locationData.longitude;
+        const key = config.get("APIKey.openWeather");
 
         getCommonLogger().logInfo(`Getting weather for ${city} @ lat=${lat}&lon=${lon}`);
 
@@ -228,68 +180,59 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
             getCommonLogger().logInfo(JSON.stringify(weatherData));
 
             return weatherData;
-        } catch (e) {
-            // @ts-expect-error todo cleanup tech debt
-            if (e.message.includes('ETIMEDOUT')) {
-                await interaction.editReply('TImed out trying to get weather from One API, try again later');
+        } catch (e: any) {  // eslint-disable-line @typescript-eslint/no-explicit-any
+            if ('message' in e && e.message.includes('ETIMEDOUT')) {
+                await interaction.editReply('Timed out trying to get weather from One API, try again later');
             } else {
-                await interaction.editReply(`${config.get<string>("Global.botName")} breakdown trying to get the weather, check logs`);
+                await interaction.editReply(`${config.get("Global.botName")} breakdown trying to get the weather, check logs`);
             }
 
             getCommonLogger().logErrorAsync(`Failed to print out weather, got: ${e} from call ${apiCall}`, interaction, true);
 
-            return null;
+            return undefined;
         }
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to get weather using one api, got ${e}`, interaction, true);
     }
 }
 
-/**
- * Print the weather data as a reply to the discord message
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- */
-// @ts-expect-error todo cleanup tech debt
-async function printWeatherUsingOneApiv3(locationData, interaction)
+async function printWeatherUsingOneApiv3(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction)
 {
     try {
         const excludes = "minutely,hourly,alerts";
-        const weatherData = <any> await getWeatherUsingOneApiv3(locationData, interaction, excludes);
+        const weatherData = <any> await getWeatherUsingOneApiv3(locationData, interaction, excludes);   // eslint-disable-line @typescript-eslint/no-explicit-any
 
         if (weatherData)
         {   
-            const city = locationData[0];
+            const city = locationData.locationName;
 
-            await interaction.editReply(
-                `**${city} Weather** :: ${getTemperatureString(weatherData.current.temp)} (Humidity: ${weatherData.current.humidity}%)`
-                + ` | **Feels Like:** ${getTemperatureString(weatherData.current.feels_like)}`
-                + ` | **Dew Point:** ${getTemperatureString(weatherData.current.dew_point)}`
-                + ` | **Wind:** ${degreesToCompass(weatherData.current.wind_deg)}@${weatherData.current.wind_speed}km/h`
-                + ` | **Today's High:** ${getTemperatureString(weatherData.daily[0].temp.max)}`
-                + ` | **Today's Low:** ${getTemperatureString(weatherData.daily[0].temp.min)}`
-                + ` | **Current Conditions:** ${weatherData.current.weather[0].description}`
-            );
+            if ('editReply' in interaction) {
+                await interaction.editReply(
+                    `**${city} Weather** :: ${getTemperatureString(weatherData.current.temp)} (Humidity: ${weatherData.current.humidity}%)`
+                    + ` | **Feels Like:** ${getTemperatureString(weatherData.current.feels_like)}`
+                    + ` | **Dew Point:** ${getTemperatureString(weatherData.current.dew_point)}`
+                    + ` | **Wind:** ${degreesToCompass(weatherData.current.wind_deg)}@${weatherData.current.wind_speed}km/h`
+                    + ` | **Today's High:** ${getTemperatureString(weatherData.daily[0].temp.max)}`
+                    + ` | **Today's Low:** ${getTemperatureString(weatherData.daily[0].temp.min)}`
+                    + ` | **Current Conditions:** ${weatherData.current.weather[0].description}`
+                );
+            }
         } 
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Received malformed weather data, got error ${e}`, interaction, true);
     }
 }
 
-/**
- * Handles the /weather commands
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- */
-// @ts-expect-error todo cleanup tech debt
-async function handleWeatherCommand(interaction) {
+
+async function handleWeatherCommand(interaction: Discord.ChatInputCommandInteraction) {
     using perfCounter = PerformanceCounter.Create("handleWeatherCommand(): ");
 
     try {
-        await interaction.deferReply();
+        if ('deferReply' in interaction) {
+            await interaction.deferReply();
+        }
 
-        let result;
-
-        result = await getWeatherLocationGoogleMapsAPI(interaction);
+        const result = await getWeatherLocationGoogleMapsAPI(interaction);
         
         if (result != null)
         {
@@ -302,16 +245,9 @@ async function handleWeatherCommand(interaction) {
     
 }
 
-/**
- * Print the hourly forecast based on weatherData
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- * @param {JSON} weatherData - OneAPI weather data that includes hourly
- */
-// @ts-expect-error todo cleanup tech debt
-async function printHourlyForecast(locationData, interaction, weatherData) {
+async function printHourlyForecast(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, weatherData: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
-        let hourlyWeatherString = `**Hourly Forecast for ${locationData[0]}:** \n`;
+        let hourlyWeatherString = `**Hourly Forecast for ${locationData.locationName}:** \n`;
         for (let i = 0; i < 5 && i < weatherData.hourly.length; i++) { 
             const tempStrFeels = getTemperatureString(weatherData.hourly[i].feels_like);
             const tempStr = getTemperatureString(weatherData.hourly[i].temp);
@@ -324,14 +260,7 @@ async function printHourlyForecast(locationData, interaction, weatherData) {
     }
 }
 
-/**
- * No one uses this
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- * @param {JSON} weatherData - OneAPI weather data that includes minutely
- */
-// @ts-expect-error todo cleanup tech debt
-async function printMinutelyForecast(locationData, interaction, weatherData) {
+async function printMinutelyForecast(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, weatherData: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
         let messageStr = `No precipitation expected in the next ${weatherData.minutely.length} minutes.`;
 
@@ -373,24 +302,18 @@ async function printMinutelyForecast(locationData, interaction, weatherData) {
             }
         }
 
-        await interaction.editReply(`**Minutely forecast for ${locationData[0]}** :: ` + messageStr);
+        await interaction.editReply(`**Minutely forecast for ${locationData.locationName}** :: ` + messageStr);
     }
     catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to get minutely weather, got ${e}`, interaction, true);
     }
 }
 
-/**
- * Returns the shortened day string based on day index.  Automatically wraps around.
- * @param {number} day - index of day (0=Sunday, 6=Saturday)
- * @returns Shortened day string (e.g. Mon), ??? on error
- */
-// @ts-expect-error todo cleanup tech debt
-function getDayFromIndex(day) {
+function getDayFromIndex(day: number): string {
     const dayArray = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ];
 
     if (day > 32) {
-        return "???";
+        throw new Error(`Got invalid day index: ${day}`);
     }
 
     while (day >= dayArray.length) {
@@ -400,13 +323,7 @@ function getDayFromIndex(day) {
     return dayArray[day];
 }
 
-/**
- * Pull an emoji for weather based on the icon
- * @param {JSON} weather - weather object result from Open Weather
- * @returns emoji, description string otherwise
- */
-// @ts-expect-error todo cleanup tech debt
-function getEmojiFromConditions(weather) {
+function getEmojiFromConditions(weather: any): string { // eslint-disable-line @typescript-eslint/no-explicit-any
     // See: https://openweathermap.org/weather-conditions
     const conditionToEmojiMap = [
         [ "01", "☀️" ],
@@ -431,31 +348,18 @@ function getEmojiFromConditions(weather) {
     return weather.description;
 }
 
-/**
- * Print the daily (8-day) weather forecast
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- * @param {JSON} weatherData - OneAPI weather data that includes daily
- */
-// @ts-expect-error todo cleanup tech debt
-async function printDailyForecast(locationData, interaction, weatherData) {
+async function printDailyForecast(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, weatherData: any) {  // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
         const preferredUnits = getUserPreferredUnits(interaction);
-        let conversionMap = <any> convertKelvinTo[0];
-        for (let i = 0; i < convertKelvinTo.length; i++)
-        {
-            if (preferredUnits == convertKelvinTo[i][0]) {
-                conversionMap = convertKelvinTo[i];
-            }
-        }
+        const unitsShort = preferredUnits[0].toUpperCase();
 
-        let dailyWeatherString = `**${locationData[0]}** :: 8-Day Forecast `;
-        let date = new Date();
+        let dailyWeatherString = `**${locationData.locationName}** :: 8-Day Forecast `;
+        const date = new Date();
 
         for (let i = 0; i < 8 && i < weatherData.daily.length; i++)
         {
-            const highTemp = `${conversionMap[2](weatherData.daily[i].temp.max).toFixed(0)}${conversionMap[1]}`;
-            const lowTemp = `${conversionMap[2](weatherData.daily[i].temp.min).toFixed(0)}${conversionMap[1]}`;
+            const highTemp = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.max, preferredUnits).toFixed(0)}${unitsShort}`;
+            const lowTemp = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.min, preferredUnits).toFixed(0)}${unitsShort}`;
             const tempStr = `:: **${getDayFromIndex(date.getDay()+i)}:** ${getEmojiFromConditions(weatherData.daily[i].weather[0])} (${highTemp}/${lowTemp})`;
             dailyWeatherString += tempStr;
         }
@@ -466,14 +370,7 @@ async function printDailyForecast(locationData, interaction, weatherData) {
     }
 }
 
-/**
- * Print alerts for a given location based on weather data
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- * @param {JSON} weatherData - OneAPI weather data that includes alerts
- */
-// @ts-expect-error todo cleanup tech debt
-async function printAlertForecast(locationData, interaction, weatherData) {
+async function printAlertForecast(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, weatherData: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
         if (weatherData.alerts != null && weatherData.alerts.length > 0) {
             let alertStr = "**Active Alerts:**";
@@ -483,48 +380,52 @@ async function printAlertForecast(locationData, interaction, weatherData) {
             }
             await interaction.editReply(alertStr);
         } else {
-            await interaction.editReply(`No active alerts for ${locationData[0]}`);
+            await interaction.editReply(`No active alerts for ${locationData.locationName}`);
         }
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to process the alert forecast, got ${e}`, interaction, true);
     }
 }
 
-/**
- * Get the forecast map data for a given type
- * @param {string} forecastType - "hourly", "daily", etc
- * @returns array from forecastTypeMap for the given type
- */
-// @ts-expect-error todo cleanup tech debt
-function getForecastMapData(forecastType)
+function getWeatherExcludeForForecastType(forecastType: string): string
 {
-    try {
-        for (let i = 0; i < forecastTypeMap.length; i++) {
-            if (forecastTypeMap[i][0] === forecastType) {
-                return forecastTypeMap[i];
-            }
-        }
-    } catch (e) {
-        getCommonLogger().logErrorAsync(`Failed to get forecast map data, got ${e}`);
+    switch (forecastType) {
+        case "hourly":
+            return "minutely,current,daily,alerts";
+        case "minutely":
+            return "hourly,current,daily,alerts";
+        case "daily":
+            return "hourly,minutely,current,alerts";
+        case "alerts":
+            return "hourly,minutely,current,daily";
+        default:
+            getCommonLogger().logWarning(`Got unexpected forecast type: ${forecastType}`);
+            return "";
     }
-
-    return null;
 }
 
-/**
- * Print the forecast data as a reply to the discord message
- * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- */
-// @ts-expect-error todo cleanup tech debt
-async function printForecastUsingOneApiv3(locationData, interaction, forecastType)
+async function printForecastUsingOneApiv3(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, forecastType: string)
 {
     try {
-        const forecastMapData = <any> getForecastMapData(forecastType);
-        const weatherData = <any> await getWeatherUsingOneApiv3(locationData, interaction, forecastMapData[1]);
+        const weatherData = await getWeatherUsingOneApiv3(locationData, interaction, getWeatherExcludeForForecastType(forecastType));
 
         if (weatherData) {
-            await forecastMapData[2](locationData, interaction, weatherData);
+            switch (forecastType) {
+                case "hourly":
+                    await printHourlyForecast(locationData, interaction, weatherData);
+                    break;
+                case "minutely":
+                    await printMinutelyForecast(locationData, interaction, weatherData);
+                    break;
+                case "daily":
+                    await printDailyForecast(locationData, interaction, weatherData);
+                    break;
+                case "alerts":
+                    await printAlertForecast(locationData, interaction, weatherData);
+                    break;
+                default:
+                    getCommonLogger().logWarning(`Got unexpected forecast type: ${forecastType}`);
+            }
         } else {
             getCommonLogger().logInfo(`Failed to get forecast data`);
         }
@@ -533,66 +434,53 @@ async function printForecastUsingOneApiv3(locationData, interaction, forecastTyp
     }
 }
 
-/**
- * Retrieves the options as an array for the forecast
- * @param {Discord.message} interaction - Discord message to reply to
- * @returns [ forecastType, location ]
- */
-// @ts-expect-error todo cleanup tech debt
-async function getForecastOptions(interaction)
+async function getForecastOptions(interaction: Discord.ChatInputCommandInteraction): Promise<ForecastMapData | undefined>
 {
     try {
-        let forecastType = null;
+        let forecastType = "";
         let location = "";
 
         for (let i = 0; i < interaction.options.data.length; i++) {
             switch (interaction.options.data[i].name)
             {
                 case 'forecasttype':
-                    forecastType = interaction.options.data[i].value.trim();
+                    forecastType = interaction.options!.data![i].value!.toString().trim();
                     break;
                 case 'location':
-                    location = interaction.options.data[i].value.trim();
+                    location = interaction.options!.data![i].value!.toString().trim();
                     break;
                 default:
                     getCommonLogger().logWarning(`Got unexpected value in forecast interaction: ${interaction.options.data[i]}`);
             }
         }
 
-        return [forecastType, location];
+        return { forecastType, location };
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Error getting forecast options, got: ${e}`, interaction, true);
     }
 }
 
-/**
- * Handles the /forecast commands
- * @param {Discord.message} interaction - Discord interaction to reply to
- */
-// @ts-expect-error todo cleanup tech debt
-async function handleForecastCommand(interaction)
+async function handleForecastCommand(interaction: Discord.ChatInputCommandInteraction)
 {
     using perfCounter = PerformanceCounter.Create("handleForecastCommand(): ");
 
     try {
         await interaction.deferReply();
 
-        let result;
-
         const forecastOptions = await getForecastOptions(interaction);
 
         if (!forecastOptions) {
             return;
-        } else if (getForecastMapData(forecastOptions[0]) == null) {
-            await getCommonLogger().logErrorAsync(`Unexpected forecast type received: ${forecastOptions[0]}`);
+        } else if (forecastOptions.forecastType == "") {
+            await getCommonLogger().logErrorAsync(`Unexpected forecast type received: ${forecastOptions.forecastType}`);
             return;
         }
 
-        result = await getWeatherLocationGoogleMapsAPI(interaction);
+        const result = await getWeatherLocationGoogleMapsAPI(interaction);
         
         if (result != null)
         {
-            printForecastUsingOneApiv3(result, interaction, forecastOptions[0]);
+            printForecastUsingOneApiv3(result, interaction, forecastOptions.forecastType);
         }
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to handle weather command, got error: ${e}`, interaction, true);
@@ -602,8 +490,7 @@ async function handleForecastCommand(interaction)
 }
 
 class WeatherCommand extends DiscordBotCommand {
-    // @ts-expect-error todo cleanup tech debt
-    async handle(interaction) {
+    async handle(interaction: Discord.ChatInputCommandInteraction) {
         return handleWeatherCommand(interaction);
     }
 
@@ -622,8 +509,7 @@ class WeatherCommand extends DiscordBotCommand {
 }
 
 class ForecastCommand extends DiscordBotCommand {
-    // @ts-expect-error todo cleanup tech debt
-    async handle(interaction) {
+    async handle(interaction: Discord.ChatInputCommandInteraction) {
         return handleForecastCommand(interaction);
     }
 

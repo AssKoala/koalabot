@@ -6,7 +6,7 @@ export class KoalaSlashCommandRequest {
     {
         // @ts-expect-error todo cleanup tech debt
         if (interaction.options["_subcommand"]) {
-            let subRequest = new KoalaSlashCommandRequest(interaction);
+            const subRequest = new KoalaSlashCommandRequest(interaction);
 
             // @ts-expect-error todo cleanup tech debt
             subRequest.name = interaction.options["_subcommand"];
@@ -31,7 +31,7 @@ export class KoalaSlashCommandRequest {
 
     public static fromDiscordInteraction(interaction: ChatInputCommandInteraction): KoalaSlashCommandRequest 
     {
-        let request = new KoalaSlashCommandRequest(interaction);
+        const request = new KoalaSlashCommandRequest(interaction);
 
         request.name = interaction.commandName;
         request.subcommand = KoalaSlashCommandRequest.fromDiscordSubcommand(interaction);

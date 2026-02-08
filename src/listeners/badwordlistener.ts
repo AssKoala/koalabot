@@ -171,7 +171,7 @@ class BadWordListener implements WordListener {
     // @ts-expect-error todo cleanup tech debt
     private responseType: BadWordResponseType;
 
-    private fileOpHandle: Promise<any> = Promise.resolve();
+    private fileOpHandle: Promise<unknown> = Promise.resolve();
 
     private getBadWordSaveFilePath(badword: string, channelId: string) {
         return GetBadWordSaveFilePath(badword, channelId);
@@ -248,7 +248,7 @@ class BadWordListener implements WordListener {
 
                 // Check if this is a new record
                 // @ts-expect-error todo cleanup tech debt
-                let diff = currentTime - tracker.last().timestamp;
+                const diff = currentTime - tracker.last().timestamp;
                 if (diff > tracker.getLongestStreak()) {
                     isNewRecord = true;
                 }

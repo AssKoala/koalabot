@@ -3,27 +3,25 @@
 */
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { PerformanceCounter } from '../performancecounter.js';
 import config from 'config';
 
 export class ShortenUrlResult {
-    // @ts-expect-error todo cleanup tech debt
-    shortUrl: string = null;
-    // @ts-expect-error todo cleanup tech debt
-    fetchResult: Response = null;
-    responseData: any = null;
-    error: unknown = null;
+    shortUrl?: string;
+    fetchResult?: Response;
+    responseData?: unknown;
+    error?: unknown;
 
-    isValid(): boolean { return this.shortUrl != null && this.error == null; }
+    isValid(): boolean { return this.shortUrl != undefined && this.error == undefined; }
 }
 
 export class ShortenURLCommand extends DiscordBotCommand {
     static async shortenUrl(longUrl: string): Promise<ShortenUrlResult> {
-        let shortUrlResult = new ShortenUrlResult();
+        const shortUrlResult = new ShortenUrlResult();
 
         try {
-            let UrlToShorten = new URL(longUrl);
+            const UrlToShorten = new URL(longUrl);
 
             
             const url = `${config.get<string>("ShortenUrl.shlinkBaseAddress")}/rest/v3/short-urls`;
@@ -43,12 +41,12 @@ export class ShortenURLCommand extends DiscordBotCommand {
             const result = await fetch(url, options);
 
             if (result.ok) {
-                const responseData = <any> await result.json();
+                const responseData = <any> await result.json(); // eslint-disable-line @typescript-eslint/no-explicit-any
 
                 shortUrlResult.shortUrl = responseData.shortUrl;
                 shortUrlResult.fetchResult = result;
                 shortUrlResult.responseData = responseData;
-                shortUrlResult.error = null;
+                shortUrlResult.error = undefined;
             }
         } catch (e) {
             shortUrlResult.error = e;
@@ -61,7 +59,7 @@ export class ShortenURLCommand extends DiscordBotCommand {
         using perfCounter = PerformanceCounter.Create("handleShortenUrlCommand(): ");
 
         try {
-            let shortened = await ShortenURLCommand.shortenUrl(interaction.options.data[0].value as string);
+            const shortened = await ShortenURLCommand.shortenUrl(interaction.options.data[0].value as string);
             
             if (shortened.isValid()) {
                 await interaction.editReply(`Short URL: ${shortened.shortUrl}`);

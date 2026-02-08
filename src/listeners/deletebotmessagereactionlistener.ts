@@ -1,21 +1,24 @@
 import { DiscordReactionAddListener } from "../api/discordmessagelistener.js";
 import { EmbedBuilder } from 'discord.js';
 import { ListenerManager } from "../listenermanager.js"
+import { DiscordBotRuntimeData } from "../api/discordbotruntimedata.js";
+import * as Discord from 'discord.js';
+
+type ReactionType = Discord.MessageReaction | Discord.PartialMessageReaction;
+type UserType = Discord.User | Discord.PartialUser;
 
 class DeleteBotMessageReactionListener implements DiscordReactionAddListener {
-    // @ts-expect-error todo cleanup tech debt
-    async onDiscordMessageReactionAdd(runtimeData, reaction, user) {
+    async onDiscordMessageReactionAdd(runtimeData: DiscordBotRuntimeData, reaction: ReactionType, user: UserType) {
         // Ignore bot's reactions
 		if (user.bot) return;
 
 		// Check if the reaction is '❌' emoji and it's the bot's message
-		if (reaction.emoji.name === '❌' && reaction.message.author.id === runtimeData.bot().client().user.id) {
+		if (reaction.emoji.name === '❌' && reaction.message!.author!.id === runtimeData.bot().client().user!.id) {
 			let username = '';
 
 			try {
-                // @ts-expect-error todo cleanup tech debt
-				const reactedUser = reaction.users.cache.every((entry) => {
-					username = entry.globalName;
+				const _reactedUser = reaction.users.cache.every((entry) => {
+					username = entry.globalName!;
 					return false;
 				});
 			} catch (e) {

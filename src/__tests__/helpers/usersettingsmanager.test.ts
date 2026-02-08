@@ -1,6 +1,5 @@
-import { Global } from "../../__mocks__/global.js";
 import { UserSettingsManager, UserSettingsData } from '../../app/user/usersettingsmanager.js';
-import { beforeAll, describe, expect, test, afterAll } from 'vitest'
+import { beforeAll, describe, expect, test } from 'vitest'
 
 let userSettingsManager: UserSettingsManager;
 

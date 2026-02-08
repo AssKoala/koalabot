@@ -3,7 +3,7 @@
 */
 
 import { LoggerConcrete } from '../logging/logger.js';
-import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js'
+import { SlashCommandBuilder } from 'discord.js'
 import { Stenographer } from '../app/stenographer/discordstenographer.js';
 import { DiscordStenographerMessage } from "../app/stenographer/discordstenographermessage.js";
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
@@ -11,10 +11,20 @@ import { PerformanceCounter } from '../performancecounter.js'
 import { getCommonLogger } from '../logging/logmanager.js';
 import { readJsonFile } from '../sys/jsonreader.js';
 import { DiscordPlatform } from '../platform/discord/discordplatform.js';
+import * as Discord from 'discord.js';
 
 import config from 'config';
 
-const profanities = await readJsonFile(`${config.get<string>("Global.dataPath")}/profanity.json`);
+interface ProfanityEntry {
+    profanity: string,
+    matches: string[]
+}
+
+interface LeaderboardChangeEntry { 
+    "profanity": string, "leader": string, "old_leader": string 
+}
+
+const profanities: ProfanityEntry[] = await readJsonFile(`${config.get<string>("Global.dataPath")}/profanity.json`);
 
 class ProfanityStats {
     private _profanityMap: Map<string, number> = new Map<string, number>();
@@ -42,7 +52,7 @@ class ProfanityLeaderboard {
         try {
             const guildeCaches = Stenographer.getAllGuildCaches();
 
-            for (const [guildId, messageCache] of guildeCaches) {
+            for (const [_guildId, messageCache] of guildeCaches) {
                 messageCache.messages().forEach(entry => {
                     this.addMessageToProfanityLeaderboard(entry);
                 });
@@ -52,10 +62,9 @@ class ProfanityLeaderboard {
         }
     }
     
-    addMessageToProfanityLeaderboard(discordStenographerMsg: DiscordStenographerMessage)
+    addMessageToProfanityLeaderboard(discordStenographerMsg: DiscordStenographerMessage): LeaderboardChangeEntry[]
     {
-        // @ts-expect-error todo cleanup tech debt
-        let result = [];
+        const result: LeaderboardChangeEntry[] = [];
 
         try {
             const author = discordStenographerMsg.author;
@@ -66,18 +75,18 @@ class ProfanityLeaderboard {
                 this._leaderboardMap.set(guildId, new Map<string, ProfanityStats>());
             }
 
-            let profanityLeaders = this._leaderboardMap.get(guildId)!;
+            const profanityLeaders = this._leaderboardMap.get(guildId)!;
 
             if (!profanityLeaders.has(author)) {
                 profanityLeaders.set(author, new ProfanityStats());
-                // @ts-expect-error todo cleanup tech debt
+                
                 profanities.forEach(profanity => {
                     profanityLeaders.get(author)!.set(profanity.profanity, 0);
                 });
             }        
 
-            profanities.forEach((profanity: any) => {
-                let currentLeader = this.getProfanityLeader(guildId, profanityLeaders, profanity.profanity);
+            profanities.forEach(profanity => {
+                const currentLeader = this.getProfanityLeader(guildId, profanityLeaders, profanity.profanity);
 
                 profanity.matches.every((regex: string) => {
                     if (discordStenographerMsg.message.toLowerCase().match(regex) != null) {
@@ -87,7 +96,7 @@ class ProfanityLeaderboard {
                     return true;
                 });
 
-                let newLeader = this.getProfanityLeader(guildId, profanityLeaders, profanity.profanity);
+                const newLeader = this.getProfanityLeader(guildId, profanityLeaders, profanity.profanity);
 
                 if (!(currentLeader["leader"] === newLeader["leader"])) {
                     result.push({ "profanity": profanity.profanity, "leader": newLeader["leader"], "old_leader": currentLeader["leader"] });
@@ -97,10 +106,9 @@ class ProfanityLeaderboard {
             this._leaderboardMap.set(discordStenographerMsg.guildId, profanityLeaders);
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to add message to profanity leaderboard, got ${e}`);
-            result = [];
+            result.length = 0;
         }
 
-        // @ts-expect-error todo cleanup tech debt
         return result;
     }
 
@@ -142,22 +150,19 @@ class ProfanityLeaderboard {
         return { "leader": "error", "count": 0 };
     };
 
-    // @ts-expect-error todo cleanup tech debt
-    async showProfanityLeaderboard(interaction, perCapita = false)
+    async showProfanityLeaderboard(interaction: Discord.ChatInputCommandInteraction, perCapita = false)
     {
         try {
             const perCapitaString = perCapita ? `(per capita)` : `(total)`;
 
-            const profanityLeaders = this._leaderboardMap.get(interaction.guildId);
+            const profanityLeaders = this._leaderboardMap.get(interaction.guildId!);
 
             let outputString =
                 "```Profanity Leaderboard " + `${perCapitaString}\n`
                 + "-------------------------\n";
             
-            // @ts-expect-error todo cleanup tech debt
             profanities.forEach(profanity => {
-                // @ts-expect-error todo cleanup tech debt
-                const lead = this.getProfanityLeader(interaction.guildId, profanityLeaders, profanity.profanity, perCapita, [Global.settings().get("BOT_NAME")] );
+                const lead = this.getProfanityLeader(interaction.guildId, profanityLeaders, profanity.profanity, perCapita, [config.get("Global.botName")] );
 
                 outputString += `${profanity.profanity}(s):`.padEnd(12, " ");
 
@@ -189,7 +194,7 @@ class ProfanityLeaderboard {
             if (message.author.bot) return;
 
             const stdMsg = LoggerConcrete.getStandardDiscordMessageFormat(message);
-            let discordStenographerMsg = DiscordStenographerMessage.parseFromStandardMessageFormat(message.guildId, message.channelId, stdMsg);
+            const discordStenographerMsg = DiscordStenographerMessage.parseFromStandardMessageFormat(message.guildId, message.channelId, stdMsg);
 
             const result = this.addMessageToProfanityLeaderboard(discordStenographerMsg);
 
@@ -207,7 +212,7 @@ class ProfanityLeaderboard {
                 });
 
                 // @ts-expect-error todo cleanup tech debt
-                let convertToOutput = function (items) {
+                const convertToOutput = function (items) {
                     // Remove trailing , and front whitespace then split
                     items = items.substring(0, items.length - 1).split(',');
 
@@ -258,24 +263,23 @@ class ProfanityLeaderboard {
         }
     }
 
-    // @ts-expect-error todo cleanup tech debt
-    async handleDisplayCustomLeaderboardCommand(interaction, options, ignoreList = [])
+    async handleDisplayCustomLeaderboardCommand(interaction: Discord.ChatInputCommandInteraction, options: readonly unknown[], ignoreList: string[] = [])
     {
         try {
-            const guildId = interaction.guildId;
+            const guildId = interaction.guildId!;
 
-            // @ts-expect-error todo cleanup tech debt
-            let profanity;
-            let perCapita = false;
+            let profanity: (string | undefined) = undefined;
+            let perCapita: boolean = false;
 
-            // @ts-expect-error todo cleanup tech debt
-            options.forEach((opt) => {
+            type OptionType = { name: string, value: string | boolean};
+
+            (options as OptionType[]).forEach((opt: OptionType) => {
                 switch (opt.name) {
                     case `profanity`:
-                        profanity = opt.value.toLowerCase();
+                        profanity = (opt.value as string).toLowerCase();
                         break;
                     case `per_capita`:
-                        perCapita = opt.value;
+                        perCapita = opt.value as boolean;
                         break;
                     default:
                         getCommonLogger().logErrorAsync(`Unexpected value when displaying custom leaderboard: ${opt.name}`);
@@ -283,13 +287,15 @@ class ProfanityLeaderboard {
                 }
             });
 
-            // @ts-expect-error todo cleanup tech debt
-            let profanityMatches = [];
+            if (!profanity) {
+                await getCommonLogger().logErrorAsync(`No profanity provided for custom leaderboard command`, interaction, true);
+                return;
+            }
+
+            let profanityMatches: string[] = [];
             profanityMatches[0] = profanity;
 
-            // @ts-expect-error todo cleanup tech debt
             profanities.every(entry => {
-                // @ts-expect-error todo cleanup tech debt
                 if (entry.profanity === profanity) {
                     profanityMatches = entry.matches;
                     return false;
@@ -297,27 +303,21 @@ class ProfanityLeaderboard {
                 return true;
             });
 
-            // @ts-expect-error todo cleanup tech debt
-            let customLeaders = [];
-            const messages = Stenographer.getGuildMessages(guildId);
+            const customLeaders = new Map<string, number>();
+            const messages = Stenographer.getGuildMessages(guildId!);
 
             // Calculate the totals
             messages.forEach(discordMsg => {
                 const author = discordMsg.author;
 
-                // @ts-expect-error todo cleanup tech debt
                 if (!ignoreList.includes(author)) {
-                    // @ts-expect-error todo cleanup tech debt
-                    if (!(author in customLeaders)) {
-                        // @ts-expect-error todo cleanup tech debt
-                        customLeaders[author] = 0;
+                    if (!customLeaders.has(author)) {
+                        customLeaders.set(author, 0);
                     }
         
-                    // @ts-expect-error todo cleanup tech debt
                     profanityMatches.every(regex => {
                         if (discordMsg.message.toLowerCase().match(regex) != null) {
-                            // @ts-expect-error todo cleanup tech debt
-                            customLeaders[author]++;
+                            customLeaders.set(author, (customLeaders.get(author) || 0) + 1);
                             return false;
                         }
                         return true;
@@ -326,14 +326,15 @@ class ProfanityLeaderboard {
             });
 
             // Sort the totals for the leaderboard
-            let sortedLeaders = [];
-            // @ts-expect-error todo cleanup tech debt
-            for (const key of Object.keys(customLeaders)) {
-                // @ts-expect-error todo cleanup tech debt
-                const count = customLeaders[key];
-                if (count > 0)
-                    sortedLeaders.push({ "author": key, "count": count });
-            }
+            type LeaderEntry = { "author": string, "count": number };
+            const sortedLeaders: LeaderEntry[] = [];
+            
+            customLeaders.forEach((count, author) => {
+                if (count > 0) {
+                    sortedLeaders.push({ "author": author, "count": count });
+                }
+            });
+            
             sortedLeaders.sort((a, b) => {
                 const a_total = perCapita ? Stenographer.getMessageCount(guildId, a.author) : 1;
                 const b_total = perCapita ? Stenographer.getMessageCount(guildId, b.author) : 1;
@@ -374,8 +375,7 @@ class LeaderboardCommand extends DiscordBotCommand {
     private _profanityLeaderboard: ProfanityLeaderboard = new ProfanityLeaderboard();
     profanityLeaderboard() { return this._profanityLeaderboard; }
 
-    // @ts-expect-error todo cleanup tech debt
-    async handle(interaction)
+    async handle(interaction: Discord.ChatInputCommandInteraction)
     {
         using perfCounter = PerformanceCounter.Create("handleLeaderboardCommand(): ");
 
@@ -390,8 +390,7 @@ class LeaderboardCommand extends DiscordBotCommand {
                         await this._profanityLeaderboard.handleDisplayLeaderboardCommand(interaction, interaction.options.data[i].options);
                         break;
                     case 'custom':
-                        // @ts-expect-error todo cleanup tech debt
-                        await this._profanityLeaderboard.handleDisplayCustomLeaderboardCommand(interaction, interaction.options.data[i].options, ["BOOBS", "BOOBS (Test)"]);
+                        await this._profanityLeaderboard.handleDisplayCustomLeaderboardCommand(interaction, interaction.options!.data![i]!.options!, ["BOOBS", "BOOBS (Test)"]);
                         break;
                     default:
                         break;

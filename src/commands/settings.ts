@@ -2,34 +2,28 @@
     Settings module, stores and manages user settings.
 */
 
-import dotenv from "dotenv"
 import { SlashCommandBuilder } from 'discord.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from "../api/discordbotcommand.js";
+import { DiscordBotCommand, registerDiscordBotCommand } from "../api/discordbotcommand.js";
 import { getCommonLogger } from '../logging/logmanager.js'
 import { PerformanceCounter } from "../performancecounter.js";
 import { UserSettingsManager } from "../app/user/usersettingsmanager.js";
-import { GetKoalaBotSystem } from '../api/koalabotsystem.js';
+
 import * as Discord from 'discord.js';
 import config from 'config';
 
 const clearString: string = '!clear';
 
-/**
- * Sets the user's location and saves it off
- * @param {Discord.interaction} interaction - Discord interaction to reply to
- */
-// @ts-expect-error todo cleanup tech debt
-async function setUserLocation(interaction)
+async function setUserLocation(interaction: Discord.ChatInputCommandInteraction)
 {
     try {
-        const newLocation = interaction.options.data[0].options[0].options[0].value;
+        const newLocation = interaction.options!.data![0]!.options![0]!.options![0]!.value;
 
         // If they didn't specify a location, let them know and bail
         if (newLocation == "")
         {
             await interaction.editReply('You gotta specify a location after set_location, buddy');
         } else {
-            let userData = UserSettingsManager.get().get(interaction.user.username);
+            const userData = UserSettingsManager.get().get(interaction.user.username);
 
             if (userData) {
                 if (userData.weatherSettings.location === "") {
@@ -38,7 +32,7 @@ async function setUserLocation(interaction)
                     await interaction.editReply(`Setting your location to ${newLocation} from ${userData.weatherSettings.location}`);
                 }
                 
-                userData.weatherSettings.location = newLocation;
+                userData.weatherSettings.location = newLocation!.toString();
                 UserSettingsManager.get().set(userData, true);
             } else {
                 await interaction.editReply(`Failed to create user data, something has gone wrong, check the logs!`);
@@ -74,7 +68,7 @@ async function setPreferredUnits(interaction)
             {
                 await interaction.editReply(`Maybe try using real units not whatever the hell ${preferred_units} is, friend`);
             } else {
-                let userData = UserSettingsManager.get().get(interaction.user.username);
+                const userData = UserSettingsManager.get().get(interaction.user.username);
                 await interaction.editReply(`Setting your preferred units to ${preferred_units} from ${userData.weatherSettings.preferredUnits}`);
                 userData.weatherSettings.preferredUnits = preferred_units;
                 UserSettingsManager.get().set(userData, true);
@@ -90,7 +84,7 @@ async function setPreferredAiModel(interaction: Discord.ChatInputCommandInteract
     try {
         const aiModel = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
 
-        let userData = UserSettingsManager.get().get(interaction.user.username);
+        const userData = UserSettingsManager.get().get(interaction.user.username);
         
         if (aiModel === clearString) {
             userData.chatSettings.preferredAiModel = "";
@@ -110,7 +104,7 @@ async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteractio
 {
     try {
         const customPrompt = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
-        const customUsername = interaction!.options!.data![0]!.options![0]!.options![1]?.value! as string | undefined;
+        const customUsername = interaction!.options!.data![0]!.options![0]!.options![1]?.value as string | undefined;
         let userToLoad = interaction.user.username;
 
         // If they are trying to set a different user's prompt, make sure they are sudo
@@ -129,7 +123,7 @@ async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteractio
             userToLoad = customUsername;
         }
 
-        let userData = UserSettingsManager.get().get(userToLoad);
+        const userData = UserSettingsManager.get().get(userToLoad);
         const oldPrompt = userData.chatSettings.customPrompt;
 
         if (customPrompt === clearString) {
@@ -146,33 +140,36 @@ async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteractio
     }
 }
 
-/**
- * Prints the user's existing settings out, if they exist
- * @param {Discord.interaction} interaction - interaction to reply to
- */
-// @ts-expect-error todo cleanup tech debt
-async function getUserSettings(interaction)
+async function getUserSettings(interaction: Discord.ChatInputCommandInteraction)
 {
     try {
-        let userNameToGet;
+        let userNameToGet: string;
         
-        if (interaction.options._subcommand === 'yours') {
-            userNameToGet = interaction.user.username;
-        } else if (interaction.options._subcommand === 'someones') {
-            userNameToGet = interaction.options.data[0].options[0].options[0].value;
+        if ('_subcommand' in interaction.options) {
+            const subcommand = interaction.options._subcommand;
 
-            if (!UserSettingsManager.get().has(userNameToGet)) {
-                await interaction.editReply(`User *${userNameToGet}* doesn't exist, cannot get their settings.`);
+            if (subcommand === 'yours') {
+                userNameToGet = interaction.user.username;
+            } else if (subcommand === 'someones') {
+                userNameToGet = interaction.options.data![0].options![0].options![0].value!.toString();
+
+                if (!UserSettingsManager.get().has(userNameToGet)) {
+                    await interaction.editReply(`User *${userNameToGet}* doesn't exist, cannot get their settings.`);
+                    return;
+                }
+            }  else if (subcommand === 'available_ai_models') {
+                const availableModels = config.get<string>('Chat.AiModels.enabledModels');
+                await interaction.editReply(`Available AI Models: ${availableModels}`);
+                return;
+            } else {
+                await interaction.editReply(`Interaction did not contain valid subcommand: ${subcommand}`);
                 return;
             }
-        }  else if (interaction.options._subcommand === 'available_ai_models') {
-            const availableModels = config.get<string>('Chat.AiModels.enabledModels');
-            await interaction.editReply(`Available AI Models: ${availableModels}`);
-            return;
         } else {
-            await interaction.editReply(`Interaction did not contain valid subcommand: ${interaction.options._subcommand}`);
+            await interaction.editReply('Interaction did not contain subcommand');
             return;
         }
+        
         const userData = UserSettingsManager.get().get(userNameToGet);
 
         const preferredUnits = userData.weatherSettings.preferredUnits.charAt(0).toUpperCase() 

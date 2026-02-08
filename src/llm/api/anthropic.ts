@@ -23,7 +23,7 @@ export class AnthropicApi {
         return AnthropicApi.anthropic;
     }
 
-    static async simpleQuery(aiModel: string, query: string) {
+    static async simpleQuery(_aiModel: string, _query: string) {
         throw new Error("Method not implemented.");
     }
 

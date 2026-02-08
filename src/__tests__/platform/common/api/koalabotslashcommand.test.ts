@@ -6,6 +6,7 @@ describe('KoalaBotSlashCommand', () => {
     const desc = "desc";
     const value = "value";
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function TestNameAndDescription(command: any, name: string, desc: string) {
         expect(command.getName()).toBe(name);
         expect(command.getDescription()).toBe(desc);
@@ -79,6 +80,7 @@ describe('KoalaBotSlashCommand', () => {
     });
 
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function TestArguments(command: any, argOne: KoalaBotSlashCommand.KoalaBotSlashCommandArgument, argTwo: KoalaBotSlashCommand.KoalaBotSlashCommandArgument) {
         expect(command.getArguments().length).toBe(0);
         expect(command.hasArgument("arbitrary")).toBe(false);

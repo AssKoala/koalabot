@@ -157,7 +157,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         ));
 
         try {
-            const pChannel = await runtimeData.bot().client().channels.cache.get(message.getChannelId());
+            const pChannel = runtimeData.bot().client().channels.cache.get(message.getChannelId());
 
             const messages = LLMBot.splitText(responseText);
             await message.reply(messages[0]);
@@ -294,7 +294,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
                 try {
                     completion = await this.getImageCompletion(runtimeData, systemPrompt, message.getQuestion(), imageUrls);
                 } catch (e) {
-                    runtimeData.logger().logError("LLMBot::handleUserInteraction(): Failed to generate image, got ${e}");
+                    runtimeData.logger().logError(`LLMBot::handleUserInteraction(): Failed to generate image, got ${e}`);
                     message.reply(`Failed to generate image, got error ${e}`);
                     return;
                 }

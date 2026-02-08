@@ -62,7 +62,7 @@ export class MessageCache
     {
         try {
             if (this.messages().length > 0) {
-                var toRet = this.messages()[0];
+                const toRet = this.messages()[0];
 
                 // @ts-expect-error todo cleanup tech debt
                 this._authorMessageCount.set(toRet.author, this._authorMessageCount.get(toRet.author) - 1);

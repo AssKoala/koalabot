@@ -1,18 +1,17 @@
-import { json } from "node:stream/consumers";
 import * as KoalaBotSlashCommand from "../../../../api/koalabotslashcommand.js";
 import * as DiscordBotSlashCommand from "../../../../platform/discord/api/discordbotslashcommand.js";
-import * as Discord from "discord.js";
-import { describe, expect, test, beforeEach, afterEach } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
-const factory = DiscordBotSlashCommand.getDiscordSlashCommandObjectFactory() as DiscordBotSlashCommand.DiscordSlashCommandObjectFactory;
-const jsonData = `{"name":"commandname","description":"commandDescription","arguments":[],"commandgroups":[{"name":"groupaname","description":"groupADescription","subcommands":[{"name":"subcommandaname","description":"subcommandadescription","arguments":[{"name":"argstringname","description":"argStringDescription","required":true,"choices":[{"name":"nameA","description":"descA","value":"valueA"},{"name":"nameB","description":"descB","value":"valueB"}],"dataType":2,"options":[]},{"name":"argbooleanname","description":"argBooleanDescription","required":false,"choices":[],"dataType":3,"options":[]},{"name":"argintegername","description":"argIntegerDescription","required":false,"choices":[],"dataType":0,"options":[{"name":"minValue","description":"","value":10},{"name":"maxValue","description":"","value":100}]}]}]}]}`;
+const _factory = DiscordBotSlashCommand.getDiscordSlashCommandObjectFactory() as DiscordBotSlashCommand.DiscordSlashCommandObjectFactory;
+const _jsonData = `{"name":"commandname","description":"commandDescription","arguments":[],"commandgroups":[{"name":"groupaname","description":"groupADescription","subcommands":[{"name":"subcommandaname","description":"subcommandadescription","arguments":[{"name":"argstringname","description":"argStringDescription","required":true,"choices":[{"name":"nameA","description":"descA","value":"valueA"},{"name":"nameB","description":"descB","value":"valueB"}],"dataType":2,"options":[]},{"name":"argbooleanname","description":"argBooleanDescription","required":false,"choices":[],"dataType":3,"options":[]},{"name":"argintegername","description":"argIntegerDescription","required":false,"choices":[],"dataType":0,"options":[{"name":"minValue","description":"","value":10},{"name":"maxValue","description":"","value":100}]}]}]}]}`;
 
 describe('DiscordBotSlashCommand', () => {
-    const name = "name";
-    const desc = "desc";
-    const value = "value";
+    const _name = "name";
+    const _desc = "desc";
+    const _value = "value";
 
-    function TestNameAndDescription(command: any, name: string, desc: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function _TestNameAndDescription(command: any, name: string, desc: string) {
         expect(command.getName()).toBe(name);
         expect(command.getDescription()).toBe(desc);
 
@@ -27,7 +26,7 @@ describe('DiscordBotSlashCommand', () => {
     }
 
     describe("DiscordBotSlashCommandArgument", () => {
-        let commandArg: KoalaBotSlashCommand.KoalaBotSlashCommandArgument;
+        let _commandArg: KoalaBotSlashCommand.KoalaBotSlashCommandArgument;
 
         describe("DiscordBotSlashCommandArgumentString", () => {
             // beforeAll(() => {

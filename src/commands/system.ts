@@ -12,11 +12,12 @@ import { EOL } from 'node:os'
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import crypto from 'crypto'
 import fsPromise from 'node:fs/promises'
-import { GetBadWordSaveFileName, GetBadWordSaveFilePath, GetBadWordSaveFolder } from '../listeners/badwordlistener.js';
+import { GetBadWordSaveFilePath, GetBadWordSaveFolder } from '../listeners/badwordlistener.js';
 import config from 'config';
 import { getCommonLogger, LogManager } from '../logging/logmanager.js';
 import { PerformanceCounter } from '../performancecounter.js';
 import { DiscordPlatform } from '../platform/discord/discordplatform.js'
+import * as Discord from 'discord.js';
 
 class Administration {
     static isSuper(memberId: string): boolean {
@@ -40,8 +41,8 @@ async function showMemoryStats(interaction)
 {
     try {
         const procMemUsage = process.memoryUsage();
-        var memoryUsage = (procMemUsage["rss"] / (1024 * 1024)).toFixed(2);
-        var heapUsage = (procMemUsage["heapTotal"] / (1024 * 1024)).toFixed(2);
+        const memoryUsage = (procMemUsage["rss"] / (1024 * 1024)).toFixed(2);
+        const heapUsage = (procMemUsage["heapTotal"] / (1024 * 1024)).toFixed(2);
 
         const msgCount = Stenographer.getInMemoryMessageCount();
 
@@ -357,11 +358,9 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-expect-error todo cleanup tech debt
-    private async handleBadWordSubcommand(interaction) {
+    private async handleBadWordSubcommand(interaction: Discord.ChatInputCommandInteraction) {
         try {
-            const subCommand = interaction.options.data[0].options[0];
-            let messageResponse = "";
+            const subCommand = interaction.options.data[0]!.options![0];
 
             switch (subCommand.name) {
                 case 'list':
@@ -378,7 +377,8 @@ class SystemCommand extends DiscordBotCommand {
                 break;
 
                 case 'load':
-                    const filePath = GetBadWordSaveFilePath(subCommand.options[1].value, subCommand.options[0].value);
+                {
+                    const filePath = GetBadWordSaveFilePath(subCommand.options![1]!.value!.toString(), subCommand.options![0]!.value!.toString());
                     try 
                     {
                         const file = new AttachmentBuilder(filePath);
@@ -394,23 +394,29 @@ class SystemCommand extends DiscordBotCommand {
                     } catch (e) {
                         await this.runtimeData().logger().logErrorAsync(`Failed to load file ${filePath}, got ${e}`, interaction, true);
                     }
+                }
                 break;
 
                 default:
-                    await interaction.editReply(messageResponse);
+                    await interaction.editReply(`Unknown badword subcommand ${subCommand.name}`);
+                    break;
             }
         } catch (e) {
             await getCommonLogger().logErrorAsync(`Top level error handling badword command, got ${e}`, interaction, true);
         }
     }
 
-    // @ts-expect-error todo cleanup tech debt
-    async handle(interaction) {
+    async handle(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = PerformanceCounter.Create("handleSystemCommand(): ");
 
         // This function must defer the interaction if needed, it's not autodeferred.
 
         try {
+            if (!('_group' in interaction.options)) {
+                getCommonLogger().logErrorAsync(`Options missing group, cannot handle interaction: ${interaction.options}`, interaction, true);
+                return;
+            }
+
             switch (interaction.options._group) {
                 case 'core':
                     await interaction.deferReply();

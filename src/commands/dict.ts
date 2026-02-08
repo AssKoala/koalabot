@@ -4,7 +4,7 @@
 */
 // TODO: Remove Global here -- legacy issues
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import { readJsonFile } from '../sys/jsonreader.js'
 import { PerformanceCounter } from '../performancecounter.js';
 import { getCommonLogger } from '../logging/logmanager.js'
@@ -13,12 +13,18 @@ import fs from 'fs'
 
 import config from 'config';
 
+type DictEntry = {
+    author: string;
+    entry: string;
+    definition: string;
+}
+
 export class Dict {
-    private dictData: any;
+    private dictData!: DictEntry[];
     private readonly dictDataPath: string;
     
     private static instance: Dict = new Dict();
-    private constructor(dataPath = `${config.get<string>("Global.dataPath")}/dictdata.json`) {
+    private constructor(dataPath = `${config.get("Global.dataPath")}/dictdata.json`) {
         this.dictDataPath = dataPath;
     }
 
@@ -28,7 +34,7 @@ export class Dict {
         registerDiscordBotCommand(new DefineCommand('define'), false);
         registerDiscordBotCommand(new IndexCommand('index'), false);
 
-        Dict.instance.dictData = await readJsonFile(Dict.instance.dictDataPath);
+        Dict.instance.dictData = await readJsonFile(Dict.instance.dictDataPath) as DictEntry[];
         Dict.sortDictData();
     }
 
@@ -39,8 +45,7 @@ export class Dict {
     static sortDictData() {
         using perfCounter = PerformanceCounter.Create("sortDictData(): ");
         try {
-            Dict.instance.dictData.sort((a: any, b: any) => {
-                //console.log(sortDictData(): `${a.entry} compareTo ${b.entry} == ${a.entry.localeCompare(b.entry)}`);
+            Dict.instance.dictData.sort((a: DictEntry, b: DictEntry) => {
                 return a.entry.localeCompare(b.entry, undefined, { sensitivity: 'accent' })
             });
             getCommonLogger().logInfo(`Sorted ${this.getDictDataEntryCount()} dictionary items.`);
@@ -66,6 +71,7 @@ export class Dict {
      */
     static async flushDictData() {
         using perfCounter = PerformanceCounter.Create("flushDictData(): ");
+
         try {
             const jsonString = JSON.stringify(Dict.instance.dictData, null, 2);
             fs.writeFile(Dict.instance.dictDataPath, jsonString, err => {
@@ -80,27 +86,16 @@ export class Dict {
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to flush dict data to disk, got error ${e}`);
         }
-        
     }
 
-    /**
-     * Binary search array.  If array is unsorted, behavior is undefined
-     * @param { [object] } array - array of objects
-     * @param {object} target - target object to find
-     * @param {function(left,right)} compareFunc - Function comparing left and right
-     * @returns the index of target in the array, -1 if not found
-     */
-    static getIndexOf(array: any, target: any, compareFunc: any) {
+    static getIndexOf(array: DictEntry[], target: string, compareFunc: ( left: DictEntry, right: string) => number): number {
         try {
             let start = 0;
             let end = array.length - 1;
-            let iterations = 0;
 
             while (start <= end) {
-                let middle = Math.floor((start + end) / 2);
-
-                let result = compareFunc(array[middle], target);
-                //console.log(`getIndexOf(): compare(${array[middle]}, ${target}) == ${result}`);
+                const middle = Math.floor((start + end) / 2);
+                const result = compareFunc(array[middle], target);
 
                 if (result === 0) {
                     return middle;
@@ -109,7 +104,6 @@ export class Dict {
                 } else {
                     end = middle - 1;
                 }
-                iterations++;
             }
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
@@ -118,37 +112,31 @@ export class Dict {
         return -1;
     }
 
-    /**
-     * Find the dictionary entryName and return the author and definition associated with it.
-     * @param {string} entryName - Entry we're looking for
-     * @returns { [string, string] } - Array containing author, definition.  Null if not found 
-     */
-    static findDictionaryEntry(entryName: any) {
+    static findDictionaryEntry(entryName: string): DictEntry | undefined {
         try {
-            let result = this.getIndexOf(Dict.instance.dictData, entryName,
-                (x: any, y: any) => {
+            const foundIndex = this.getIndexOf(Dict.instance.dictData, entryName,
+                (x: DictEntry, y: string) => {
                     const left = x.entry;
                     const right = y;
                     const result = left.localeCompare(right, undefined, { sensitivity: 'accent' });
-                    //console.log(`findDictionaryEntry(): ${left} compareTo ${right} == ${result}`);
 
                     return result;
                 });
 
-            if (result != -1) {
-                return { "author": Dict.instance.dictData[result].author, "definition": Dict.instance.dictData[result].definition };
+            if (foundIndex != -1) {
+                return {
+                    "author": Dict.instance.dictData[foundIndex].author,
+                    "entry": Dict.instance.dictData[foundIndex].entry,
+                    "definition": Dict.instance.dictData[foundIndex].definition
+                };
             }
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to find dictionary entry ${entryName}, got ${e}`);
         }
 
-        return null;
+        return undefined;
     }
 
-    /**
-     * Handles the /dict command
-     * @param {Discord.interaction} interaction - interaction message to reply to
-     */
     static async handleDictCommand(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = PerformanceCounter.Create("handleDictCommand(): ");
 
@@ -171,7 +159,7 @@ export class Dict {
 
             const result = this.findDictionaryEntry(dictRequested);
 
-            if (result != null) {
+            if (result != undefined) {
                 await interaction.editReply(`**DICT:** **${dictRequested}** = ${result.definition} [added by: ${result.author}]`);
             } else {
                 await interaction.editReply(`**DICT:** No definition for ${dictRequested}`);
@@ -182,10 +170,6 @@ export class Dict {
         
     }
 
-    /**
-     * Handles the /define command
-     * @param {Discord.interaction} interaction - discord interaction to reply to
-     */
     static async handleDefineCommand(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = PerformanceCounter.Create("handleDefineCommand(): ");
 
@@ -216,9 +200,9 @@ export class Dict {
                 return;
             }
 
-            let existingEntry: any = this.findDictionaryEntry(entryName);
+            const existingEntry = this.findDictionaryEntry(entryName);
 
-            if (existingEntry === null) {
+            if (existingEntry === undefined) {
                 const newEntry =
                 {
                     "author": interaction.user.username,
@@ -232,7 +216,7 @@ export class Dict {
 
                 await interaction.reply(`**DICT:** Definition for ${entryName} added successfully.`);
             } else {
-                await interaction.reply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry[1]} by ${existingEntry[0]}`);
+                await interaction.reply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry.definition} by ${existingEntry.author}`);
             }
         } catch (e) {
             await getCommonLogger().logErrorAsync(`Failed to set definition, got error ${e}`, interaction);
@@ -241,10 +225,6 @@ export class Dict {
         
     }
 
-    /**
-     * Handles the /index command
-     * @param {Discord.interaction} interaction - discord interaction to reply to
-     */
     static async handleIndexCommand(interaction: Discord.ChatInputCommandInteraction) {
         using perfCounter = PerformanceCounter.Create("handleIndexCommand(): ");
 
@@ -253,7 +233,7 @@ export class Dict {
 
             const search_string = interaction.options.data[0].value!.toString().trim().toLowerCase();
 
-            const matches = Dict.instance.dictData.filter((entry: any) => entry.definition.toLowerCase().includes(search_string));
+            const matches = Dict.instance.dictData.filter((entry: DictEntry) => entry.definition.toLowerCase().includes(search_string));
 
             let outputString;
 

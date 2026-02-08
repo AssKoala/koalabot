@@ -4,6 +4,8 @@ import { Bot } from './bot.js'
 import { Client, REST, Routes } from 'discord.js';
 import config from 'config';
 
+import * as Discord from 'discord.js';
+
 export abstract class CommandManager {
 
     static async importCommands() {
@@ -52,8 +54,8 @@ export abstract class CommandManager {
         }
     }
 
-    static getCommandsJSON(): string[] {
-        const commands: string[] = [];
+    static getCommandsJSON(): Discord.RESTPostAPIChatInputApplicationCommandsJSONBody [] {
+        const commands: Discord.RESTPostAPIChatInputApplicationCommandsJSONBody [] = [];
         Bot.get().client().commands.forEach(entry => {
             commands.push(entry.data.toJSON());
         })

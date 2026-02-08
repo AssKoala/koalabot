@@ -2,7 +2,6 @@ import { DiscordMessageCreateListener, WordListener } from "../api/discordmessag
 import { KoalaBotSystem } from "../api/koalabotsystem.js";
 import { ListenerManager } from "../listenermanager.js";
 import { WordTracker } from "../sys/wordtracker.js";
-import { LogManager } from "../logging/logmanager.js";
 import { Logger } from '../api/koalabotsystem.js'
 import config from "config";
 

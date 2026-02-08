@@ -8,6 +8,7 @@ import config from 'config';
 import { GrokApi } from '../../llm/api/grok.js';
 import { OpenAIBot } from './openaibot.js';
 import { LLMInteractionMessage } from '../llminteractionmessage.js';
+import { getCommonLogger } from '../../logging/logmanager.js';
 
 
 class GrokImageData implements LLMGeneratedImageData {
@@ -61,7 +62,9 @@ export class GrokResponse implements LLMCompletion {
             if (messageData.length > 0) {
                 return messageData;
             }
-        } catch { }
+        } catch { 
+            getCommonLogger().logError("GrokResponse::getResponseText(): Failed to parse response text from Grok response.");
+        }
 
         return "";
     }

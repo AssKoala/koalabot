@@ -3,7 +3,7 @@
 */
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { PerformanceCounter } from '../performancecounter.js';
 
 class PillowCommand extends DiscordBotCommand  {

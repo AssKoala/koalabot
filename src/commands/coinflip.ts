@@ -5,7 +5,7 @@
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { getRandomValues } from 'node:crypto';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { PerformanceCounter } from '../performancecounter.js';
 
 class CoinFlipCommand extends DiscordBotCommand {
@@ -31,7 +31,7 @@ class CoinFlipCommand extends DiscordBotCommand {
             });
 
             let outputStr = "";
-            let flips = (count > 1) ? "flips" : "flip";        
+            const flips = (count > 1) ? "flips" : "flip";        
 
             if (total != 0) {
                 let flipResult;

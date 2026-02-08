@@ -4,14 +4,19 @@
 import config from 'config';
 
 import { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder, SlashCommandBuilder } from 'discord.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js'
 import { PerformanceCounter } from '../performancecounter.js';
 
+interface AffirmationEntry {
+    author: string;
+    entry: string;
+}
+
 class AffirmationCommand extends DiscordBotCommand  {
-    private affirmationData: any = undefined;
+    private affirmationData!: AffirmationEntry[];
     
     async loadData(affirmationFilePath: string) {
-        this.affirmationData = await this.runtimeData().helpers().readJsonFile(affirmationFilePath);
+        this.affirmationData = await this.runtimeData().helpers().readJsonFile(affirmationFilePath) as AffirmationEntry[];
     }
 
     getAffirmationCount(): number {

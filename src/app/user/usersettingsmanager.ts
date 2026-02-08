@@ -101,9 +101,9 @@ export class UserSettingsManager {
     // @ts-expect-error todo cleanup tech debt
     async flush() : Promise<boolean> {
         try {
-            let userData = new Array<UserSettingsData>();
+            const userData = new Array<UserSettingsData>();
 
-            this.userSettings.forEach((value: UserSettingsData, key: string) => {
+            this.userSettings.forEach((value: UserSettingsData, _key: string) => {
                 userData.push(value);
             });
 

@@ -93,9 +93,9 @@
         token: "",                                      // Discord bot token
         appId: "",                                      // Discord app id for bot
         guildIds: "",                                   // Comma separate list of guilds the bot will join.
-        clearSlashCommandsOnStartup: "true",            // Clear slash commands on startup, recommend true for production use.
-        deployGuildSlashCommandsOnStartup: "true",      // Deploy slash commands to guilds, recommend true for production use
-        deployGlobalSlashCommandsOnStartup: "false",    // Deploy slash commands globally for bot, recommend to always be false
+        clearSlashCommandsOnStartup: true,              // Clear slash commands on startup, recommend true for production use.
+        deployGuildSlashCommandsOnStartup: true,        // Deploy slash commands to guilds, recommend true for production use
+        deployGlobalSlashCommandsOnStartup: false,      // Deploy slash commands globally for bot, recommend to always be false
         attachmentTitleMaxLength: 256,                  // Title length for image embeds
 		attachmentDescriptionMaxLength: 1024,           // Description length for image embeds
     },

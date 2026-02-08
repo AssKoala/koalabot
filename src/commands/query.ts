@@ -2,9 +2,9 @@
 	Ask AI a question without context
 */
 
-import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { OpenAiApi } from '../llm/api/openai.js';
-import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
+import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import { PerformanceCounter } from '../performancecounter.js';
 import { getCommonLogger } from '../logging/logmanager.js'
 import { DiscordPlatform } from '../platform/discord/discordplatform.js';
@@ -59,8 +59,7 @@ class QueryCommand extends DiscordBotCommand {
             const responseText = completion.choices[0].message.content;
             getCommonLogger().logInfo(`Asked: ${question}, got: ${responseText}`);
 
-            //await interaction.editReply(`Query \"${question}\": ${responseText}`);
-            await DiscordPlatform.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
+            await DiscordPlatform.editAndSplitReply(interaction, `Query "${question}": ${responseText}`);
         }
         catch (e) {
             await getCommonLogger().logErrorAsync(`Failed to get chat reply for ${question}, got error ${e}`, interaction, true);
@@ -83,9 +82,8 @@ class QueryCommand extends DiscordBotCommand {
             const responseText = completion.data.choices[0].text;
 
             getCommonLogger().logInfo(`Asked: ${question}, got: ${responseText}`);
-            await DiscordPlatform.editAndSplitReply(interaction, `Query \"${question}\": ${responseText}`);
+            await DiscordPlatform.editAndSplitReply(interaction, `Query "${question}": ${responseText}`);
         } catch (e) {
-
             await getCommonLogger().logErrorAsync(`Failed to get davinci reply for ${question}, got error ${e}`, interaction, true);
         }
     }

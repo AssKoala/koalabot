@@ -1,4 +1,4 @@
-import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/discordmessagelistener.js";
+import { DiscordMessageCreateListener } from "../api/discordmessagelistener.js";
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
 import { Message } from 'discord.js';
 import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
@@ -6,13 +6,13 @@ import { OpenAiApi } from '../llm/api/openai.js';
 import { readJsonFileSync } from '../sys/jsonreader.js'
 import config from 'config';
 
-namespace MessageResponderInternal {
+namespace MessageResponderInternal {    // eslint-disable-line @typescript-eslint/no-namespace
     export enum MessageResponseType {
-        Positive,
-        Negative,
         Neutral,
         None,
-        Found
+        Found,
+        Positive,
+        Negative
     }
 
     export interface MessageResponseSearch {
@@ -51,15 +51,18 @@ namespace MessageResponderInternal {
             return response;
         }
 
-        static Create(data: any): MessageResponseSearchSimple  {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        static Create(data: any): MessageResponseSearchSimple | undefined {
+            
             try {
                 const search = new (<any>MessageResponderInternal)[data.className](data.id, data.searchText);
                 return search;
             } catch (e) {
-                // @ts-expect-error todo cleanup tech debt
-                return null;
+                GetKoalaBotSystem().getLogger().logError(`Failed to create MessageResponseSearchSimple, got ${e}`);
+                return undefined;
             }
         }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
     }
     
     export class MessageResponseSearchQueryAI implements MessageResponseSearch {
@@ -69,8 +72,7 @@ namespace MessageResponderInternal {
         className: string;
         private lastQuery;
 
-        // @ts-expect-error todo cleanup tech debt
-        constructor(id: string, query: string, initialSearchText) {
+        constructor(id: string, query: string, initialSearchText: string[]) {
             this.id = id;
             this.query = query;
             this.initialSearchText = initialSearchText;
@@ -78,11 +80,11 @@ namespace MessageResponderInternal {
             this.lastQuery = 0;
         }
 
-        // @ts-expect-error todo cleanup tech debt
         async getResponseType(runtimeData: DiscordBotRuntimeData, message: Message) {
+            let response = MessageResponseType.None;
+
             try {
                 let shouldQuery = false;
-                let response = MessageResponseType.None;
 
                 this.initialSearchText.every(text => {
                     if (message.content.toLowerCase().match(text) != null) {
@@ -106,35 +108,36 @@ namespace MessageResponderInternal {
                     // Reset the query timer
                     this.lastQuery = Date.now();
 
-                    const responseText = completion.choices[0].message.content;
+                    const responseText = completion.choices[0].message.content!;
 
-                    // @ts-expect-error todo cleanup tech debt
                     if (responseText.toLowerCase().includes("positive")) {
                         response = MessageResponseType.Positive;
-                    } // @ts-expect-error todo cleanup tech debt 
+                    }
                     else if (responseText.toLowerCase().includes("negative")) {
                         response = MessageResponseType.Negative;
-                    } // @ts-expect-error todo cleanup tech debt 
+                    }
                     else if (responseText.toLowerCase().includes("neutral")) {
                         response = MessageResponseType.Neutral;
                     }
                 }
-                
-                return response;
             } catch (e) {
                 GetKoalaBotSystem().getLogger().logError(`MessageResponseSearchQueryAI.getResponseType Failure!, got ${e}`);
             }
+            
+            return response;
         }
 
-        static Create(data: any): MessageResponseSearchQueryAI  {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        static Create(data: any): MessageResponseSearchQueryAI | undefined {
             try {
                 const search = new (<any>MessageResponderInternal)[data.className](data.id, data.query, data.initialSearchText);
                 return search;
             } catch (e) {
-                // @ts-expect-error todo cleanup tech debt
-                return null;
+                GetKoalaBotSystem().getLogger().logError(`Failed to create MessageResponseSearchQueryAI, got ${e}`);
+                return undefined;
             }
         }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
     }
 
     export class MessageResponseActionSimpleReaction implements MessageResponseAction {
@@ -160,15 +163,17 @@ namespace MessageResponderInternal {
             }
         }
 
-        static Create(data: any): MessageResponseActionSimpleReaction  {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        static Create(data: any): MessageResponseActionSimpleReaction | undefined {
             try {
                 const action = new (<any>MessageResponderInternal)[data.className](data.id, data.reaction);
                 return action;
             } catch (e) {
-                // @ts-expect-error todo cleanup tech debt
-                return null;
+                GetKoalaBotSystem().getLogger().logError(`Failed to create MessageResponseActionSimpleReaction, got ${e}`);
+                return undefined;
             }
         }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
     }
 
     export class MessageResponseActionReact implements MessageResponseAction {
@@ -211,15 +216,18 @@ namespace MessageResponderInternal {
             }
         }
 
-        static Create(data: any): MessageResponseActionReact  {
+
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        static Create(data: any): MessageResponseActionReact | undefined {
             try {
                 const action = new (<any>MessageResponderInternal)[data.className](data.id, data.positiveReaction, data.negativeReaction, data.neutralReaction);
                 return action;
             } catch (e) {
-                // @ts-expect-error todo cleanup tech debt
-                return null;
+                GetKoalaBotSystem().getLogger().logError(`Failed to create MessageResponseActionReact, got ${e}`);
+                return undefined;
             }
         }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
     }
 
     export class MessageResponseRule {
@@ -244,18 +252,17 @@ export class MessageResponder implements DiscordMessageCreateListener {
     // @ts-expect-error todo cleanup tech debt
     private dataSet: MessageResponderInternal.MessageResponseDataSet;
 
-    // @ts-expect-error todo cleanup tech debt
-    constructor(filePath: string = null) {
+    constructor(filePath: string) {
         try {
             GetKoalaBotSystem().getLogger().logInfo(`Loading message responder dataset from: ${filePath}`);
-            if (filePath != null) {
+            if (filePath) {
                 const data = readJsonFileSync(filePath);
     
                 if (data != null) {
                     this.dataSet = new MessageResponderInternal.MessageResponseDataSet();
     
-                    // @ts-expect-error todo cleanup tech debt
-                    data.searches.forEach(search => {
+                    /* eslint-disable @typescript-eslint/no-explicit-any */
+                    data.searches.forEach((search: any) => {
                         const newSearch = (<any>MessageResponderInternal)[search.className].Create(search);
                         if (newSearch != null) {
                             this.dataSet.searches.push(newSearch);    
@@ -264,8 +271,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
                         }
                     });
     
-                    // @ts-expect-error todo cleanup tech debt
-                    data.actions.forEach(action => {
+                    data.actions.forEach((action: any) => {
                         const newAction = (<any>MessageResponderInternal)[action.className].Create(action);
                         if (newAction != null) {
                             this.dataSet.actions.push(newAction);
@@ -274,10 +280,9 @@ export class MessageResponder implements DiscordMessageCreateListener {
                         }
                     });
     
-                    // @ts-expect-error todo cleanup tech debt
-                    data.rules.forEach(rule => {
-                        let search = this.dataSet.searches.find(search => search.id == rule.searchid);
-                        let action = this.dataSet.actions.find(action => action.id == rule.actionid);
+                    data.rules.forEach((rule: any) => {
+                        const search = this.dataSet.searches.find(search => search.id == rule.searchid);
+                        const action = this.dataSet.actions.find(action => action.id == rule.actionid);
 
                         if (search != null && action != null) {
                             this.dataSet.rules.push(new MessageResponderInternal.MessageResponseRule(search, action));
@@ -285,6 +290,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
                             GetKoalaBotSystem().getLogger().logError(`Failed to parse ${rule}`);
                         }
                     });
+                    /* eslint-enable @typescript-eslint/no-explicit-any */
                 }
 
                 GetKoalaBotSystem().getLogger().logInfo(`Successfully loaded message responder dataset.`);
@@ -305,7 +311,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
                 await this.dataSet.rules[i].action.performAction(runtimeData, message, response);
             }
         } catch (e) {
-
+            GetKoalaBotSystem().getLogger().logError(`MessageResponder.onDiscordMessageCreate Failure!, got ${e}`);
         }
     }
 }

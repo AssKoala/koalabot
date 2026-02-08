@@ -117,6 +117,7 @@ export abstract class ListenerManager {
 
     static processMessageReactionAddListeners(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) 
 	{
+        // This will break with global message react listeners since it assumes guildId exists
 		const guildLogger = LogManager.get().discordLogManager.getGuildLogger(reaction.message.guildId!);
 		const channelLogger = LogManager.get().discordLogManager.getChannelLogger(reaction.message.channelId!);
 

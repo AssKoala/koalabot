@@ -2,6 +2,9 @@
     AI Image Generation
 */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 
 import { SlashCommandBuilder, AttachmentBuilder, ChatInputCommandInteraction } from 'discord.js';
@@ -59,7 +62,7 @@ class ImageGenerationData {
 
         this.base_images = [];
 
-        let base_images = request.getSubcommand().getOptionValueString("base_images", undefined);
+        const base_images = request.getSubcommand().getOptionValueString("base_images", undefined);
 
         if (base_images != null) {
             const base_images_array = base_images.split('|');
@@ -110,7 +113,7 @@ class ImageDownloadedFileInfo {
 class OpenAI {
     private static async getImageResponse(imageGenData: ImageGenerationData, interaction: ChatInputCommandInteraction) {
         using perfCounter = PerformanceCounter.Create("image::getImageUrl(): ");
-        let image_url = null;
+        const image_url = null;
         let error = null;
         let response = null;
 
@@ -127,8 +130,9 @@ class OpenAI {
                     });
                     break;
 
-                case 'gpt-image-1':                    
-                    const quality = imageGenData.quality == 'standard' ? 'auto' : imageGenData.quality
+                case 'gpt-image-1': 
+                {                    
+                    const quality = imageGenData.quality == 'standard' ? 'auto' : imageGenData.quality;
 
                     if (imageGenData.base_images.length == 0) {
                         response = await OpenAiApi.getInterface().images.generate({
@@ -139,11 +143,11 @@ class OpenAI {
                             background: `${imageGenData.transparency}` as any,
                         });
                     } else {
-                        let baseImageFileList = [];                  
+                        const baseImageFileList = [];                  
 
                         // Check if there are base images and download them somewhere temporary
                         for (let i = 0; i < imageGenData.base_images.length; i++) {
-                            let downloadedFileInfo = await this.downloadUrlToFile(imageGenData.base_images[i]);
+                            const downloadedFileInfo = await this.downloadUrlToFile(imageGenData.base_images[i]);
                             baseImageFileList.push(downloadedFileInfo.fullpath);
                         }
 
@@ -167,7 +171,7 @@ class OpenAI {
                         // Delete downloaded files
                         baseImageFileList.forEach((file) => { rm(file);});
                     }                    
-
+                }
                     break;
             }
             
@@ -520,10 +524,10 @@ class ImageCommand extends DiscordBotCommand {
         // Pull in checkpoints dynamically for use in the slash command we send to discord
         const checkpoints = config.get<string>("ImageGeneration.StableDiffusion.checkpoints").split(',');
 
-        let choices: any = [];
+        const choices: any = [];
 
         const getEntry = function (checkpointString: string) {
-            let split = checkpointString.split('(');
+            const split = checkpointString.split('(');
             let name = ''
             let value = '';
             
