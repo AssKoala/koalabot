@@ -119,5 +119,15 @@
     },
     Stenographer: {
         storeImages: false                  // If true, store images in stenographer logs
+    },
+    Database: {
+        enabled: false,                     // If true, connect to PostgreSQL for persistent storage
+        url: "",                            // PostgreSQL connection URL (e.g. postgresql://user:pass@host:5432/db). If set, overrides host/port/database/user/password.
+        host: "localhost",                  // PostgreSQL host
+        port: 5432,                         // PostgreSQL port
+        database: "koalabot",               // PostgreSQL database name
+        user: "koalabot",                   // PostgreSQL user
+        password: "",                       // PostgreSQL password
+        migrationsPath: "./db/migrations"   // Path to SQL migration files
     }
 }

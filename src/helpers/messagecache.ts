@@ -37,6 +37,10 @@ export class MessageCache
         return this._authorMessageCount.get(author);
     }
 
+    getAuthorCounts(): Map<string, number> {
+        return this._authorMessageCount;
+    }
+
     maxEntries(): number {
         return this._maxEntries;
     }

@@ -1,5 +1,5 @@
 import { GeminiApi } from "../../llm/api/gemini.js";
-import { LLMBot, LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
+import { LLMBot, LLMCompletion, LLMGeneratedImageData, LLMTokenUsage } from "../llmbot.js";
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { Stenographer } from "../../app/stenographer/discordstenographer.js";
@@ -59,6 +59,19 @@ export class GeminiResponse implements LLMCompletion {
             getCommonLogger().logError(`GeminiResponse::getResponseText(): Failed to get response text, returning empty string. Error: ${e}`);
             return "";
         }
+    }
+
+    getTokenUsage(): LLMTokenUsage | null {
+        try {
+            const usage = this.response.usageMetadata;
+            if (usage) {
+                return {
+                    promptTokens: usage.promptTokenCount ?? null,
+                    completionTokens: usage.candidatesTokenCount ?? null
+                };
+            }
+        } catch { }
+        return null;
     }
 }
 

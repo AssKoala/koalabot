@@ -1,6 +1,6 @@
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
-import { LLMBot, LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
+import { LLMBot, LLMCompletion, LLMGeneratedImageData, LLMTokenUsage } from "../llmbot.js";
 import { OpenAiApi } from '../api/openai.js';
 import { Stenographer } from '../../app/stenographer/discordstenographer.js';
 import { PerformanceCounter } from "../../performancecounter.js";
@@ -17,9 +17,15 @@ interface ImageContentType {
 
 export class OpenAIResponse implements LLMCompletion {
     private response: OpenAiSdk.OpenAI.Responses.Response;
+    private priorTokenUsage: LLMTokenUsage | null = null;
 
     constructor(response: unknown) {
         this.response = response as OpenAiSdk.OpenAI.Responses.Response;
+    }
+
+    addPriorTokenUsage(usage: LLMTokenUsage | null): void {
+        if (!usage) return;
+        this.priorTokenUsage = usage;
     }
 
     getResponseRaw(): unknown {
@@ -65,12 +71,32 @@ export class OpenAIResponse implements LLMCompletion {
                         return messageData;
                     }
                 }
-            }           
+            }
         } catch {
             console.error("Error extracting message text from response");
         }
 
         return "";
+    }
+
+    getTokenUsage(): LLMTokenUsage | null {
+        try {
+            const usage = this.response.usage;
+            if (usage) {
+                const base: LLMTokenUsage = {
+                    promptTokens: usage.input_tokens ?? null,
+                    completionTokens: usage.output_tokens ?? null
+                };
+                if (this.priorTokenUsage) {
+                    return {
+                        promptTokens: (base.promptTokens ?? 0) + (this.priorTokenUsage.promptTokens ?? 0),
+                        completionTokens: (base.completionTokens ?? 0) + (this.priorTokenUsage.completionTokens ?? 0)
+                    };
+                }
+                return base;
+            }
+        } catch { }
+        return this.priorTokenUsage;
     }
 }
 
@@ -318,7 +344,9 @@ export class OpenAIBot extends LLMBot {
 
         // If we made a function call, need to get a new completion with the tool output
         if (madeFunctionCall) {
+            const firstUsage = completion.getTokenUsage();
             completion = await this.getOpenAICompletion(runtimeData, tracker);
+            (completion as OpenAIResponse).addPriorTokenUsage(firstUsage);
 
             // Copy all responses into the input for future context
             completion.getResponseRaw().output.forEach((item: unknown) => {

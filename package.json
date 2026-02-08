@@ -21,6 +21,7 @@
     "node-fetch": "^3.3.2",
     "ollama": "^0.6.0",
     "openai": "^6.0.1",
+    "pg": "^8.18.0",
     "tiktoken": "^1.0.22",
     "typescript": "^5.9.3",
     "validator": "^13.15.15",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@eslint/json": "^0.14.0",
+    "@types/pg": "^8.16.0",
     "eslint": "^9.39.2",
     "globals": "^17.1.0",
     "jiti": "^2.6.1",

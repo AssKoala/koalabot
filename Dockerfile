@@ -16,6 +16,7 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/db ./db
 RUN find ./dist -name "*.js.map" -exec rm {} \;
 RUN rm -rf ./dist/__mocks__
 RUN rm -rf ./dist/__tests__

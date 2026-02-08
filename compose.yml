@@ -1,10 +1,35 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: koalabot-postgres
+    environment:
+      - POSTGRES_DB=koalabot
+      - POSTGRES_USER=koalabot
+      - POSTGRES_PASSWORD=koalabot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U koalabot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   koalabot:
     container_name: koalabot-dev
     build:
       dockerfile: ./Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
+      - DATABASE_ENABLED=true
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=koalabot
+      - DATABASE_USER=koalabot
+      - DATABASE_PASSWORD=koalabot
     volumes:
       # override config settings, necessary for sensitive settings such as API keys
       - ./production.json5:/app/config/production.json5
@@ -12,3 +37,6 @@ services:
       - ./logs:/logs
       - ./temp:/temp
     restart: unless-stopped
+
+volumes:
+  pgdata:

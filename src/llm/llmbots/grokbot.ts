@@ -1,6 +1,6 @@
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
-import { LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
+import { LLMCompletion, LLMGeneratedImageData, LLMTokenUsage } from "../llmbot.js";
 import { createXai } from '@ai-sdk/xai';
 import { generateText } from 'ai';
 import { PerformanceCounter } from "../../performancecounter.js";
@@ -64,6 +64,26 @@ export class GrokResponse implements LLMCompletion {
         } catch { }
 
         return "";
+    }
+
+    getTokenUsage(): LLMTokenUsage | null {
+        try {
+            interface GrokUsageResponse {
+                usage?: {
+                    promptTokens?: number;
+                    completionTokens?: number;
+                };
+            }
+
+            const usage = (this.response as GrokUsageResponse).usage;
+            if (usage) {
+                return {
+                    promptTokens: usage.promptTokens ?? null,
+                    completionTokens: usage.completionTokens ?? null
+                };
+            }
+        } catch { }
+        return null;
     }
 }
 

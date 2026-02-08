@@ -26,5 +26,15 @@
         "clientId": "REDDIT_CLIENT_ID",
         "clientSecret": "REDDIT_CLIENT_SECRET",
         "userAgent": "REDDIT_USER_AGENT"
+    },
+    "Database": {
+        "enabled": "DATABASE_ENABLED",
+        "url": "DATABASE_URL",
+        "host": "DATABASE_HOST",
+        "port": "DATABASE_PORT",
+        "database": "DATABASE_NAME",
+        "user": "DATABASE_USER",
+        "password": "DATABASE_PASSWORD",
+        "migrationsPath": "DATABASE_MIGRATIONS_PATH"
     }
 }

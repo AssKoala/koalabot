@@ -51,6 +51,26 @@ process.on('unhandledRejection', error => {
     LogManager.get().commonLogger.logErrorAsync(`Unhandled Process Rejection, got ${error}`);
 });
 
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    LogManager.get().commonLogger.logInfo('Received SIGTERM, shutting down gracefully.');
+    await DatabaseManager.shutdownIfAvailable();
+    process.exit(0);
+});
+process.on('SIGINT', async () => {
+    LogManager.get().commonLogger.logInfo('Received SIGINT, shutting down gracefully.');
+    await DatabaseManager.shutdownIfAvailable();
+    process.exit(0);
+});
+
+// Database (optional, graceful degradation if unavailable)
+import { DatabaseManager } from './db/databasemanager.js';
+try {
+    await DatabaseManager.init();
+} catch (e) {
+    LogManager.get().commonLogger.logErrorAsync(`Database initialization failed, continuing without DB: ${e}`);
+}
+
 // Load previous logs
 import { Stenographer } from './app/stenographer/discordstenographer.js';
 Stenographer.init(LogManager.get());
@@ -58,6 +78,7 @@ Stenographer.init(LogManager.get());
 // Load user settings
 import { UserSettingsManager } from './app/user/usersettingsmanager.js';
 UserSettingsManager.init(`${config.get("Global.dataPath")}/settings.json`);
+await UserSettingsManager.get().loadFromDatabase();
 
 /* Initialize the bot */
 import { Bot } from './bot.js'
