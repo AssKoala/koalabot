@@ -39,10 +39,10 @@ Set the `DATABASE_ENABLED` environment variable to `true` (case-insensitive).
 |----------|-------------|---------|
 | `DATABASE_ENABLED` | Enable PostgreSQL persistence | `false` |
 | `DATABASE_URL` | Full connection string (overrides individual params) | — |
-| `DATABASE_HOST` | PostgreSQL host | — |
-| `DATABASE_PORT` | PostgreSQL port | — |
-| `DATABASE_NAME` | Database name | — |
-| `DATABASE_USER` | Database user | — |
+| `DATABASE_HOST` | PostgreSQL host | `localhost` |
+| `DATABASE_PORT` | PostgreSQL port | `5432` |
+| `DATABASE_NAME` | Database name | `koalabot` |
+| `DATABASE_USER` | Database user | `koalabot` |
 | `DATABASE_PASSWORD` | Database password | — |
 
 ### Docker Compose

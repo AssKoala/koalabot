@@ -1,3 +1,5 @@
+# Exclude build artifacts and dependencies to keep Docker build context small
+# and prevent host node_modules from clobbering the container's npm install cache layer.
 .git/
 .vscode/
 buildsys/

@@ -1,3 +1,11 @@
+# Before deploying to production:
+#   1. Change POSTGRES_PASSWORD, DATABASE_USER, and DATABASE_PASSWORD below (they must match)
+#   2. Ensure a production.json5 exists with your API keys and Discord token
+#
+# Alternatively, replace the individual DATABASE_HOST/PORT/NAME/USER/PASSWORD vars
+# with a single DATABASE_URL (e.g. postgresql://user:pass@host:5432/dbname).
+# Migrations run automatically on first startup — no manual DB setup required.
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -5,7 +13,7 @@ services:
     environment:
       - POSTGRES_DB=koalabot
       - POSTGRES_USER=koalabot
-      - POSTGRES_PASSWORD=koalabot  # CHANGE IN PRODUCTION
+      - POSTGRES_PASSWORD=koalabot  # CHANGE IN PRODUCTION (must match DATABASE_PASSWORD)
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -25,11 +33,14 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_ENABLED=true
+      # Option 1: Individual connection params (default)
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_NAME=koalabot
-      - DATABASE_USER=koalabot  # CHANGE IN PRODUCTION
-      - DATABASE_PASSWORD=koalabot  # CHANGE IN PRODUCTION
+      - DATABASE_USER=koalabot  # CHANGE IN PRODUCTION (must match POSTGRES_USER)
+      - DATABASE_PASSWORD=koalabot  # CHANGE IN PRODUCTION (must match POSTGRES_PASSWORD)
+      # Option 2: Single connection string (uncomment to use instead of individual params)
+      # - DATABASE_URL=postgresql://koalabot:koalabot@postgres:5432/koalabot
     volumes:
       # override config settings, necessary for sensitive settings such as API keys
       - ./production.json5:/app/config/production.json5
