@@ -90,6 +90,8 @@ export class GeminiBot extends LLMBot {
         super(aiModel, enabled);
     }
 
+    protected override getProviderName(): string { return 'gemini'; }
+
     protected override async getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string): Promise<LLMMessageTracker> {
         const tempTracker = new LLMMessageTracker(
                                 config.get("Chat.maxMessages"),

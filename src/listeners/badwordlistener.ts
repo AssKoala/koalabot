@@ -214,7 +214,11 @@ class BadWordListener implements WordListener {
                     }
                 });
             }
-            // Fire-and-forget: migrate JSON events to DB on startup, and load from DB if JSON is missing
+            // Async-in-constructor: these fire-and-forget calls migrate JSON events to DB
+            // and load from DB when JSON is missing. There is a brief window during startup
+            // where lastUsedMap may not yet reflect DB data. The defensive check at
+            // onWordDetected (line ~307: `if (!this.lastUsedMap.has(...)`) handles this
+            // gracefully by creating a new tracker if data hasn't loaded yet.
             this.migrateEventsToDatabase();
             this.loadMissingFromDatabase();
         } catch (e) {

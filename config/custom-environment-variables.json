@@ -34,7 +34,6 @@
         "port": "DATABASE_PORT",
         "database": "DATABASE_NAME",
         "user": "DATABASE_USER",
-        "password": "DATABASE_PASSWORD",
-        "migrationsPath": "DATABASE_MIGRATIONS_PATH"
+        "password": "DATABASE_PASSWORD"
     }
 }

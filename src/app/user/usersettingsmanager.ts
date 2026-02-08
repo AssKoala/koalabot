@@ -3,6 +3,7 @@ import fs from 'fs'
 import config from 'config';
 import { DatabaseManager } from '../../db/databasemanager.js';
 import { UserSettingsRepository } from '../../db/usersettingsrepository.js';
+import { getCommonLogger } from '../../logging/logmanager.js';
 
 export class UserWeatherSettings {
     location: string;
@@ -73,7 +74,7 @@ export class UserSettingsManager {
                         chatSettings: data.chatSettings
                     });
                 }
-                console.log(`UserSettingsManager: Migrated ${this.userSettings.size} user settings to database.`);
+                getCommonLogger().logInfo(`UserSettingsManager: Migrated ${this.userSettings.size} user settings to database.`);
             } else if (!isEmpty) {
                 // Load from DB, but don't overwrite users already loaded from JSON.
                 // JSON is always written on every set(), so if the user changed settings
@@ -94,7 +95,7 @@ export class UserSettingsManager {
                     this.userSettings.set(row.user_name, newData);
                     loadedCount++;
                 }
-                console.log(`UserSettingsManager: Loaded ${loadedCount} user settings from database (${rows.length - loadedCount} already in JSON).`);
+                getCommonLogger().logInfo(`UserSettingsManager: Loaded ${loadedCount} user settings from database (${rows.length - loadedCount} already in JSON).`);
 
                 // Re-sync JSON-loaded settings back to DB (in case they were changed during outage)
                 for (const [_name, data] of this.userSettings) {
@@ -105,7 +106,7 @@ export class UserSettingsManager {
                 }
             }
         } catch (e) {
-            console.error(`UserSettingsManager: Failed to load from database, got ${e}`);
+            getCommonLogger().logErrorAsync(`UserSettingsManager: Failed to load from database, got ${e}`);
         }
     }
 

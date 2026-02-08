@@ -97,7 +97,9 @@ export class GrokBot extends OpenAIBot {
         });
     }
 
-    protected override hasAutomaticImageGeneration(): boolean { 
+    protected override getProviderName(): string { return 'grok'; }
+
+    protected override hasAutomaticImageGeneration(): boolean {
         return false;
     }
 

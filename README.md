@@ -26,6 +26,38 @@ All bot features can be configured by overriding the various options listed in *
 
 The particularly confidential (and required) options can also be overridden via environment variables.  See *config/custom-environment-variables.json5* the full list.
 
+## Database (Optional)
+
+KoalaBot supports an optional PostgreSQL database for persisting leaderboard stats, bad word events, user settings, and LLM usage metrics across restarts. The bot runs identically without a database — all data falls back to in-memory/JSON storage.
+
+### Enabling
+Set the `DATABASE_ENABLED` environment variable to `true` (case-insensitive).
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_ENABLED` | Enable PostgreSQL persistence | `false` |
+| `DATABASE_URL` | Full connection string (overrides individual params) | — |
+| `DATABASE_HOST` | PostgreSQL host | — |
+| `DATABASE_PORT` | PostgreSQL port | — |
+| `DATABASE_NAME` | Database name | — |
+| `DATABASE_USER` | Database user | — |
+| `DATABASE_PASSWORD` | Database password | — |
+
+### Docker Compose
+The included `compose.yml` starts both the bot and a PostgreSQL container. Update the default credentials before deploying to production.
+
+```bash
+docker compose -f compose.yml up -d
+```
+
+### Migrations
+Database schema migrations run automatically on startup from `db/migrations/`. Applied migrations are tracked in the `schema_migrations` table.
+
+### Graceful Degradation
+If the database is unreachable or disabled, the bot continues normally. All DB writes are fire-and-forget — a transient database outage will not affect bot responsiveness.
+
 ## High level program flow
 
 ### Bot

@@ -5,7 +5,7 @@ services:
     environment:
       - POSTGRES_DB=koalabot
       - POSTGRES_USER=koalabot
-      - POSTGRES_PASSWORD=koalabot
+      - POSTGRES_PASSWORD=koalabot  # CHANGE IN PRODUCTION
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,8 +28,8 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_NAME=koalabot
-      - DATABASE_USER=koalabot
-      - DATABASE_PASSWORD=koalabot
+      - DATABASE_USER=koalabot  # CHANGE IN PRODUCTION
+      - DATABASE_PASSWORD=koalabot  # CHANGE IN PRODUCTION
     volumes:
       # override config settings, necessary for sensitive settings such as API keys
       - ./production.json5:/app/config/production.json5

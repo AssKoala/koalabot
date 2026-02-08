@@ -88,9 +88,11 @@ export class OpenAIResponse implements LLMCompletion {
                     completionTokens: usage.output_tokens ?? null
                 };
                 if (this.priorTokenUsage) {
+                    const addNullable = (a: number | null, b: number | null): number | null =>
+                        (a === null && b === null) ? null : (a ?? 0) + (b ?? 0);
                     return {
-                        promptTokens: (base.promptTokens ?? 0) + (this.priorTokenUsage.promptTokens ?? 0),
-                        completionTokens: (base.completionTokens ?? 0) + (this.priorTokenUsage.completionTokens ?? 0)
+                        promptTokens: addNullable(base.promptTokens, this.priorTokenUsage.promptTokens),
+                        completionTokens: addNullable(base.completionTokens, this.priorTokenUsage.completionTokens)
                     };
                 }
                 return base;
@@ -112,7 +114,9 @@ export class OpenAIBot extends LLMBot {
         }
     }
 
-    protected override hasAutomaticImageGeneration(): boolean { 
+    protected override getProviderName(): string { return 'openai'; }
+
+    protected override hasAutomaticImageGeneration(): boolean {
         return true;
     }
 

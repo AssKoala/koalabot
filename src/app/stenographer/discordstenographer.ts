@@ -11,7 +11,7 @@ import { getCommonLogger, LogManager } from '../../logging/logmanager.js';
 import * as Discord from 'discord.js';
 import config from 'config';
 import { DatabaseManager } from '../../db/databasemanager.js';
-import { LeaderboardRepository } from '../../db/leaderboardrepository.js';
+import { MessageCountRepository } from '../../db/messagecountrepository.js';
 
 /**
  * Caches discord messages in memory for use in bot processing
@@ -329,7 +329,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
 
                 // Fire-and-forget DB message count increment
                 if (DatabaseManager.isAvailable()) {
-                    LeaderboardRepository.incrementMessageCount(message.guildId!, message.author.username).catch(() => {});
+                    MessageCountRepository.incrementMessageCount(message.guildId!, message.author.username).catch(() => {});
                 }
             }
         } catch (e) {

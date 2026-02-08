@@ -73,6 +73,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         };
     }
 
+    protected abstract getProviderName(): string;
     protected abstract getVisionContent(_promptText: string, _imageUrls: string[]): Promise<unknown[]>;
     protected abstract getCompletion(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _tracker: LLMMessageTracker): Promise<LLMCompletion>;
     protected abstract getImageCompletion(_runtimeData: DiscordBotRuntimeData, _systemPrompt: string, _promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion>;
@@ -356,7 +357,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             // Fire-and-forget LLM usage tracking
             if (DatabaseManager.isAvailable()) {
                 const tokenUsage = completion.getTokenUsage();
-                const provider = this.constructor.name.replace(/Bot$/, '').toLowerCase();
+                const provider = this.getProviderName();
                 const latencyMs = performance.now() - _llmStartTime;
                 LLMUsageRepository.insert(
                     message.getGuildId(),

@@ -74,7 +74,8 @@ export class BadWordEventRepository {
 
                 await client.query(
                     `INSERT INTO badword_events (channel_id, badword, user_id, user_name, timestamp, created_at)
-                     VALUES ${placeholders.join(', ')}`,
+                     VALUES ${placeholders.join(', ')}
+                     ON CONFLICT ON CONSTRAINT uq_badword_event DO NOTHING`,
                     values
                 );
             }

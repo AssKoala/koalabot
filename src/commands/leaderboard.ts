@@ -15,6 +15,7 @@ import { DiscordPlatform } from '../platform/discord/discordplatform.js';
 import config from 'config';
 import { DatabaseManager } from '../db/databasemanager.js';
 import { LeaderboardRepository } from '../db/leaderboardrepository.js';
+import { MessageCountRepository } from '../db/messagecountrepository.js';
 
 const profanities = await readJsonFile(`${config.get<string>("Global.dataPath")}/profanity.json`);
 
@@ -470,15 +471,25 @@ registerDiscordBotCommand(leaderboardInstance, false);
 // Initial calculation of leaders
 leaderboardInstance.profanityLeaderboard().recalculateProfanityLeaders();
 
-// Bulk-import in-memory leaderboard data to DB on first startup
+// Sync in-memory leaderboard data with DB (blocks until complete before listeners are registered)
 if (DatabaseManager.isAvailable()) {
-    (async () => {
-        try {
+    try {
+        const guildCaches = Stenographer.getAllGuildCaches();
+        const leaderboardMap = leaderboardInstance.profanityLeaderboard()._leaderboardMap;
+
+        // Check if DB already has data (skip bulk upsert on subsequent startups)
+        let dbAlreadyHasData = false;
+        for (const [guildId] of guildCaches) {
+            const existing = await LeaderboardRepository.getAllForGuild(guildId);
+            if (existing.length > 0) { dbAlreadyHasData = true; break; }
+        }
+
+        if (!dbAlreadyHasData) {
+            // First startup: bulk-import in-memory data to DB
             const rows: { guildId: string; userName: string; word: string; count: number }[] = [];
-            const guildCaches = Stenographer.getAllGuildCaches();
 
             for (const [guildId, _cache] of guildCaches) {
-                const profanityLeaders = leaderboardInstance.profanityLeaderboard()._leaderboardMap.get(guildId);
+                const profanityLeaders = leaderboardMap.get(guildId);
                 if (!profanityLeaders) continue;
 
                 for (const [author, stats] of profanityLeaders) {
@@ -506,51 +517,50 @@ if (DatabaseManager.isAvailable()) {
             }
 
             if (countRows.length > 0) {
-                await LeaderboardRepository.bulkUpsertMessageCounts(countRows);
+                await MessageCountRepository.bulkUpsertMessageCounts(countRows);
             }
-
-            // Load DB data back into in-memory map (DB has lifetime-accurate counts)
-            const leaderboardMap = leaderboardInstance.profanityLeaderboard()._leaderboardMap;
-            for (const [guildId] of guildCaches) {
-                const dbRows = await LeaderboardRepository.getAllForGuild(guildId);
-                if (dbRows.length === 0) continue;
-
-                if (!leaderboardMap.has(guildId)) {
-                    leaderboardMap.set(guildId, new Map());
-                }
-                const guildLeaders = leaderboardMap.get(guildId)!;
-
-                for (const row of dbRows) {
-                    if (!guildLeaders.has(row.user_name)) {
-                        guildLeaders.set(row.user_name, new ProfanityStats());
-                        // Initialize all profanity slots
-                        profanities.forEach((profanity: any) => {
-                            guildLeaders.get(row.user_name)!.set(profanity.profanity, 0);
-                        });
-                    }
-                    const currentCount = guildLeaders.get(row.user_name)!.get(row.word) ?? 0;
-                    if (row.count > currentCount) {
-                        guildLeaders.get(row.user_name)!.set(row.word, row.count);
-                    }
-                }
-
-                // Load lifetime message counts from DB into the Stenographer cache
-                // This fixes per-capita calculations: without this, profanity counts are
-                // lifetime-accurate (from DB) but message counts only reflect the capped
-                // log cache, producing inflated per-capita percentages after restart.
-                const dbMessageCounts = await LeaderboardRepository.getAllMessageCountsForGuild(guildId);
-                for (const row of dbMessageCounts) {
-                    const cacheCount = Stenographer.getMessageCount(guildId, row.user_name);
-                    if (row.count > cacheCount) {
-                        Stenographer.setGuildAuthorMessageCount(guildId, row.user_name, row.count);
-                    }
-                }
-            }
-            getCommonLogger().logInfo('Leaderboard: Loaded lifetime counts from database.');
-        } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to bulk-import leaderboard data to DB: ${e}`);
         }
-    })();
+
+        // Always reload from DB into memory (DB has lifetime-accurate counts)
+        for (const [guildId] of guildCaches) {
+            const dbRows = await LeaderboardRepository.getAllForGuild(guildId);
+            if (dbRows.length === 0) continue;
+
+            if (!leaderboardMap.has(guildId)) {
+                leaderboardMap.set(guildId, new Map());
+            }
+            const guildLeaders = leaderboardMap.get(guildId)!;
+
+            for (const row of dbRows) {
+                if (!guildLeaders.has(row.user_name)) {
+                    guildLeaders.set(row.user_name, new ProfanityStats());
+                    // Initialize all profanity slots
+                    profanities.forEach((profanity: any) => {
+                        guildLeaders.get(row.user_name)!.set(profanity.profanity, 0);
+                    });
+                }
+                const currentCount = guildLeaders.get(row.user_name)!.get(row.word) ?? 0;
+                if (row.count > currentCount) {
+                    guildLeaders.get(row.user_name)!.set(row.word, row.count);
+                }
+            }
+
+            // Load lifetime message counts from DB into the Stenographer cache
+            // This fixes per-capita calculations: without this, profanity counts are
+            // lifetime-accurate (from DB) but message counts only reflect the capped
+            // log cache, producing inflated per-capita percentages after restart.
+            const dbMessageCounts = await MessageCountRepository.getAllMessageCountsForGuild(guildId);
+            for (const row of dbMessageCounts) {
+                const cacheCount = Stenographer.getMessageCount(guildId, row.user_name);
+                if (row.count > cacheCount) {
+                    Stenographer.setGuildAuthorMessageCount(guildId, row.user_name, row.count);
+                }
+            }
+        }
+        getCommonLogger().logInfo('Leaderboard: Loaded lifetime counts from database.');
+    } catch (e) {
+        getCommonLogger().logErrorAsync(`Failed to sync leaderboard data with DB: ${e}`);
+    }
 }
 
 class LeaderboardMessageListener implements DiscordMessageCreateListener {

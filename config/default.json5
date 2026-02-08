@@ -128,6 +128,10 @@
         database: "koalabot",               // PostgreSQL database name
         user: "koalabot",                   // PostgreSQL user
         password: "",                       // PostgreSQL password
-        migrationsPath: "./db/migrations"   // Path to SQL migration files
+        migrationsPath: "./db/migrations",  // Path to SQL migration files
+        poolMax: 10,                        // Maximum number of pool connections
+        poolIdleTimeoutMs: 10000,           // Close idle connections after this many ms
+        poolConnectionTimeoutMs: 5000,      // Timeout when acquiring a connection from the pool
+        poolStatementTimeoutMs: 10000       // Statement execution timeout
     }
 }

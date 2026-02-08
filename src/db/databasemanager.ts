@@ -5,6 +5,10 @@ import config from 'config';
 import { fileURLToPath } from 'url';
 import { getCommonLogger } from '../logging/logmanager.js';
 
+// Parse BIGINT (OID 20) as JavaScript number instead of string.
+// Safe for Unix millisecond timestamps (Number.MAX_SAFE_INTEGER ≈ year 287,396).
+pg.types.setTypeParser(20, (val: string) => parseInt(val, 10));
+
 export class DatabaseManager {
     private static instance: DatabaseManager | null = null;
     private pool: pg.Pool;
@@ -20,7 +24,7 @@ export class DatabaseManager {
         if (DatabaseManager.instance || DatabaseManager._initializing) return;
 
         const enabled = config.has('Database.enabled') ? config.get<string | boolean>('Database.enabled') : false;
-        if (enabled !== true && enabled !== 'true') {
+        if (enabled !== true && String(enabled).toLowerCase() !== 'true') {
             getCommonLogger().logInfo('DatabaseManager: Database is disabled in config, skipping initialization.');
             return;
         }
@@ -30,11 +34,17 @@ export class DatabaseManager {
         try {
             const url = config.has('Database.url') ? config.get<string>('Database.url') : '';
 
+            const getPoolNum = (key: string, fallback: number): number => {
+                if (!config.has(key)) return fallback;
+                const v = parseInt(String(config.get(key)), 10);
+                return isNaN(v) ? fallback : v;
+            };
+
             const poolConfig: pg.PoolConfig = {
-                max: 10,
-                idleTimeoutMillis: 10000,
-                connectionTimeoutMillis: 5000,
-                statement_timeout: 10000,
+                max: getPoolNum('Database.poolMax', 10),
+                idleTimeoutMillis: getPoolNum('Database.poolIdleTimeoutMs', 10000),
+                connectionTimeoutMillis: getPoolNum('Database.poolConnectionTimeoutMs', 5000),
+                statement_timeout: getPoolNum('Database.poolStatementTimeoutMs', 10000),
             };
 
             if (url && url.length > 0) {
@@ -42,7 +52,11 @@ export class DatabaseManager {
                 getCommonLogger().logInfo('DatabaseManager: Using DATABASE_URL connection string.');
             } else {
                 poolConfig.host = config.get<string>('Database.host');
-                poolConfig.port = parseInt(String(config.get('Database.port')), 10);
+                const port = parseInt(String(config.get('Database.port')), 10);
+                if (isNaN(port)) {
+                    throw new Error(`DatabaseManager: Invalid port value "${config.get('Database.port')}". Must be a number.`);
+                }
+                poolConfig.port = port;
                 poolConfig.database = config.get<string>('Database.database');
                 poolConfig.user = config.get<string>('Database.user');
                 poolConfig.password = config.get<string>('Database.password');
