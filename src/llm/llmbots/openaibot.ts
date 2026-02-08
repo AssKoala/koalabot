@@ -1,6 +1,6 @@
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
-import { LLMBot, LLMCompletion, LLMGeneratedImageData, LLMTokenUsage } from "../llmbot.js";
+import { LLMBot, LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
 import { OpenAiApi } from '../api/openai.js';
 import { Stenographer } from '../../app/stenographer/discordstenographer.js';
 import { PerformanceCounter } from "../../performancecounter.js";
@@ -17,15 +17,9 @@ interface ImageContentType {
 
 export class OpenAIResponse implements LLMCompletion {
     private response: OpenAiSdk.OpenAI.Responses.Response;
-    private priorTokenUsage: LLMTokenUsage | null = null;
 
     constructor(response: unknown) {
         this.response = response as OpenAiSdk.OpenAI.Responses.Response;
-    }
-
-    addPriorTokenUsage(usage: LLMTokenUsage | null): void {
-        if (!usage) return;
-        this.priorTokenUsage = usage;
     }
 
     getResponseRaw(): unknown {
@@ -79,27 +73,6 @@ export class OpenAIResponse implements LLMCompletion {
         return "";
     }
 
-    getTokenUsage(): LLMTokenUsage | null {
-        try {
-            const usage = this.response.usage;
-            if (usage) {
-                const base: LLMTokenUsage = {
-                    promptTokens: usage.input_tokens ?? null,
-                    completionTokens: usage.output_tokens ?? null
-                };
-                if (this.priorTokenUsage) {
-                    const addNullable = (a: number | null, b: number | null): number | null =>
-                        (a === null && b === null) ? null : (a ?? 0) + (b ?? 0);
-                    return {
-                        promptTokens: addNullable(base.promptTokens, this.priorTokenUsage.promptTokens),
-                        completionTokens: addNullable(base.completionTokens, this.priorTokenUsage.completionTokens)
-                    };
-                }
-                return base;
-            }
-        } catch { }
-        return this.priorTokenUsage;
-    }
 }
 
 export class OpenAIBot extends LLMBot {
@@ -113,8 +86,6 @@ export class OpenAIBot extends LLMBot {
             throw new Error(`Failed to create tiktoken encoder for aiModel(${this.aiModel}), will fall back to estimate`);
         }
     }
-
-    protected override getProviderName(): string { return 'openai'; }
 
     protected override hasAutomaticImageGeneration(): boolean {
         return true;
@@ -348,9 +319,7 @@ export class OpenAIBot extends LLMBot {
 
         // If we made a function call, need to get a new completion with the tool output
         if (madeFunctionCall) {
-            const firstUsage = completion.getTokenUsage();
             completion = await this.getOpenAICompletion(runtimeData, tracker);
-            (completion as OpenAIResponse).addPriorTokenUsage(firstUsage);
 
             // Copy all responses into the input for future context
             completion.getResponseRaw().output.forEach((item: unknown) => {

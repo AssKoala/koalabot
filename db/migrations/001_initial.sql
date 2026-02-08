@@ -46,18 +46,3 @@ CREATE TABLE IF NOT EXISTS command_usage (
 );
 CREATE INDEX IF NOT EXISTS idx_command_usage_guild ON command_usage (guild_id, command_name);
 CREATE INDEX IF NOT EXISTS idx_command_usage_user ON command_usage (user_id);
-
-CREATE TABLE IF NOT EXISTS llm_usage (
-    id SERIAL PRIMARY KEY,
-    guild_id TEXT,
-    user_id TEXT,
-    user_name TEXT,
-    provider TEXT,
-    model TEXT,
-    prompt_tokens INT,
-    completion_tokens INT,
-    latency_ms INT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_llm_usage_guild ON llm_usage (guild_id);
-CREATE INDEX IF NOT EXISTS idx_llm_usage_model ON llm_usage (provider, model);

@@ -12,24 +12,16 @@ import { LLMInteractionMessage, LLMInteractionMessageFactory } from './llmintera
 import config from 'config';
 import { LLMToolManager } from './llmtoolmanager.js';
 import { getCommonLogger } from '../logging/logmanager.js';
-import { DatabaseManager } from '../db/databasemanager.js';
-import { LLMUsageRepository } from '../db/llmusagerepository.js';
 
 export interface LLMGeneratedImageData {
     imageBytes: Buffer;
     prompt: string;
 }
 
-export interface LLMTokenUsage {
-    promptTokens: number | null;
-    completionTokens: number | null;
-}
-
 export interface LLMCompletion {
     getResponseRaw(): any;  // eslint-disable-line @typescript-eslint/no-explicit-any
     getResponseImageData(): LLMGeneratedImageData | undefined;
     getResponseText(): string;
-    getTokenUsage(): LLMTokenUsage | null;
 }
 
 export class LLMChatInteraction {
@@ -73,7 +65,6 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         };
     }
 
-    protected abstract getProviderName(): string;
     protected abstract getVisionContent(_promptText: string, _imageUrls: string[]): Promise<unknown[]>;
     protected abstract getCompletion(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _tracker: LLMMessageTracker): Promise<LLMCompletion>;
     protected abstract getImageCompletion(_runtimeData: DiscordBotRuntimeData, _systemPrompt: string, _promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion>;
@@ -281,7 +272,6 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
 
     public async handleUserInteraction(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage) {
         using _perfCounter = PerformanceCounter.Create("LLMBot::handleUserInteraction(): ", performance.now(), runtimeData.logger(), true);
-        const _llmStartTime = performance.now();
 
         try {
             const userData = UserSettingsManager.get().get(message.getUserName());
@@ -354,22 +344,6 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
                 message.reply(errMsg);
             }
 
-            // Fire-and-forget LLM usage tracking
-            if (DatabaseManager.isAvailable()) {
-                const tokenUsage = completion.getTokenUsage();
-                const provider = this.getProviderName();
-                const latencyMs = performance.now() - _llmStartTime;
-                LLMUsageRepository.insert(
-                    message.getGuildId(),
-                    message.getUserId(),
-                    message.getUserName(),
-                    provider,
-                    this.aiModel,
-                    tokenUsage?.promptTokens ?? null,
-                    tokenUsage?.completionTokens ?? null,
-                    latencyMs
-                ).catch(() => {});
-            }
         } catch (e) {
             const errMsg = `LLMBot::handleUserInteraction(): Failed to process message, got error ${e}`;
             runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): ${errMsg}`);

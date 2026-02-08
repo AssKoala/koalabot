@@ -1,5 +1,5 @@
 import { GeminiApi } from "../../llm/api/gemini.js";
-import { LLMBot, LLMCompletion, LLMGeneratedImageData, LLMTokenUsage } from "../llmbot.js";
+import { LLMBot, LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { Stenographer } from "../../app/stenographer/discordstenographer.js";
@@ -61,18 +61,6 @@ export class GeminiResponse implements LLMCompletion {
         }
     }
 
-    getTokenUsage(): LLMTokenUsage | null {
-        try {
-            const usage = this.response.usageMetadata;
-            if (usage) {
-                return {
-                    promptTokens: usage.promptTokenCount ?? null,
-                    completionTokens: usage.candidatesTokenCount ?? null
-                };
-            }
-        } catch { }
-        return null;
-    }
 }
 
 class DownloadedImage {
@@ -89,8 +77,6 @@ export class GeminiBot extends LLMBot {
     constructor(aiModel: string, enabled: boolean = false) {
         super(aiModel, enabled);
     }
-
-    protected override getProviderName(): string { return 'gemini'; }
 
     protected override async getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string): Promise<LLMMessageTracker> {
         const tempTracker = new LLMMessageTracker(
