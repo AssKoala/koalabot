@@ -169,7 +169,7 @@ export class DatabaseManager {
                 .sort();
         } catch (e) {
             getCommonLogger().logErrorAsync(`DatabaseManager: Failed to read migrations directory ${migrationsPath}, got ${e}`);
-            return;
+            throw e;
         }
 
         for (const file of files) {

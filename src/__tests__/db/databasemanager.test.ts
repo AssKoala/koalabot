@@ -537,7 +537,7 @@ describe('DatabaseManager', () => {
             );
         });
 
-        test('handles missing migrations directory gracefully', async () => {
+        test('when migrations directory is unreadable, should mark DB unavailable and close pool', async () => {
             setEnabledConfig();
 
             mockPoolQuery.mockImplementation((sql: string) => {
@@ -556,8 +556,11 @@ describe('DatabaseManager', () => {
             expect(mockLogErrorAsync).toHaveBeenCalledWith(
                 expect.stringContaining('Failed to read migrations directory')
             );
-            // Init should still complete successfully since missing migrations is non-fatal
-            expect(DatabaseManager.isAvailable()).toBe(true);
+            expect(mockPoolEnd).toHaveBeenCalled();
+            expect(DatabaseManager.isAvailable()).toBe(false);
+            expect(mockLogErrorAsync).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to connect to database')
+            );
         });
 
         test('uses custom migrationsPath from config when available', async () => {
