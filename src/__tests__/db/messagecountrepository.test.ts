@@ -1,40 +1,13 @@
-import { vi, describe, test, expect, beforeEach } from 'vitest';
-
-const mockQuery = vi.fn();
-let mockIsAvailable = true;
-
-vi.mock('../../db/databasemanager.js', () => ({
-    DatabaseManager: {
-        isAvailable: () => mockIsAvailable,
-        get: () => ({
-            query: mockQuery,
-        }),
-    },
-}));
-
-vi.mock('../../logging/logmanager.js', () => ({
-    getCommonLogger: () => ({
-        logInfo: vi.fn(),
-        logErrorAsync: vi.fn(),
-        logError: vi.fn(),
-        logDebug: vi.fn(),
-        logWarning: vi.fn(),
-    }),
-}));
+import { describe, test, expect } from 'vitest';
+import { mockQuery, setMockIsAvailable } from './__helpers.js';
 
 import { MessageCountRepository } from '../../db/messagecountrepository.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAvailable = true;
-    mockQuery.mockResolvedValue({ rows: [] });
-});
 
 describe('MessageCountRepository', () => {
 
     describe('incrementMessageCount', () => {
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await MessageCountRepository.incrementMessageCount('g1', 'user1');
             expect(mockQuery).not.toHaveBeenCalled();
         });
@@ -56,7 +29,7 @@ describe('MessageCountRepository', () => {
 
     describe('getMessageCount', () => {
         test('returns 0 when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await MessageCountRepository.getMessageCount('g1', 'user1');
             expect(result).toBe(0);
             expect(mockQuery).not.toHaveBeenCalled();
@@ -87,7 +60,7 @@ describe('MessageCountRepository', () => {
 
     describe('getAllMessageCountsForGuild', () => {
         test('returns empty array when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await MessageCountRepository.getAllMessageCountsForGuild('g1');
             expect(result).toEqual([]);
             expect(mockQuery).not.toHaveBeenCalled();
@@ -113,7 +86,7 @@ describe('MessageCountRepository', () => {
 
     describe('bulkUpsertMessageCounts', () => {
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await MessageCountRepository.bulkUpsertMessageCounts([{ guildId: 'g1', userName: 'u1', count: 1 }]);
             expect(mockQuery).not.toHaveBeenCalled();
         });

@@ -1,39 +1,12 @@
-import { vi, describe, test, expect, beforeEach } from 'vitest';
-
-const mockQuery = vi.fn();
-let mockIsAvailable = true;
-
-vi.mock('../../db/databasemanager.js', () => ({
-    DatabaseManager: {
-        isAvailable: () => mockIsAvailable,
-        get: () => ({
-            query: mockQuery,
-        }),
-    },
-}));
-
-vi.mock('../../logging/logmanager.js', () => ({
-    getCommonLogger: () => ({
-        logInfo: vi.fn(),
-        logErrorAsync: vi.fn(),
-        logError: vi.fn(),
-        logDebug: vi.fn(),
-        logWarning: vi.fn(),
-    }),
-}));
+import { describe, test, expect } from 'vitest';
+import { mockQuery, setMockIsAvailable } from './__helpers.js';
 
 import { UserSettingsRepository } from '../../db/usersettingsrepository.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAvailable = true;
-    mockQuery.mockResolvedValue({ rows: [] });
-});
 
 describe('UserSettingsRepository', () => {
     describe('upsert()', () => {
         test('returns early when DB is unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await UserSettingsRepository.upsert('alice', { theme: 'dark' });
             expect(mockQuery).not.toHaveBeenCalled();
         });
@@ -56,7 +29,7 @@ describe('UserSettingsRepository', () => {
 
     describe('get()', () => {
         test('returns null when DB is unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await UserSettingsRepository.get('alice');
             expect(result).toBeNull();
             expect(mockQuery).not.toHaveBeenCalled();
@@ -84,7 +57,7 @@ describe('UserSettingsRepository', () => {
 
     describe('getAll()', () => {
         test('returns empty array when DB is unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await UserSettingsRepository.getAll();
             expect(result).toEqual([]);
             expect(mockQuery).not.toHaveBeenCalled();
@@ -109,7 +82,7 @@ describe('UserSettingsRepository', () => {
 
     describe('isEmpty()', () => {
         test('returns true when DB is unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await UserSettingsRepository.isEmpty();
             expect(result).toBe(true);
             expect(mockQuery).not.toHaveBeenCalled();

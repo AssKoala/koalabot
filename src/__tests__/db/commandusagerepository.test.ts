@@ -1,39 +1,12 @@
-import { vi, describe, test, expect, beforeEach } from 'vitest';
-
-const mockQuery = vi.fn();
-let mockIsAvailable = true;
-
-vi.mock('../../db/databasemanager.js', () => ({
-    DatabaseManager: {
-        isAvailable: () => mockIsAvailable,
-        get: () => ({
-            query: mockQuery,
-        }),
-    },
-}));
-
-vi.mock('../../logging/logmanager.js', () => ({
-    getCommonLogger: () => ({
-        logInfo: vi.fn(),
-        logErrorAsync: vi.fn(),
-        logError: vi.fn(),
-        logDebug: vi.fn(),
-        logWarning: vi.fn(),
-    }),
-}));
+import { describe, test, expect } from 'vitest';
+import { mockQuery, setMockIsAvailable } from './__helpers.js';
 
 import { CommandUsageRepository } from '../../db/commandusagerepository.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAvailable = true;
-    mockQuery.mockResolvedValue({ rows: [] });
-});
 
 describe('CommandUsageRepository', () => {
     describe('insert()', () => {
         test('returns early when DB is unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await CommandUsageRepository.insert('guild1', 'user1', 'Alice', 'ping', 42);
             expect(mockQuery).not.toHaveBeenCalled();
         });

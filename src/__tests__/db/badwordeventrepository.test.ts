@@ -1,42 +1,13 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest';
-
-const mockQuery = vi.fn();
-const mockConnect = vi.fn();
-let mockIsAvailable = true;
-
-vi.mock('../../db/databasemanager.js', () => ({
-    DatabaseManager: {
-        isAvailable: () => mockIsAvailable,
-        get: () => ({
-            query: mockQuery,
-            connect: mockConnect,
-        }),
-    },
-}));
-
-vi.mock('../../logging/logmanager.js', () => ({
-    getCommonLogger: () => ({
-        logInfo: vi.fn(),
-        logErrorAsync: vi.fn(),
-        logError: vi.fn(),
-        logDebug: vi.fn(),
-        logWarning: vi.fn(),
-    }),
-}));
+import { mockQuery, mockConnect, setMockIsAvailable } from './__helpers.js';
 
 import { BadWordEventRepository } from '../../db/badwordeventrepository.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAvailable = true;
-    mockQuery.mockResolvedValue({ rows: [] });
-});
 
 describe('BadWordEventRepository', () => {
 
     describe('insert', () => {
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await BadWordEventRepository.insert('ch1', 'badword', 'uid1', 'user1', 12345);
             expect(mockQuery).not.toHaveBeenCalled();
         });
@@ -60,7 +31,7 @@ describe('BadWordEventRepository', () => {
 
     describe('getEvents', () => {
         test('returns empty array when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await BadWordEventRepository.getEvents('ch1', 'badword');
             expect(result).toEqual([]);
             expect(mockQuery).not.toHaveBeenCalled();
@@ -100,7 +71,7 @@ describe('BadWordEventRepository', () => {
         });
 
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await BadWordEventRepository.bulkInsert([
                 { channelId: 'ch1', badword: 'bw', userId: 'u1', userName: 'user1', timestamp: 1 },
             ]);

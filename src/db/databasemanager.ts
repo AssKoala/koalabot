@@ -83,6 +83,7 @@ export class DatabaseManager {
             DatabaseManager.instance = instance;
 
             // Start periodic health check to recover from transient failures
+            const healthCheckIntervalMs = getPoolNum('Database.healthCheckIntervalMs', 30000);
             instance.healthCheckInterval = setInterval(async () => {
                 if (!instance._isAvailable) {
                     try {
@@ -93,7 +94,7 @@ export class DatabaseManager {
                         // Still unavailable, keep _isAvailable false
                     }
                 }
-            }, 30000);
+            }, healthCheckIntervalMs);
             instance.healthCheckInterval.unref();
         } catch (e) {
             if (pool) {

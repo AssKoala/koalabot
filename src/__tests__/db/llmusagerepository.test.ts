@@ -1,39 +1,12 @@
-import { vi, describe, test, expect, beforeEach } from 'vitest';
-
-const mockQuery = vi.fn();
-let mockIsAvailable = true;
-
-vi.mock('../../db/databasemanager.js', () => ({
-    DatabaseManager: {
-        isAvailable: () => mockIsAvailable,
-        get: () => ({
-            query: mockQuery,
-        }),
-    },
-}));
-
-vi.mock('../../logging/logmanager.js', () => ({
-    getCommonLogger: () => ({
-        logInfo: vi.fn(),
-        logErrorAsync: vi.fn(),
-        logError: vi.fn(),
-        logDebug: vi.fn(),
-        logWarning: vi.fn(),
-    }),
-}));
+import { describe, test, expect } from 'vitest';
+import { mockQuery, setMockIsAvailable } from './__helpers.js';
 
 import { LLMUsageRepository } from '../../db/llmusagerepository.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAvailable = true;
-    mockQuery.mockResolvedValue({ rows: [] });
-});
 
 describe('LLMUsageRepository', () => {
     describe('insert()', () => {
         test('returns early when DB is unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await LLMUsageRepository.insert('guild1', 'user1', 'Alice', 'openai', 'gpt-4', 100, 50, 200);
             expect(mockQuery).not.toHaveBeenCalled();
         });

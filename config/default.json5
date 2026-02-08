@@ -132,6 +132,7 @@
         poolMax: 10,                        // Maximum number of pool connections
         poolIdleTimeoutMs: 10000,           // Close idle connections after this many ms
         poolConnectionTimeoutMs: 5000,      // Timeout when acquiring a connection from the pool
-        poolStatementTimeoutMs: 10000       // Statement execution timeout
+        poolStatementTimeoutMs: 10000,      // Statement execution timeout
+        healthCheckIntervalMs: 30000        // Health check interval for connection recovery
     }
 }

@@ -2,8 +2,12 @@
 .vscode/
 buildsys/
 data/
+dist/
 environment/
+logs/
+node_modules/
 runtime/
+temp/
 test-data/
 .dockerignore
 compose.yml

@@ -1,42 +1,13 @@
-import { vi, describe, test, expect, beforeEach } from 'vitest';
-
-const mockQuery = vi.fn();
-const mockConnect = vi.fn();
-let mockIsAvailable = true;
-
-vi.mock('../../db/databasemanager.js', () => ({
-    DatabaseManager: {
-        isAvailable: () => mockIsAvailable,
-        get: () => ({
-            query: mockQuery,
-            connect: mockConnect,
-        }),
-    },
-}));
-
-vi.mock('../../logging/logmanager.js', () => ({
-    getCommonLogger: () => ({
-        logInfo: vi.fn(),
-        logErrorAsync: vi.fn(),
-        logError: vi.fn(),
-        logDebug: vi.fn(),
-        logWarning: vi.fn(),
-    }),
-}));
+import { describe, test, expect } from 'vitest';
+import { mockQuery, setMockIsAvailable } from './__helpers.js';
 
 import { LeaderboardRepository } from '../../db/leaderboardrepository.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAvailable = true;
-    mockQuery.mockResolvedValue({ rows: [] });
-});
 
 describe('LeaderboardRepository', () => {
 
     describe('upsertWordCount', () => {
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await LeaderboardRepository.upsertWordCount('g1', 'user1', 'hello', 5);
             expect(mockQuery).not.toHaveBeenCalled();
         });
@@ -58,7 +29,7 @@ describe('LeaderboardRepository', () => {
 
     describe('incrementWordCount', () => {
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await LeaderboardRepository.incrementWordCount('g1', 'user1', 'hello');
             expect(mockQuery).not.toHaveBeenCalled();
         });
@@ -80,7 +51,7 @@ describe('LeaderboardRepository', () => {
 
     describe('getLeaderboard', () => {
         test('returns empty array when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await LeaderboardRepository.getLeaderboard('g1', 'hello');
             expect(result).toEqual([]);
             expect(mockQuery).not.toHaveBeenCalled();
@@ -106,7 +77,7 @@ describe('LeaderboardRepository', () => {
 
     describe('getUserStats', () => {
         test('returns empty array when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await LeaderboardRepository.getUserStats('g1', 'user1');
             expect(result).toEqual([]);
             expect(mockQuery).not.toHaveBeenCalled();
@@ -132,7 +103,7 @@ describe('LeaderboardRepository', () => {
 
     describe('bulkUpsert', () => {
         test('returns early when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             await LeaderboardRepository.bulkUpsert([{ guildId: 'g1', userName: 'u1', word: 'w', count: 1 }]);
             expect(mockQuery).not.toHaveBeenCalled();
         });
@@ -176,7 +147,7 @@ describe('LeaderboardRepository', () => {
 
     describe('getAllForGuild', () => {
         test('returns empty array when DB unavailable', async () => {
-            mockIsAvailable = false;
+            setMockIsAvailable(false);
             const result = await LeaderboardRepository.getAllForGuild('g1');
             expect(result).toEqual([]);
             expect(mockQuery).not.toHaveBeenCalled();
