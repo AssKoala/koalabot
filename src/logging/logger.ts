@@ -75,10 +75,10 @@ export class LoggerConcrete implements Logger {
     logDiscordMessage(message: string)
     {
         try {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             this._logger.discord_message(message);
         } catch (e) {
-            console.log(`[PANIC] Failed to log discord message ${message}!!`);
+            console.log(`[PANIC] Failed to log discord message ${message}!, error: ${e}`);
         }
     }
 
@@ -87,7 +87,7 @@ export class LoggerConcrete implements Logger {
         try {
             this._logger.info(message);
         } catch (e) {
-            console.log(`[PANIC] Failed to log info ${message}!!`);
+            console.log(`[PANIC] Failed to log info ${message}!, error: ${e}`);
         }
     }
 
@@ -96,7 +96,7 @@ export class LoggerConcrete implements Logger {
         try {
             this._logger.debug(message);
         } catch (e) {
-            console.log(`[PANIC] Failed to log debug ${message}!!`);
+            console.log(`[PANIC] Failed to log debug ${message}!, error: ${e}`);
         }
     }
 
@@ -105,12 +105,12 @@ export class LoggerConcrete implements Logger {
         try {
             this._logger.warning(message);
         } catch (e) {
-            console.log(`[PANIC] Failed to log warning ${message}!!`);
+            console.log(`[PANIC] Failed to log warning ${message}!, error: ${e}`);
         }
     }
 
     logFatal(message: string, shouldThrow: boolean = true) {
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         this._logger.fatal(message);
         if (shouldThrow) {
             throw new Error(message);
@@ -121,7 +121,7 @@ export class LoggerConcrete implements Logger {
         try {
             this._logger.error(message);
         } catch (e) {
-            console.log(`[PANIC] Failed to log error ${message}!!`);
+            console.log(`[PANIC] Failed to log error ${message}!, error: ${e}`);
         }
     }
 
@@ -148,7 +148,7 @@ export class LoggerConcrete implements Logger {
                 this._logger.error(`Failed to reply to discord, got error ${e}`);
             }
         } catch (e) {
-            console.log(`[PANIC] Failed to log error ${message}!!`);
+            console.log(`[PANIC] Failed to log error ${message}!, error: ${e}`);
         } 
     }
 }

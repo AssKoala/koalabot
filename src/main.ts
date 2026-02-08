@@ -78,9 +78,8 @@ await CommandManager.deployDiscordSlashCommands(    // Deploy
 import { ListenerManager } from './listenermanager.js';
 await ListenerManager.importListeners();
 
-if (config.get("Developer.Flags.enableExperimentalChatSystem")) {
-    Bot.get().createSubBots();
-}
+/* Create all the LLM instances. */
+Bot.get().createSubBots();
 
 /* Once all systems are loaded, login to services */
 await Bot.get().login();

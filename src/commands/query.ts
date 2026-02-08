@@ -3,7 +3,7 @@
 */
 
 import { SlashCommandBuilder, AttachmentBuilder, Utils } from 'discord.js';
-import { OpenAIHelper } from '../helpers/openaihelper.js';
+import { OpenAiApi } from '../llm/api/openai.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import { PerformanceCounter } from '../performancecounter.js';
 import { getCommonLogger } from '../logging/logmanager.js'
@@ -13,7 +13,7 @@ import config from 'config';
 
 class QueryCommand extends DiscordBotCommand {
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handle(interaction) {
         using perfCounter = PerformanceCounter.Create("handleQueryCommand(): ");
 
@@ -47,10 +47,10 @@ class QueryCommand extends DiscordBotCommand {
         }        
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handleChatModelQuery(interaction, question, ai_model) {
         try {
-            const completion = await OpenAIHelper.getInterface().chat.completions.create({
+            const completion = await OpenAiApi.getInterface().chat.completions.create({
                 model: ai_model,
                 messages: [
                     { "role": "user", "content": question }
@@ -67,13 +67,13 @@ class QueryCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handleDavinciQuery(interaction, question) {
         try {
             const model = `text-davinci-003`;
 
-            // @ts-ignore
-            const completion = await OpenAIHelper.getInterface().createCompletion({
+            // @ts-expect-error todo cleanup tech debt
+            const completion = await OpenAiApi.getInterface().createCompletion({
                 model: `${model}`,
                 prompt: `${question}`,
                 stream: false,

@@ -1,7 +1,6 @@
 import { readFile } from "fs/promises";
 import { LoggerConcrete } from '../logging/logger.js'
 import { ChatInputCommandInteraction } from 'discord.js'
-import { PerformanceCounter } from "../performancecounter.js";
 
 export class DiscordBotHelpers
 {
@@ -60,13 +59,13 @@ export class DiscordBotHelpers
         }
     }
 
-    async readJsonFile(path: string): Promise<any> {
+    async readJsonFile(path: string): Promise<unknown | undefined> {
         try {
             const file = await readFile(path, "utf8");
             return JSON.parse(file);
         } catch (e) {
             this.logger.logErrorAsync(`Failed to load ${path}, got ${e}`);
-            return null;
+            return undefined;
         }
     }
 }

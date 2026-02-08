@@ -1,0 +1,29 @@
+pipeline {
+    agent any // or a specific label if you have dedicated Docker agents
+    parameters {
+        booleanParam(name: 'DEPLOY_TO_DOCKERHUB', defaultValue: false, description: 'Set to true to push the Docker image to Docker Hub')
+    }
+    triggers {
+        // Poll Perforce every five minutes
+        pollSCM('H/5 * * * *')
+    }
+    stages {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def customImage = docker.build("asskoala/koalabot:$BRANCH_NAME", "-t asskoala/koalabot:$BRANCH_NAME-$P4_CHANGELIST .")
+
+                    if (params.DEPLOY_TO_DOCKERHUB == true) {
+                        echo "Pushing Docker image to Docker Hub..."
+                        docker.withRegistry('', '70142cca-53fc-40a4-b36f-73ebb74d149d') {
+                            customImage.push("$BRANCH_NAME")
+                            customImage.push("$BRANCH_NAME-$P4_CHANGELIST")
+                        }
+                    } else {
+                        echo "Skipping Docker image push to Docker Hub. Set DEPLOY_TO_DOCKERHUB to true to enable."
+                    }
+                }
+            }
+        }
+    }
+}

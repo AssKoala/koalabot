@@ -1,4 +1,4 @@
-import { OpenAiCompletionsV1Compatible } from "../../../helpers/llm/openai_completions_v1.js"
+import { OpenAiCompletionsV1Compatible } from "../../../llm/api/openai_completions_v1.js"
 import { afterEach, beforeEach, describe, expect, test, afterAll } from 'vitest'
 
 class OpenAiCompletionsV1Test extends OpenAiCompletionsV1Compatible {
@@ -23,7 +23,7 @@ class OpenAiCompletionsV1Test extends OpenAiCompletionsV1Compatible {
     }
 }
 
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 let mockApi: OpenAiCompletionsV1Test = null;
 const constants = {
     MAX_MESSAGES: 10,
@@ -54,7 +54,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     mockApi = null;
 });
 

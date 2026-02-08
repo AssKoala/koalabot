@@ -3,11 +3,11 @@ import { DiscordMessageCreateListener, WordListener } from "../../api/discordmes
 import { describe, expect, test } from 'vitest'
 
 export class MockKoalaBotSystem implements KoalaBotSystem {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     getConfigVariable(key: string)
     { return null; }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     getLogger()
     { return null; }
 
@@ -19,7 +19,7 @@ export class MockKoalaBotSystem implements KoalaBotSystem {
 }
 
 export function GetKoalaBotSystem(): KoalaBotSystem {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     return null;
 }
 

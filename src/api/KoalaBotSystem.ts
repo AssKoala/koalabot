@@ -1,5 +1,6 @@
 import { Bot } from '../bot.js'
 import { DiscordMessageCreateListener, WordListener } from "./discordmessagelistener.js";
+import * as Discord from 'discord.js';
 
 export enum LogLevel {
     DISCORD_MESSAGE = 'discord_message',
@@ -18,7 +19,7 @@ export interface Logger {
     logWarning(message: string): void;
     logFatal(message: string, shouldThrow: boolean) : void;
     logError(message: string) : void;
-    logErrorAsync(message: string, discordReply: any, editReply: boolean): Promise<void>;
+    logErrorAsync(message: string, discordReply: Discord.ChatInputCommandInteraction, editReply: boolean): Promise<void>;
 }
 
 /*

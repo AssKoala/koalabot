@@ -54,7 +54,7 @@ class ProfanityLeaderboard {
     
     addMessageToProfanityLeaderboard(discordStenographerMsg: DiscordStenographerMessage)
     {
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         let result = [];
 
         try {
@@ -70,7 +70,7 @@ class ProfanityLeaderboard {
 
             if (!profanityLeaders.has(author)) {
                 profanityLeaders.set(author, new ProfanityStats());
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 profanities.forEach(profanity => {
                     profanityLeaders.get(author)!.set(profanity.profanity, 0);
                 });
@@ -100,11 +100,11 @@ class ProfanityLeaderboard {
             result = [];
         }
 
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         return result;
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     getProfanityLeader(guildId, profanityLeaders, profanity, perCapita = false, ignoreList = [])
     {
         try {
@@ -113,7 +113,7 @@ class ProfanityLeaderboard {
             let leaderMessageCount = 0;
 
             for (const [author, profanityStats] of profanityLeaders) {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 if (ignoreList.includes(author)) continue;
 
                 const authorTotalMessages = Stenographer.getMessageCount(guildId, author);
@@ -142,7 +142,7 @@ class ProfanityLeaderboard {
         return { "leader": "error", "count": 0 };
     };
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async showProfanityLeaderboard(interaction, perCapita = false)
     {
         try {
@@ -154,15 +154,15 @@ class ProfanityLeaderboard {
                 "```Profanity Leaderboard " + `${perCapitaString}\n`
                 + "-------------------------\n";
             
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             profanities.forEach(profanity => {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 const lead = this.getProfanityLeader(interaction.guildId, profanityLeaders, profanity.profanity, perCapita, [Global.settings().get("BOT_NAME")] );
 
                 outputString += `${profanity.profanity}(s):`.padEnd(12, " ");
 
                 if (lead.count != 0) {
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     const perCapitaValue = lead["count"] / lead["total"] * 100;
 
                     if (perCapita) outputString += `${lead["leader"]} with ${perCapitaValue.toPrecision(2)}%\n`;
@@ -180,7 +180,7 @@ class ProfanityLeaderboard {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     updateProfanityLeaderboard(message)
     {
         using perfCounter = PerformanceCounter.Create("updateProfanityLeaderboard(): ");
@@ -206,7 +206,7 @@ class ProfanityLeaderboard {
                     }
                 });
 
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 let convertToOutput = function (items) {
                     // Remove trailing , and front whitespace then split
                     items = items.substring(0, items.length - 1).split(',');
@@ -234,7 +234,7 @@ class ProfanityLeaderboard {
         
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handleDisplayLeaderboardCommand(interaction, options)
     {
         try {
@@ -258,17 +258,17 @@ class ProfanityLeaderboard {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handleDisplayCustomLeaderboardCommand(interaction, options, ignoreList = [])
     {
         try {
             const guildId = interaction.guildId;
 
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             let profanity;
             let perCapita = false;
 
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             options.forEach((opt) => {
                 switch (opt.name) {
                     case `profanity`:
@@ -283,13 +283,13 @@ class ProfanityLeaderboard {
                 }
             });
 
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             let profanityMatches = [];
             profanityMatches[0] = profanity;
 
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             profanities.every(entry => {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 if (entry.profanity === profanity) {
                     profanityMatches = entry.matches;
                     return false;
@@ -297,7 +297,7 @@ class ProfanityLeaderboard {
                 return true;
             });
 
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             let customLeaders = [];
             const messages = Stenographer.getGuildMessages(guildId);
 
@@ -305,18 +305,18 @@ class ProfanityLeaderboard {
             messages.forEach(discordMsg => {
                 const author = discordMsg.author;
 
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 if (!ignoreList.includes(author)) {
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     if (!(author in customLeaders)) {
-                        // @ts-ignore
+                        // @ts-expect-error todo cleanup tech debt
                         customLeaders[author] = 0;
                     }
         
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     profanityMatches.every(regex => {
                         if (discordMsg.message.toLowerCase().match(regex) != null) {
-                            // @ts-ignore
+                            // @ts-expect-error todo cleanup tech debt
                             customLeaders[author]++;
                             return false;
                         }
@@ -327,9 +327,9 @@ class ProfanityLeaderboard {
 
             // Sort the totals for the leaderboard
             let sortedLeaders = [];
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             for (const key of Object.keys(customLeaders)) {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 const count = customLeaders[key];
                 if (count > 0)
                     sortedLeaders.push({ "author": key, "count": count });
@@ -374,7 +374,7 @@ class LeaderboardCommand extends DiscordBotCommand {
     private _profanityLeaderboard: ProfanityLeaderboard = new ProfanityLeaderboard();
     profanityLeaderboard() { return this._profanityLeaderboard; }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handle(interaction)
     {
         using perfCounter = PerformanceCounter.Create("handleLeaderboardCommand(): ");
@@ -390,7 +390,7 @@ class LeaderboardCommand extends DiscordBotCommand {
                         await this._profanityLeaderboard.handleDisplayLeaderboardCommand(interaction, interaction.options.data[i].options);
                         break;
                     case 'custom':
-                        // @ts-ignore
+                        // @ts-expect-error todo cleanup tech debt
                         await this._profanityLeaderboard.handleDisplayCustomLeaderboardCommand(interaction, interaction.options.data[i].options, ["BOOBS", "BOOBS (Test)"]);
                         break;
                     default:
@@ -463,7 +463,7 @@ registerDiscordBotCommand(leaderboardInstance, false);
 leaderboardInstance.profanityLeaderboard().recalculateProfanityLeaders();
 
 class LeaderboardMessageListener implements DiscordMessageCreateListener {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async onDiscordMessageCreate(runtimeData, message) {
         await leaderboardInstance.profanityLeaderboard().updateProfanityLeaderboard(message);
     }

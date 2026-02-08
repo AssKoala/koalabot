@@ -12,11 +12,13 @@ import { GetKoalaBotSystem } from '../api/koalabotsystem.js';
 import * as Discord from 'discord.js';
 import config from 'config';
 
+const clearString: string = '!clear';
+
 /**
  * Sets the user's location and saves it off
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function setUserLocation(interaction)
 {
     try {
@@ -52,7 +54,7 @@ async function setUserLocation(interaction)
  * Sets the user's preferred temperature units and saves that to disk
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function setPreferredUnits(interaction)
 {
     try {
@@ -89,8 +91,15 @@ async function setPreferredAiModel(interaction: Discord.ChatInputCommandInteract
         const aiModel = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
 
         let userData = UserSettingsManager.get().get(interaction.user.username);
-        await interaction.editReply(`Setting your preferred AI model to ${aiModel} from ${userData.chatSettings.preferredAiModel}`);
-        userData.chatSettings.preferredAiModel = aiModel;
+        
+        if (aiModel === clearString) {
+            userData.chatSettings.preferredAiModel = "";
+            await interaction.editReply(`Clearing your preferred AI model. Will use default model now.`);
+        } else {
+            userData.chatSettings.preferredAiModel = aiModel;
+            await interaction.editReply(`Setting your preferred AI model to ${aiModel} from ${userData.chatSettings.preferredAiModel}`);
+        }
+
         UserSettingsManager.get().set(userData, true);
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to set preferred AI model, got error ${e}`, interaction);
@@ -121,8 +130,16 @@ async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteractio
         }
 
         let userData = UserSettingsManager.get().get(userToLoad);
-        await interaction.editReply(`**Setting *${userToLoad}*'s custom AI prompt to** *${customPrompt}* **from** *${userData.chatSettings.customPrompt}*`);
-        userData.chatSettings.customPrompt = customPrompt;
+        const oldPrompt = userData.chatSettings.customPrompt;
+
+        if (customPrompt === clearString) {
+            userData.chatSettings.customPrompt = "";
+            await interaction.editReply(`**Clearing *${userToLoad}*'s custom AI prompt. Will use default global prompt now.**`);
+        } else {
+            userData.chatSettings.customPrompt = customPrompt;
+            await interaction.editReply(`**Setting *${userToLoad}*'s custom AI prompt to** *${userData.chatSettings.customPrompt}* **from** *${oldPrompt}*`);
+        }
+
         UserSettingsManager.get().set(userData, true);
     } catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to set custom AI prompt, got error ${e}`, interaction);
@@ -133,7 +150,7 @@ async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteractio
  * Prints the user's existing settings out, if they exist
  * @param {Discord.interaction} interaction - interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function getUserSettings(interaction)
 {
     try {
@@ -148,6 +165,10 @@ async function getUserSettings(interaction)
                 await interaction.editReply(`User *${userNameToGet}* doesn't exist, cannot get their settings.`);
                 return;
             }
+        }  else if (interaction.options._subcommand === 'available_ai_models') {
+            const availableModels = config.get<string>('Chat.AiModels.enabledModels');
+            await interaction.editReply(`Available AI Models: ${availableModels}`);
+            return;
         } else {
             await interaction.editReply(`Interaction did not contain valid subcommand: ${interaction.options._subcommand}`);
             return;
@@ -175,7 +196,7 @@ async function getUserSettings(interaction)
  * Set the user settings using the interaction object
  * @param {Discord.interaction} interaction 
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function setUserSettings(interaction)
 {
     try {
@@ -197,18 +218,18 @@ async function setUserSettings(interaction)
                 break;
         }
     } catch (e) {
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         await getCommonLogger().logErrorAsync(e, interaction);
     }
 }
 
 class SettingsCommand extends DiscordBotCommand {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handle(interaction) {
         using perfCounter = PerformanceCounter.Create("handleSettingsCommand(): ");
 
         try {
-            await interaction.deferReply();
+            await interaction.deferReply({ flags: Discord.MessageFlags.Ephemeral});
 
             if (interaction.options.data.length < 1) {
                 const str = `Interaction data missing, got length: ${interaction.options.data.length}`;
@@ -276,18 +297,18 @@ class SettingsCommand extends DiscordBotCommand {
                                 .addStringOption((option) =>
                                     option
                                         .setName('preferred_ai_model')
-                                        .setDescription(`Ai Model (${config.get<string>('Chat.AiModels.enabledModels')})`)
+                                        .setDescription(`Ai Model (use get available_ai_models to see options or ${clearString} to clear)`)
                                         .setRequired(true),
                                 )
                         )
                         .addSubcommand((subcommand) =>
                             subcommand
                                 .setName('custom_prompt')
-                                .setDescription('Custom AI prompt to use (e.g. You are a helpful assistant...)')
+                                .setDescription(`Custom AI prompt to use (e.g. You are a helpful assistant...)`)
                                 .addStringOption((option) =>
                                     option
                                         .setName('custom_prompt')
-                                        .setDescription('Custom AI prompt to use (e.g. You are a helpful assistant...)')
+                                        .setDescription(`Custom AI prompt to use (e.g. You are a helpful assistant...)`)
                                         .setRequired(true),
                                 )
                                 .addStringOption((option) =>
@@ -310,13 +331,18 @@ class SettingsCommand extends DiscordBotCommand {
                         .addSubcommand((subcommand) =>
                             subcommand
                                 .setName('someones')
-                                .setDescription('Get someone else\'s settings')
+                                .setDescription(`Get someone else's settings`)
                                 .addStringOption((option) =>
                                     option
                                         .setName('username')
                                         .setDescription('Username to get settings for.  Empty for self.')
                                         .setRequired(true),
                                 )
+                        )
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('available_ai_models')
+                                .setDescription('Get Available AI models')
                         )
                         
                 )

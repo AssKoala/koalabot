@@ -14,7 +14,7 @@
 */
 
 import fetch from 'node-fetch';
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 import validator from 'validator';
 import { SlashCommandBuilder } from "discord.js";
 
@@ -35,13 +35,13 @@ const forecastTypeMap = [
  ];
 
 const convertKelvinTo = [
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     [ "celsius",    'C', (x) => { return Number(x) - 273.15; } ],
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     [ "fahrenheit", 'F', (x) => { return ((Number(x) - 273.15) * (9/5)) + 32; } ],
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     [ "rankine",    'R', (x) => { return Number(x) * 1.8; } ],
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     [ "kelvin",     'K', (x) => { return Number(x); } ]
 ];
 
@@ -50,7 +50,7 @@ const convertKelvinTo = [
  * @param {string} temperatureCelsius - The temperature in Celsius
  * @returns {string} The temperature in Fahrenheit
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function celsiusToFahrenheit(temperatureCelsius)
 {
 	return (1.8 * Number(temperatureCelsius) + 32).toFixed(0);
@@ -61,7 +61,7 @@ function celsiusToFahrenheit(temperatureCelsius)
  * @param {string} temperatureKelvin - The temperature in Kelvin 
  * @returns {string} The temperature formatted for output
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function getTemperatureString(temperatureKelvin)
 {
     try {
@@ -77,7 +77,7 @@ function getTemperatureString(temperatureKelvin)
  * @param {string} degrees - value in degrees (0-360)
  * @returns {string} compass direction of degrees passed in
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function degreesToCompass(degrees)
 {
     try {
@@ -95,7 +95,7 @@ function degreesToCompass(degrees)
  * Returns the user's preferred temperature units
  * @param {Discord.interaction} interaction - interaction sent to us from Discord API
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function getUserPreferredUnits(interaction) 
 {
     try {
@@ -117,7 +117,7 @@ function getUserPreferredUnits(interaction)
  * this will look it up and use it if it exists or tell them they're dumb if they haven't set it.
  * @param {*} interaction - discord interaction
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function getWeatherLocation(interaction)
 {
     let location = null;
@@ -157,7 +157,7 @@ async function getWeatherLocation(interaction)
  * @param {Discord.interaction} interaction - Message sent to us from Discord API
  * @returns array containing [ {string}cityName, {string}latitude, {string}longitude ]
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function getWeatherLocationGoogleMapsAPI(interaction)
 {
     try {
@@ -201,7 +201,7 @@ async function getWeatherLocationGoogleMapsAPI(interaction)
  * @param {string} excludes - Excludes to send to the one API to lower bandwidth usage
  * @returns the weather data in the One API v3 format or null on error.
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "alerts")
 {
     try {
@@ -229,7 +229,7 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
 
             return weatherData;
         } catch (e) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             if (e.message.includes('ETIMEDOUT')) {
                 await interaction.editReply('TImed out trying to get weather from One API, try again later');
             } else {
@@ -250,7 +250,7 @@ async function getWeatherUsingOneApiv3(locationData, interaction, excludes = "al
  * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function printWeatherUsingOneApiv3(locationData, interaction)
 {
     try {
@@ -280,7 +280,7 @@ async function printWeatherUsingOneApiv3(locationData, interaction)
  * Handles the /weather commands
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function handleWeatherCommand(interaction) {
     using perfCounter = PerformanceCounter.Create("handleWeatherCommand(): ");
 
@@ -308,7 +308,7 @@ async function handleWeatherCommand(interaction) {
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  * @param {JSON} weatherData - OneAPI weather data that includes hourly
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function printHourlyForecast(locationData, interaction, weatherData) {
     try {
         let hourlyWeatherString = `**Hourly Forecast for ${locationData[0]}:** \n`;
@@ -330,7 +330,7 @@ async function printHourlyForecast(locationData, interaction, weatherData) {
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  * @param {JSON} weatherData - OneAPI weather data that includes minutely
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function printMinutelyForecast(locationData, interaction, weatherData) {
     try {
         let messageStr = `No precipitation expected in the next ${weatherData.minutely.length} minutes.`;
@@ -385,7 +385,7 @@ async function printMinutelyForecast(locationData, interaction, weatherData) {
  * @param {number} day - index of day (0=Sunday, 6=Saturday)
  * @returns Shortened day string (e.g. Mon), ??? on error
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function getDayFromIndex(day) {
     const dayArray = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ];
 
@@ -405,7 +405,7 @@ function getDayFromIndex(day) {
  * @param {JSON} weather - weather object result from Open Weather
  * @returns emoji, description string otherwise
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function getEmojiFromConditions(weather) {
     // See: https://openweathermap.org/weather-conditions
     const conditionToEmojiMap = [
@@ -437,7 +437,7 @@ function getEmojiFromConditions(weather) {
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  * @param {JSON} weatherData - OneAPI weather data that includes daily
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function printDailyForecast(locationData, interaction, weatherData) {
     try {
         const preferredUnits = getUserPreferredUnits(interaction);
@@ -472,7 +472,7 @@ async function printDailyForecast(locationData, interaction, weatherData) {
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  * @param {JSON} weatherData - OneAPI weather data that includes alerts
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function printAlertForecast(locationData, interaction, weatherData) {
     try {
         if (weatherData.alerts != null && weatherData.alerts.length > 0) {
@@ -495,7 +495,7 @@ async function printAlertForecast(locationData, interaction, weatherData) {
  * @param {string} forecastType - "hourly", "daily", etc
  * @returns array from forecastTypeMap for the given type
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 function getForecastMapData(forecastType)
 {
     try {
@@ -516,7 +516,7 @@ function getForecastMapData(forecastType)
  * @param {array} locationData - [ {string}locationName, {string}latitude, {string}longitude ] 
  * @param {Discord.interaction} interaction - Discord interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function printForecastUsingOneApiv3(locationData, interaction, forecastType)
 {
     try {
@@ -538,7 +538,7 @@ async function printForecastUsingOneApiv3(locationData, interaction, forecastTyp
  * @param {Discord.message} interaction - Discord message to reply to
  * @returns [ forecastType, location ]
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function getForecastOptions(interaction)
 {
     try {
@@ -569,7 +569,7 @@ async function getForecastOptions(interaction)
  * Handles the /forecast commands
  * @param {Discord.message} interaction - Discord interaction to reply to
  */
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function handleForecastCommand(interaction)
 {
     using perfCounter = PerformanceCounter.Create("handleForecastCommand(): ");
@@ -602,7 +602,7 @@ async function handleForecastCommand(interaction)
 }
 
 class WeatherCommand extends DiscordBotCommand {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handle(interaction) {
         return handleWeatherCommand(interaction);
     }
@@ -622,7 +622,7 @@ class WeatherCommand extends DiscordBotCommand {
 }
 
 class ForecastCommand extends DiscordBotCommand {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handle(interaction) {
         return handleForecastCommand(interaction);
     }

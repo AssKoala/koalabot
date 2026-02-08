@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-      "module": "ESNext", // or any values starting with "es" or "ES"
+      "module": "ESNext",
       "target": "ESNext",
       "esModuleInterop": true
     }

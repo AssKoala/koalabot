@@ -98,7 +98,7 @@ export class UserSettingsManager {
     /**
      * Flush the user data to disk in JSON format
      */
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async flush() : Promise<boolean> {
         try {
             let userData = new Array<UserSettingsData>();
@@ -124,13 +124,13 @@ export class UserSettingsManager {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     reload(jsonFile) : boolean {
         try {
             const data = fs.readFileSync(jsonFile, { encoding: "utf8", flag: "r" });
             const jsonData = JSON.parse(data);
 
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             jsonData.forEach((item) => {
                 if (!item.name) { 
                     GetKoalaBotSystem().getLogger().logWarning(`UserSettingsManager::reload(): Skipping invalid user settings entry without name field.`);

@@ -6,7 +6,7 @@
             "dependsOn": [
                 "Generate Version File",
                 "tsc: build - tsconfig.json"
-            ],
+            ]
         },
 		{
             "label": "tsc: build - tsconfig.json",

@@ -1,5 +1,5 @@
 import { Global } from "../../__mocks__/global.js";
-import { MessageCache } from "../../helpers/messagecache.js";
+import { MessageCache } from "../../app/stenographer/messagecache.js";
 import { DiscordStenographerMessage } from "../../app/stenographer/discordstenographermessage.js";
 import { beforeAll, describe, expect, test, afterAll } from 'vitest'
 

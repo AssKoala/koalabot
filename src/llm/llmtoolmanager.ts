@@ -1,9 +1,11 @@
 // TODO remove the imports and make this dynamic
 import { LlmDictTool } from "./tools/dicttool.js";
+import { getCommonLogger } from "../logging/logmanager.js";
 
-type LLMFunctionCallTool = (args:any) => Promise<string>;
+type LLMFunctionCallTool = (args:unknown) => Promise<string>;
+
 export interface LLMTool {
-    definition: any;
+    definition: unknown;
     call: LLMFunctionCallTool;
 }
 
@@ -16,14 +18,20 @@ export class LLMToolManager {
         LLMToolManager.registerTool(LlmDictTool.dictTool.name, LlmDictTool.dictTool, LlmDictTool.execute);
     }
 
-    public static registerTool(name: string, definition: any, tool: LLMFunctionCallTool): void {
+    public static registerTool(name: string, definition: unknown, tool: LLMFunctionCallTool): void {
         LLMToolManager.instance.toolMap.set(name, { definition: definition, call: tool });
     }
 
-    public static async callTool(name: string, args: any): Promise<string> {
+    public static async callTool(name: string, args: unknown): Promise<string> {
         const tool = LLMToolManager.instance.toolMap.get(name);
         if (tool) {
-            return tool.call(args);
+            try {
+                return tool.call(args);
+            } catch (e) {
+                getCommonLogger().logError(`Error calling tool ${name}: ${e}`);
+                return "";
+            }
+            
         } else {
             throw new Error(`Tool ${name} not found`);
         }
@@ -33,9 +41,9 @@ export class LLMToolManager {
         return LLMToolManager.instance.toolMap.has(name);
     }
 
-    public static getToolDefinitions(): any[] {
-        const definitions: any[] = [];
-        LLMToolManager.instance.toolMap.forEach((tool, name) => {
+    public static getToolDefinitions(): unknown[] {
+        const definitions: unknown[] = [];
+        LLMToolManager.instance.toolMap.forEach((tool, _name) => {
             definitions.push(tool.definition);
         });
         return definitions;

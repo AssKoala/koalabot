@@ -1,10 +1,9 @@
-import { LoggerConcrete } from '../../logging/logger.js';
 import fs from 'fs';
 import path from 'path';
 import { DiscordMessageCreateListener } from '../../api/discordmessagelistener.js'
 import { ListenerManager, ListenerPriority } from "../../listenermanager.js"
 import { DiscordStenographerMessage } from './discordstenographermessage.js'
-import { MessageCache } from '../../helpers/messagecache.js'
+import { MessageCache } from './messagecache.js'
 import { PerformanceCounter } from '../../performancecounter.js';
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js';
 import { getCommonLogger, LogManager } from '../../logging/logmanager.js';
@@ -111,8 +110,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
         return this._globalCache;
     }
 
-    private getChannelCache(channelId: string, create: boolean = true): MessageCache
-    {
+    private getChannelCache(channelId: string): MessageCache {
         if (!this._channelCacheMap.has(channelId)) {
             this._channelCacheMap.set(channelId, new MessageCache(this._maxEntriesPerCache));
         }
@@ -120,7 +118,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
         return this._channelCacheMap.get(channelId)!;
     }
 
-    private getGuildCache(guildId: string, create: boolean = true) {
+    private getGuildCache(guildId: string) {
         if (!this._guildCacheMap.has(guildId)) {
             this._guildCacheMap.set(guildId, new MessageCache(this._maxEntriesPerCache));
         }
@@ -129,7 +127,7 @@ class DiscordStenographer implements DiscordMessageCreateListener
     }
 
     getAllMessagesFromGuild(guildId: string) {
-        return this._globalCache.messages();
+        return this.getGuildCache(guildId).messages();
     }
 
     getAllGuildCaches(): Map<string, MessageCache> {

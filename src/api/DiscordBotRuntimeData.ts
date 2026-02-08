@@ -1,7 +1,6 @@
 import { LoggerConcrete } from '../logging/logger.js';
 import { Bot } from '../bot.js';
 import { DiscordBotHelpers } from './discordbothelpers.js'
-import config from 'config'
 
 /**
  * Simple class that will be passed to every command at registration time.

@@ -1,17 +1,24 @@
 //import * as TikToken from "tiktoken";
 import * as Discord from 'discord.js';
 
-export type MessageDataType =
-{
-    role?: string,
-    content?: any,
-    type?: string,
-    call_id?: string,
-    output?: string,
-    author?: string,
-    image_url?: string,
-    parts?: {text: string}[]
-};
+// export type MessageDataType =
+// {
+//     // general
+//     author?: string,
+
+//     // openai / grok
+//     role?: string,
+//     content?: unknown,
+//     type?: string,
+//     call_id?: string,
+//     output?: string,
+//     image_url?: string,
+    
+//     // gemini
+//     parts?: {text: string}[],
+//     inlineData?: unknown[],
+//     contents?: unknown,
+// };
 
 // const encoder = TikToken.encoding_for_model("gpt-5")
 
@@ -27,8 +34,15 @@ export type MessageDataType =
 
 export type LLMMessageTrackerGetTokenCountFunction = (message: string) => number;
 
+// Internal Types
+type MessageBasicType = {
+    content?: unknown;
+    image_url?: string;
+}
+
 export class LLMMessageTracker {
-    private messageData: MessageDataType[] = [];
+        
+    private messageData: unknown[] = [];
     private messageTokens: number = 0;
     private systemPrompt!: string;
     private systemTokens: number = 0;
@@ -95,11 +109,11 @@ export class LLMMessageTracker {
         return true;
     }
 
-    public popMessage(): MessageDataType | undefined {
+    public popMessage(): unknown | undefined {
         return this.messageData.pop();
     }
 
-    public shiftMessage(): MessageDataType | undefined {
+    public shiftMessage(): unknown | undefined {
         return this.messageData.shift();
     }
 
@@ -107,12 +121,14 @@ export class LLMMessageTracker {
         return `${message.author.displayName}<@${message.author.id}>: ${message.content}`;
     }
 
-    public pushMessage(message: MessageDataType, makeSpace: boolean = false): boolean {
-        let content = ("content" in message) ? message.content : message.image_url;
+    public pushMessage(message: unknown, makeSpace: boolean = false): boolean {
+        const messageBasic = message as MessageBasicType;
+
+        let content = ("content" in messageBasic) ? messageBasic.content : messageBasic.image_url;
         if (!content) { content = ""; }
-        const messageTokens = this.getTokens(content);
+        const messageTokens = this.getTokens(content as string);
         
-        while (!this.messageFits(content) && this.messageData.length > 0) {
+        while (!this.messageFits(content as string) && this.messageData.length > 0) {
             if (makeSpace) {
                 this.messageData.shift();
             } else {
@@ -125,14 +141,14 @@ export class LLMMessageTracker {
         return true;
     }
 
-    public unshiftMessage(message: MessageDataType, allowEmpty: boolean = false): boolean {
+    public unshiftMessage(message: unknown, allowEmpty: boolean = false): boolean {
         // TODO: Actually count tokens based on image size, this violates the max tokens config variable right now
-        const content = message.image_url || message.content;
+        const content = (message as MessageBasicType).image_url || (message as MessageBasicType).content;
 
         if (content) {            
-            const messageTokens = this.getTokens(content);
+            const messageTokens = this.getTokens(content as string);
 
-            if (!this.messageFits(content)) return false;
+            if (!this.messageFits(content as string)) return false;
 
             this.messageTokens += messageTokens;
             this.messageData.unshift(message);

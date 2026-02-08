@@ -89,7 +89,7 @@ export abstract class ListenerManager {
 		const logManager = LogManager.get();
 
 		if (!logManager.discordLogManager.hasChannelLogger(message.channelId)) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
 			const created = logManager.discordLogManager.createLogger(message.guildId, message.channelId);
 
 			if (!created) {
@@ -97,7 +97,7 @@ export abstract class ListenerManager {
 			}
 		}
 
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
 		const guildLogger = logManager.discordLogManager.getGuildLogger(message.guildId);
 		const channelLogger = logManager.discordLogManager.getChannelLogger(message.channelId);
 

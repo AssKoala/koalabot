@@ -6,9 +6,9 @@
 import { KoalaBotSystemDiscord } from "./bot/KoalaBotSystemDiscord.js";
 
 // LLM Chat Bot (TODO MOVE)
-import { OpenAIHelper } from './helpers/openaihelper.js';
-import { GrokHelper } from "./helpers/grokhelper.js";
-import { GeminiHelper } from "./helpers/geminihelper.js";
+import { OpenAiApi } from './llm/api/openai.js';
+import { GrokApi } from "./llm/api/grok.js";
+import { GeminiApi } from "./llm/api/gemini.js";
 import { LLMBotManager } from './llm/llmbot.js';
 import { OpenAIBot } from './llm/llmbots/openaibot.js';
 import { GrokBot } from './llm/llmbots/grokbot.js';
@@ -41,12 +41,12 @@ export class Bot {
 	async init() {      
         // Create the discord bot
         this.discordBot = new DiscordBot(LogManager.get().commonLogger);
-        await this.discordBot.init(config.get<string>("Discord.token"));
+        await this.discordBot.init();
 
         // Initialize low level systems
-        OpenAIHelper.init();
-        GrokHelper.init();
-        GeminiHelper.init();
+        OpenAiApi.init();
+        GrokApi.init();
+        GeminiApi.init();
 
         // Create the discord system
         this._koalaBotSystem = new KoalaBotSystemDiscord(LogManager.get().commonLogger);
@@ -63,7 +63,7 @@ export class Bot {
         for (const model of availableModels) {
             let llmBot: OpenAIBot | GrokBot | GeminiBot | null = null;
 
-            if (model.startsWith("gpt-5")) {
+            if (model.startsWith("gpt")) {
                 llmBot = new OpenAIBot(model);
             } else if (model.startsWith("grok-4")) {
                 llmBot = new GrokBot(model);

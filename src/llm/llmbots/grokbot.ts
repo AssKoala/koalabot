@@ -1,14 +1,13 @@
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
-import { LLMBot, LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
-import { xai, createXai } from '@ai-sdk/xai';
+import { LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
+import { createXai } from '@ai-sdk/xai';
 import { generateText } from 'ai';
 import { PerformanceCounter } from "../../performancecounter.js";
 import config from 'config';
-import { GrokHelper } from '../../helpers/grokhelper.js';
+import { GrokApi } from '../../llm/api/grok.js';
 import { OpenAIBot } from './openaibot.js';
-import { OpenAIHelper } from '../../helpers/openaihelper.js';
-import * as Discord from 'discord.js'
+import { LLMInteractionMessage } from '../llminteractionmessage.js';
 
 
 class GrokImageData implements LLMGeneratedImageData {
@@ -28,22 +27,22 @@ class GrokImageData implements LLMGeneratedImageData {
             }
             const buf = Buffer.from(await response.arrayBuffer());
             return new GrokImageData(prompt, buf);
-        } catch (e) {
+        } catch {
             return undefined;
         }
     }
 }
 
 export class GrokResponse implements LLMCompletion {
-    private response: any;
+    private response: unknown;
     private imageData: LLMGeneratedImageData | undefined;
 
-    constructor(completion: any, imageData: LLMGeneratedImageData | undefined = undefined) {
+    constructor(completion: unknown, imageData: LLMGeneratedImageData | undefined = undefined) {
         this.response = completion;
         this.imageData = imageData;
     }
 
-    getResponseRaw(): any {
+    getResponseRaw(): unknown {
         return this.response;
     }
 
@@ -53,7 +52,11 @@ export class GrokResponse implements LLMCompletion {
 
     getResponseText(): string {
         try {
-            const messageData = this.response.text;
+            interface GrokTextResponse {
+                text: string;
+            }
+
+            const messageData = (this.response as GrokTextResponse).text;
 
             if (messageData.length > 0) {
                 return messageData;
@@ -83,7 +86,7 @@ export class GrokBot extends OpenAIBot {
             runtimeData.logger().logWarning("GrokBot::getImageCompletion(): Grok does not currently support image inputs for generation.");
         }
 
-        const completion = await GrokHelper.getInterface().images.generate({
+        const completion = await GrokApi.getInterface().images.generate({
             model: config.get<string>("AiModel.Grok.imageAiModel"),
             prompt: promptText,
         });
@@ -93,8 +96,14 @@ export class GrokBot extends OpenAIBot {
         return new GrokResponse(completion, imageData);
     }
 
-    protected override getVisionContent(promptText: string, imageUrls: string[]): any[] {
-        const content: any[] = [];
+    protected override async getVisionContent(promptText: string, imageUrls: string[]): Promise<unknown[]> {
+        interface ImageContentType {
+            type: "text" | "image";
+            text?: string;
+            image?: URL;
+        }
+
+        const content: ImageContentType[] = [];
 
         content.push({
             type: "text",
@@ -117,17 +126,17 @@ export class GrokBot extends OpenAIBot {
         const completion = await generateText({
             model:  this.xai(this.aiModel),
             system: tracker.getSystemPrompt(),
-            prompt: tracker.getMessageDataRaw() as any, 
+            prompt: tracker.getMessageDataRaw() as any, // eslint-disable-line @typescript-eslint/no-explicit-any 
         });
 
         runtimeData.logger().logInfo("GrokBot::getCompletion(): Received response from Grok OpenAI Completions Endpoint.");
         return new GrokResponse(completion);
     }
 
-    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker) { 
+    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker) { 
         using perfCounter = PerformanceCounter.Create("GrokBot::getCompletion(): ");
 
-        let completion = await this.getOpenAICompletion(runtimeData, tracker);
+        const completion = await this.getOpenAICompletion(runtimeData, tracker);
         
         // Copy response for future context
         tracker.pushMessage(completion.getResponseRaw());

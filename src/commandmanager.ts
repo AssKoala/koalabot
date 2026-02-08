@@ -7,7 +7,7 @@ import config from 'config';
 export abstract class CommandManager {
 
     static async importCommands() {
-        using _impComm = PerformanceCounter.Create(`CommandManager::import()`);
+        using _perfCounter = PerformanceCounter.Create(`CommandManager::import()`);
         
         try {
             // Load the dynamically defined commands from the .env file
@@ -39,7 +39,7 @@ export abstract class CommandManager {
     }
 
     static async register(client: Client) {
-        using perfCounter = PerformanceCounter.Create("CommandManager::register(): ");
+        using _perfCounter = PerformanceCounter.Create("CommandManager::register(): ");
 
         if (!client) {
             getCommonLogger().logErrorAsync("Trying to register without a valid client");
@@ -53,7 +53,7 @@ export abstract class CommandManager {
     }
 
     static getCommandsJSON(): string[] {
-        let commands: string[] = [];
+        const commands: string[] = [];
         Bot.get().client().commands.forEach(entry => {
             commands.push(entry.data.toJSON());
         })
@@ -79,18 +79,25 @@ export abstract class CommandManager {
                 if (deployGlobal) {
                     getCommonLogger().logInfo("Clearing Global Discord Commands");
 
-                    rest.put(Routes.applicationCommands(clientId), { body: [] })
-                        .then(() => getCommonLogger().logInfo('Successfully deleted all Global application commands.'))
-                        .catch(console.error);
+                    try {
+                        const _result = await rest.put(Routes.applicationCommands(clientId), { body: [] });
+                        getCommonLogger().logInfo('Successfully deleted all Global application commands.');
+                    } catch (e) {
+                        getCommonLogger().logError(`Error clearing global commands: ${e}`);
+                    }
                 }
 
                 if (deployGuild) {
-                    guildIdList.forEach(guildId => {
+                    // TODO: maybe wait on all rather than linearly waiting                    
+                    guildIdList.forEach(async guildId => {
                         getCommonLogger().logInfo(`Clearing slash commands from guild: ${guildId}`);
 
-                        rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] })
-                            .then(() => getCommonLogger().logInfo(`Successfully deleted all guild commands from guild: ${guildId}`))
-                            .catch(console.error);
+                        try {
+                            const _result = await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
+                            getCommonLogger().logInfo(`Successfully deleted all guild commands from guild: ${guildId}`);
+                        } catch (e) {
+                            getCommonLogger().logError(`Error clearing guild commands from guild ${guildId}: ${e}`);
+                        }
                     });
                 }
             }
@@ -99,6 +106,7 @@ export abstract class CommandManager {
 
             // Deploy commands globally
             if (deployGlobal) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const data = <any> await rest.put(
                     Routes.applicationCommands(clientId),
                     { body: commands },
@@ -110,6 +118,7 @@ export abstract class CommandManager {
             // Deploy guild commands
             if (deployGuild) {
                 for (const guildId of guildIdList) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const data = <any> await rest.put(
                         Routes.applicationGuildCommands(clientId, guildId),
                         { body: commands },

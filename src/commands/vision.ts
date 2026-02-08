@@ -3,7 +3,7 @@
 */
 
 import { SlashCommandBuilder, AttachmentBuilder, Utils, ChatInputCommandInteraction } from 'discord.js';
-import { OpenAIHelper } from '../helpers/openaihelper.js';
+import { OpenAiApi } from '../llm/api/openai.js';
 import { BasicCommand, DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import config from 'config';
 import { PerformanceCounter } from '../performancecounter.js';
@@ -45,7 +45,7 @@ class VisionCommand extends DiscordBotCommand {
                 }
             }
 
-            const response = await OpenAIHelper.getInterface().chat.completions.create({
+            const response = await OpenAiApi.getInterface().chat.completions.create({
                 model: model,
                 messages: [
                     {
@@ -54,7 +54,7 @@ class VisionCommand extends DiscordBotCommand {
                             { "type": "text", "text": `${query}` },
                             {
 
-                                // @ts-ignore
+                                // @ts-expect-error todo cleanup tech debt
                                 "type": "image_url",
                                 "image_url": {
                                     "url": `${url}`,

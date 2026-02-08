@@ -35,7 +35,7 @@ class Administration {
     }
 }
 
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function showMemoryStats(interaction)
 {
     try {
@@ -61,7 +61,7 @@ async function showMemoryStats(interaction)
     }
 }
 
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function showCpuStats(interaction)
 {
     try {
@@ -102,7 +102,7 @@ async function showCpuStats(interaction)
     }
 }
 
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function reboot(interaction) {
     try {
         if (!Administration.isSuper(interaction.member.id)) {
@@ -133,7 +133,7 @@ async function reboot(interaction) {
     }
 }
 
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 async function showVersionInformation(interaction) {
     try {
         interaction.editReply(`**Version**: ${VersionInformation.get().getVersionString()}`);
@@ -144,7 +144,7 @@ async function showVersionInformation(interaction) {
 
 class SystemCommand extends DiscordBotCommand {
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private async handleDisplaySubcommand(interaction, subcommandOptions) {
         const coreCommandName = subcommandOptions[0].options[0].value;
 
@@ -163,7 +163,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private async handleCoreSubcommand(interaction) {
         try {
             const subcommand = interaction.options.data[0].options[0].name;
@@ -181,7 +181,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private async handleLogSubcommand(interaction) {
         try {
             if (!Administration.isSuper(interaction.member.id)) {
@@ -216,7 +216,7 @@ class SystemCommand extends DiscordBotCommand {
                 const lines = data.split(EOL);
 
                 for (let i = Math.max(0, lines.length - count - 1); i < lines.length; i++) {
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     tailOutput += `${lines[i]}\n`;
                 }
 
@@ -224,11 +224,11 @@ class SystemCommand extends DiscordBotCommand {
                     await DiscordPlatform.editAndSplitReply(interaction, `Last ${count} lines from log:${EOL}${tailOutput}`);
                 } else {
                     // Store the data into a temp file to attach to discord
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     const hash = crypto.createHash('md5').update(tailOutput).digest("hex");
                     const filePath = `${config.get<string>("Global.tempPath")}/${hash}.txt`;
 
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     fs.writeFileSync(filePath, tailOutput, 'utf8');
 
                     const file = new AttachmentBuilder(filePath);
@@ -258,7 +258,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private async handleEnvironmentSubcommand(interaction) {
         try {
             if (!Administration.isSuper(interaction.member.id)) {
@@ -357,7 +357,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private async handleBadWordSubcommand(interaction) {
         try {
             const subCommand = interaction.options.data[0].options[0];
@@ -404,7 +404,7 @@ class SystemCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async handle(interaction) {
         using perfCounter = PerformanceCounter.Create("handleSystemCommand(): ");
 

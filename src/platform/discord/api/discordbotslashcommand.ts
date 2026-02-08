@@ -15,7 +15,7 @@ export class DiscordNativeChoice<T> implements Discord.APIApplicationCommandOpti
 export type DiscordNativeObjectType = Discord.SlashCommandStringOption | Discord.SlashCommandBooleanOption | Discord.SlashCommandIntegerOption;
 
 export class DiscordBotSlashCommandArgument extends KoalaBotSlashCommand.KoalaBotSlashCommandArgument {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     appendDiscordCommand(command) {
         const nativeObject = this.asNativeObject();
 
@@ -37,49 +37,49 @@ export class DiscordBotSlashCommandArgument extends KoalaBotSlashCommand.KoalaBo
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private configureChoices<T>(nativeObject) {
         if (this.getChoices().length > 0) {
             nativeObject.setChoices(this.getNativeChoices<T>());
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private configureAutocomplete(nativeObject) {
         if (this.hasOption("autocomplete")) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             nativeObject.setAutocomplete(this.getOption("autocomplete").value as boolean);
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private configureNumericalConstraints<T>(nativeObject) {
         if (this.hasOption("minValue")) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             nativeObject.setMinValue(this.getOption("minValue").value as T);
         }
 
         if (this.hasOption("maxValue")) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             nativeObject.setMaxValue(this.getOption("maxValue").value as T);
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private configureStringConstraints(nativeObject) {
         if (this.hasOption("minLength")) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             nativeObject.setMinLength(this.getOption("minLength").value as number);
         }
 
         if (this.hasOption("maxLength")) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             nativeObject.setMaxLength(this.getOption("maxLength").value as number);
         }
     }
 
     asNativeObject() {
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         let nativeObject: DiscordNativeObjectType = null;
 
         switch(this.getDataType()) {
@@ -93,9 +93,8 @@ export class DiscordBotSlashCommandArgument extends KoalaBotSlashCommand.KoalaBo
                 break;
 
             case KoalaBotSlashCommand.KoalaBotSlashCommandArgumentType.Number:
-                nativeObject = new Discord.SlashCommandIntegerOption();
             case KoalaBotSlashCommand.KoalaBotSlashCommandArgumentType.Integer:
-                nativeObject = (nativeObject == null) ? new Discord.SlashCommandIntegerOption() : nativeObject;
+                nativeObject = new Discord.SlashCommandIntegerOption();
 
                 // Integer and Number supports choices, autocomplete, and constraints
                 this.configureChoices(nativeObject);
@@ -120,7 +119,7 @@ export class DiscordBotSlashCommandArgument extends KoalaBotSlashCommand.KoalaBo
     }
 
     private getNativeChoices<T>(): DiscordNativeChoice<T>[] {
-        let nativeChoices: DiscordNativeChoice<T>[] = [];
+        const nativeChoices: DiscordNativeChoice<T>[] = [];
 
         this.getChoices().forEach((choice) => {
             nativeChoices.push(new DiscordNativeChoice(choice.getName(), choice.getValue()));
@@ -154,9 +153,9 @@ export class DiscordBotSlashSubcommand extends KoalaBotSlashCommand.KoalaBotSlas
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     appendDiscordCommand(discordBuilder) {
-        let subcommand = new Discord.SlashCommandSubcommandBuilder();
+        const subcommand = new Discord.SlashCommandSubcommandBuilder();
 
         subcommand.setName(this.getName());
         subcommand.setDescription(this.getDescription());
@@ -170,7 +169,7 @@ export class DiscordBotSlashSubcommand extends KoalaBotSlashCommand.KoalaBotSlas
 }
 
 export class DiscordBotSlashCommand extends KoalaBotSlashCommand.KoalaBotSlashCommand {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     constructor(name: string = undefined, description: string = undefined) {
         super(name, description);
 
@@ -184,19 +183,19 @@ export class DiscordBotSlashCommand extends KoalaBotSlashCommand.KoalaBotSlashCo
             throw new TypeError("Discord doesn't support global arguments and subcommands");
         }
 
-        let discordCommand = new Discord.SlashCommandBuilder();
+        const discordCommand = new Discord.SlashCommandBuilder();
         discordCommand.setName(this.getName());
         discordCommand.setDescription(this.getDescription());
 
         if (this.getGroups().length > 0) {
             this.getGroups().forEach((group) => {
 
-                let subgroup = new Discord.SlashCommandSubcommandGroupBuilder();
+                const subgroup = new Discord.SlashCommandSubcommandGroupBuilder();
                 subgroup.setName(group.name);
                 subgroup.setDescription(group.description);
     
                 this.getSubcommands(group.name).forEach((subCommand) => {
-                    let sc = subCommand as DiscordBotSlashSubcommand;
+                    const sc = subCommand as DiscordBotSlashSubcommand;
                     sc.appendDiscordCommand(subgroup);
                 });
 

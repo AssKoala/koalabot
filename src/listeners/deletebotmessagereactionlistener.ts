@@ -3,7 +3,7 @@ import { EmbedBuilder } from 'discord.js';
 import { ListenerManager } from "../listenermanager.js"
 
 class DeleteBotMessageReactionListener implements DiscordReactionAddListener {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     async onDiscordMessageReactionAdd(runtimeData, reaction, user) {
         // Ignore bot's reactions
 		if (user.bot) return;
@@ -13,7 +13,7 @@ class DeleteBotMessageReactionListener implements DiscordReactionAddListener {
 			let username = '';
 
 			try {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
 				const reactedUser = reaction.users.cache.every((entry) => {
 					username = entry.globalName;
 					return false;

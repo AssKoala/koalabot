@@ -1,5 +1,9 @@
 import { Dict } from "../../commands/dict.js";
 
+export interface LlmDictToolArgs {
+    term: string;
+}
+
 export class LlmDictTool {
     public static readonly name = "get_dict_definition";
     public static readonly dictTool = {
@@ -30,12 +34,14 @@ export class LlmDictTool {
         return "";
     }
 
-    public static async execute(args: any): Promise<string> {
-        if (!args.term) {
+    public static async execute(args: unknown): Promise<string> {
+        const llmDictArgs = args as LlmDictToolArgs;
+        
+        if (!llmDictArgs.term) {
             throw new Error("LlmDictTool: Missing required argument 'term'");
         }
 
-        const term: string = args.term;
+        const term: string = llmDictArgs.term;
         const definition = LlmDictTool.getDictDefinition(term);
         return definition;
     }

@@ -45,7 +45,7 @@ class BadWordEvent implements IBadWordEvent {
 
 class BadWordTracker {
     private badWordEvents: IBadWordEvent[];
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private longestStreak: number;
 
     constructor(badWordEvents: IBadWordEvent[] = []) {
@@ -162,13 +162,13 @@ class HumanReadableTimestamp {
 }
 
 class BadWordListener implements WordListener {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private _badword: string;
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private readonly trackingChannels: string[];
     private lastUsedMap: Map<string, BadWordTracker> = new Map<string, BadWordTracker>();
     private enabled: boolean = true;
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private responseType: BadWordResponseType;
 
     private fileOpHandle: Promise<any> = Promise.resolve();
@@ -229,25 +229,25 @@ class BadWordListener implements WordListener {
         if (!this.enabled) return;
 
         if (this.trackingChannels.includes(message.channelId) && message.content.toLowerCase().includes(this._badword.toLowerCase())) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             const newEvent = new BadWordEvent(message.member.user.id, message.member.user.username);
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             let tracker: BadWordTracker = null;
 
             if (!this.lastUsedMap.has(message.channelId)) { // It's the first event
                 this.lastUsedMap.set(message.channelId, new BadWordTracker());
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 this.lastUsedMap.get(message.channelId).addEvent(newEvent);
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 tracker = this.lastUsedMap.get(message.channelId);
             } else {    // It's not the first event
                 const currentTime = newEvent.timestamp;
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 tracker = this.lastUsedMap.get(message.channelId);
                 let isNewRecord: boolean = false;
 
                 // Check if this is a new record
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 let diff = currentTime - tracker.last().timestamp;
                 if (diff > tracker.getLongestStreak()) {
                     isNewRecord = true;

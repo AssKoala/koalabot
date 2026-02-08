@@ -59,9 +59,9 @@
         aiModelNano: "gpt-5-nano",                     // Default LLM nano model to use for smaller responses
         AiModels: {
             // Comma separated list of available models, do not override unless you know what you are doing.
-            availableModels: "gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,grok-4-1-fast,gemini-2.5-flash,gemini-3-flash-preview",
+            availableModels: "gpt-4o,gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,grok-4-1-fast,gemini-2.5-flash,gemini-3-flash-preview",
             // Remove models from the list to disable their use.  New models won't be available automatically if overriden.
-            enabledModels: "gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,grok-4-1-fast,gemini-2.5-flash,gemini-3-flash-preview"
+            enabledModels: "gpt-4o,gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,grok-4-1-fast,gemini-2.5-flash,gemini-3-flash-preview"
         },
         enableLongDescription: true,                    // If enabled, responses with images will include the revised prompt as the embed description
         maxMessages: 2048,                              // Max number of message history to send during chat interaction

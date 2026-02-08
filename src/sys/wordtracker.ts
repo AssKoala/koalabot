@@ -30,7 +30,7 @@ export class WordTracker implements DiscordMessageCreateListener {
     private trackedWords: TrackedWordConcrete[] = [];
     private listeners: Map<string, WordListener[]> = new Map<string, WordListener[]>();
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     constructor(filePath: string = null) {
         if (filePath != null) {
             const data = readJsonFileSync(filePath);
@@ -55,13 +55,13 @@ export class WordTracker implements DiscordMessageCreateListener {
         }
     }
 
-    public untrackWord(word: TrackedWord): void {
+    public untrackWord(_word: TrackedWord): void {
         throw new Error("Not yet implemented");
     }
 
     public registerListener(listener: WordListener, word: string): boolean {
         if (this.listeners.has(word)) {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             this.listeners.get(word).push(listener);
             return true;
         }
@@ -69,14 +69,14 @@ export class WordTracker implements DiscordMessageCreateListener {
         return false;
     }
     
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         if (message.author.bot) return; // Ignore bot messages
 
         this.trackedWords.forEach(word => {
             if (word.isInMessage(message.content)) {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 this.listeners.get(word.word).forEach(listener => {
                     listener.onWordDetected(runtimeData, word, message);
                 });

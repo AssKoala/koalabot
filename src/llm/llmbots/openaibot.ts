@@ -1,38 +1,54 @@
 import { LLMMessageTracker } from '../llmmessagetracker.js'
 import { DiscordBotRuntimeData } from '../../api/discordbotruntimedata.js'
 import { LLMBot, LLMCompletion, LLMGeneratedImageData } from "../llmbot.js";
-import { OpenAIHelper } from '../../helpers/openaihelper.js';
+import { OpenAiApi } from '../api/openai.js';
 import { Stenographer } from '../../app/stenographer/discordstenographer.js';
 import { PerformanceCounter } from "../../performancecounter.js";
 import * as TikToken from "tiktoken";
 import config from 'config';
-import * as Discord from 'discord.js';
+import { LLMInteractionMessage } from '../llminteractionmessage.js';
+import * as OpenAiSdk from 'openai';
+
+interface ImageContentType {
+    type: "input_text" | "input_image";
+    text?: string;
+    image_url?: string;
+}
 
 export class OpenAIResponse implements LLMCompletion {
-    private response: any;
+    private response: OpenAiSdk.OpenAI.Responses.Response;
 
-    constructor(response: any) {
-        this.response = response;
+    constructor(response: unknown) {
+        this.response = response as OpenAiSdk.OpenAI.Responses.Response;
     }
 
-    getResponseRaw(): any {
+    getResponseRaw(): unknown {
         return this.response;
     }
 
     getResponseImageData(): LLMGeneratedImageData | undefined {
         try {
-            const imageCompletion = this.response.output
-                    .filter((output: any) => output.type === "image_generation_call");
+            // Find the image gen call
+            for (let i = 0; i < this.response.output.length; ++i) {
+                if (this.response.output[i].type === "image_generation_call") {
+                    type OpenAiImageCompletionType = {
+                        result: string;   // base64 image data
+                        revised_prompt: string;
+                    }
+                    const imageCompletion = this.response.output[i] as unknown as OpenAiImageCompletionType;
 
-            const imageData = imageCompletion[0].result;
-            const prompt = imageCompletion[0].revised_prompt;
+                    const imageData = imageCompletion.result;
+                    const prompt = imageCompletion.revised_prompt;
 
-            if (imageData.length > 0) {
-                const imageBase64 = imageData;
-                const imageBytes = Buffer.from(imageBase64, "base64");
+                    if (imageData.length > 0) {
+                        const imageBase64 = imageData;
+                        const imageBytes = Buffer.from(imageBase64, "base64");
 
-                return { imageBytes, prompt };
-            }
+                        return { imageBytes, prompt };
+                    }
+                    break;
+                }
+            }            
         } catch {
             return undefined;
         }
@@ -40,11 +56,16 @@ export class OpenAIResponse implements LLMCompletion {
 
     getResponseText(): string {
         try {
-            const messageData = this.response.output.filter((output: any) => output.type === "message")[0].content[0].text;
+            for (let i = 0; i < this.response.output.length; ++i) {
+                if (this.response.output[i].type === "message") {
+                    const openAiMsg = this.response.output[i] as unknown as OpenAiSdk.OpenAI.Responses.EasyInputMessage;
+                    const messageData = (openAiMsg.content[0] as OpenAiSdk.OpenAI.Responses.ResponseInputText).text;
 
-            if (messageData.length > 0) {
-                return messageData;
-            }
+                    if (messageData.length > 0) {
+                        return messageData;
+                    }
+                }
+            }           
         } catch {
             console.error("Error extracting message text from response");
         }
@@ -60,9 +81,8 @@ export class OpenAIBot extends LLMBot {
         super(aiModel, enabled);
         try {
             this.tokenEncoder = TikToken.encoding_for_model("gpt-5");   // TODO: use aiModel, but the encoding type safety is stupid
-        } catch (e) {
+        } catch {
             throw new Error(`Failed to create tiktoken encoder for aiModel(${this.aiModel}), will fall back to estimate`);
-            this.tokenEncoder = undefined;
         }
     }
 
@@ -70,18 +90,18 @@ export class OpenAIBot extends LLMBot {
         return true;
     }
 
-    protected async isMessageRequestForImageGeneration(runtimeData: DiscordBotRuntimeData, message: Discord.Message) {
+    protected async isMessageRequestForImageGeneration(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage) {
         using perfCounter = PerformanceCounter.Create("OpenAIBot::isMessageRequestForImageGeneration(): ");
 
         try {
             const prompt = `Does the following statement appear to be a request for image generation, respond yes or no only`;
     
-            const completion = await OpenAIHelper.simpleQuery(config.get("Chat.aiModelNano"), `${prompt}: ${message.content}`);
+            const completion = await OpenAiApi.simpleQuery(config.get("Chat.aiModelNano"), `${prompt}: ${message.getQuestion()}`);
             const responseText = completion.choices[0].message.content!;
 
             return responseText.toLowerCase().includes('yes');
         } catch (e) {
-            runtimeData.logger().logError("OpenAIBot::isMessageRequestForImageGeneration(): Failed to run isMessageRequest, falling back to no.");
+            runtimeData.logger().logError(`OpenAIBot::isMessageRequestForImageGeneration(): Failed to run isMessageRequest, falling back to no. Got: ${e}`);
         }
 
         return false;
@@ -93,13 +113,13 @@ export class OpenAIBot extends LLMBot {
                 return this.tokenEncoder.encode(message).length;
             }
         } catch (e) {
-            runtimeData.logger().logInfo("OpenAIBot::getTokenCount(${message}): Failed to encode message, falling back to rough estimate.");
+            runtimeData.logger().logDebug(`OpenAIBot::getTokenCount(${message}): Failed to encode message, falling back to rough estimate. Got: ${e}`);
         }
 
         return super.getTokenCount(runtimeData, message);
     }
 
-    protected override async getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: Discord.Message, systemPrompt: string): Promise<LLMMessageTracker> {
+    protected override async getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string): Promise<LLMMessageTracker> {
         const tempTracker = new LLMMessageTracker(
                                 config.get("Chat.maxMessages"),
                                 config.get("Chat.maxTokenCount"),
@@ -108,7 +128,7 @@ export class OpenAIBot extends LLMBot {
     
         // Regular chat request
         // Stenographer runs before all others, this includes the user's question as the most recent message
-        Stenographer.getChannelMessages(message.channelId).slice().reverse().every(entry => {
+        Stenographer.getChannelMessages(message.getChannelId()).slice().reverse().every(entry => {
             if (entry.imageUrl.length != 0) return true;    // Skip any images
 
             const role = entry.authorId == runtimeData.bot().client().user!.id ? "assistant" : "user";
@@ -129,8 +149,41 @@ export class OpenAIBot extends LLMBot {
         return tempTracker;
     }
 
-    protected override getVisionContent(promptText: string, imageUrls: string[]): any[] {
-        const content: any[] = [];
+    protected override async getVisionRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string, imageUrls: string[]): Promise<LLMMessageTracker>
+    {
+        if (imageUrls.length > config.get<number>("Chat.ImageVision.maxImages")) {
+            throw new Error(`Too many images provided (${imageUrls.length}), Chat.ImageVision.maxImages is currently ${config.get("Chat.ImageVision.maxImages")}.`);
+        }
+
+        if (message.getQuestion()?.trim().length == 0) {
+            throw new Error(`No prompt text provided with image(s), please provide a prompt describing what you want.`);
+        }
+
+        const tempTracker = new LLMMessageTracker(
+                                config.get("Chat.maxMessages"),
+                                config.get("Chat.maxTokenCount"),
+                                systemPrompt,
+                                this.getTokenCountFunction(runtimeData));
+        // Get all images
+        const images: string[] = [];
+
+        imageUrls.forEach(url => {
+            images.push(url);
+        });
+
+        const content = await this.getVisionContent(message.getQuestion(), images);
+
+        // Push all to tracker
+        tempTracker.unshiftMessage({
+            "role": "user",
+            "content": content
+        });
+
+        return tempTracker;
+    }
+
+    protected override async getVisionContent(promptText: string, imageUrls: string[]): Promise<unknown[]> {
+        const content: ImageContentType[] = [];
 
         content.push({
             type: "input_text",
@@ -150,7 +203,7 @@ export class OpenAIBot extends LLMBot {
         using perfCounter = PerformanceCounter.Create("OpenAIBot::getOpenAICompletion(): ");
         runtimeData.logger().logInfo("OpenAIBot::getOpenAICompletion(): Sending request to OpenAI Responses API...");
 
-        let tools = this.getTools();
+        let tools = this.getTools() as OpenAiSdk.OpenAI.Responses.Tool[]; // Pulling the tool types is more trouble than its worth
         
         if (config.get("Chat.ImageGeneration.enable")) {
             tools = [
@@ -166,10 +219,10 @@ export class OpenAIBot extends LLMBot {
             ];
         }
 
-        const completion = await OpenAIHelper.getInterface().responses.create({
+        const completion = await OpenAiApi.getInterface().responses.create({
             model: this.aiModel,
             instructions: tracker.getSystemPrompt(),
-            input: tracker.getMessageDataRaw() as any, 
+            input: tracker.getMessageDataRaw() as any,  // eslint-disable-line @typescript-eslint/no-explicit-any
             tool_choice: "auto",
             tools: tools
         });
@@ -182,7 +235,7 @@ export class OpenAIBot extends LLMBot {
         using perfCounter = PerformanceCounter.Create("OpenAIBot::getImageCompletion(): ");
         runtimeData.logger().logInfo("OpenAIBot::getImageCompletion(): Sending request to OpenAI Responses API...");
 
-        const content: any[] = [];
+        const content: ImageContentType[] = [];
 
         content.push({
             type: "input_text",
@@ -195,10 +248,13 @@ export class OpenAIBot extends LLMBot {
             });
         });
 
-        const completion = await OpenAIHelper.getInterface().responses.create({
+        const completion = await OpenAiApi.getInterface().responses.create({
             model: this.aiModel,
             instructions: systemPrompt,
-            input: [{ role: "user", content: content }],
+            input: 
+            [
+                { role: "user", content: (content as any[]) }   // eslint-disable-line @typescript-eslint/no-explicit-any
+            ],
             tool_choice: "auto",
             tools: [
                 { type: "image_generation" }
@@ -209,13 +265,13 @@ export class OpenAIBot extends LLMBot {
         return new OpenAIResponse(completion);
     }
 
-    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker): Promise<LLMCompletion> { 
+    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker): Promise<LLMCompletion> { 
         using perfCounter = PerformanceCounter.Create("OpenAIBot::getCompletion(): ");
 
         let completion = await this.getOpenAICompletion(runtimeData, tracker);
         
         // Copy all responses into the input for future context
-        completion.getResponseRaw().output.forEach((item: any) => {
+        completion.getResponseRaw().output.forEach((item: unknown) => {
             tracker.pushMessage(item);
         });
 
@@ -251,11 +307,7 @@ export class OpenAIBot extends LLMBot {
                 break;
             
             case "web_search_call":
-                try {
-                    runtimeData.logger().logInfo(`OpenAIBot::getCompletion(): OpenAI returned completion with web search.`);
-                } catch (e) {
-
-                }
+                runtimeData.logger().logInfo(`OpenAIBot::getCompletion(): OpenAI returned completion with web search.`);
                 break;
 
             default:
@@ -269,7 +321,7 @@ export class OpenAIBot extends LLMBot {
             completion = await this.getOpenAICompletion(runtimeData, tracker);
 
             // Copy all responses into the input for future context
-            completion.getResponseRaw().output.forEach((item: any) => {
+            completion.getResponseRaw().output.forEach((item: unknown) => {
                 tracker.pushMessage(item);
             });
         }

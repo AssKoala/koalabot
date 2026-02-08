@@ -1,23 +1,9 @@
 import { performance } from 'perf_hooks';
 import { Logger } from './api/koalabotsystem.js'
 
-import config from 'config'
-
-// <polyfill>
-
-// the interfaces are only necessary if you're not including https://github.com/microsoft/TypeScript/blob/main/src/lib/esnext.disposable.d.ts as a `lib` option
-interface SymbolConstructor {
-    readonly dispose: unique symbol
-}
-
 interface Disposable {
     [Symbol.dispose](): void
 }
-
-// @ts-ignore - if it already exists as a readonly property, this is a no-op anyway
-Symbol.dispose ??= Symbol('Symbol.dispose')
-
-// </polyfill>
 
 export class SimplePerformanceCounter {
     public readonly description: string;
@@ -71,8 +57,4 @@ export class PerformanceCounter implements Disposable {
         this.enableCounters = enable;
         this.defaultLogger = logger;
     }
-}
-
-export class AutoPerformanceCounter {
-
 }

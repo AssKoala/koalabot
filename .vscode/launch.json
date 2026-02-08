@@ -87,6 +87,6 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "sourceMaps": true
-        },
+        }
     ]
 }

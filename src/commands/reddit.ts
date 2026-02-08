@@ -6,7 +6,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import { PerformanceCounter } from '../performancecounter.js';
 
-// @ts-ignore
+// @ts-expect-error todo cleanup tech debt
 import validator from 'validator';
 import cp from 'child_process';
 import path from "path";
@@ -71,7 +71,7 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private async getRandomLink(interaction: ChatInputCommandInteraction, searchLimit, subredditList: string[]) {
         using perfCounter = PerformanceCounter.Create("replyRandomLink(): ");
 
@@ -98,7 +98,7 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private _slashCommand;
     slashCommand() {
         return this._slashCommand;
@@ -119,7 +119,7 @@ class RedditLinkCommand extends DiscordBotCommand {
             // Check if blacklisted
             let isBlacklistedChannel: boolean = false;
             this.blacklist.forEach(blacklisted => {
-                // @ts-ignore
+                // @ts-expect-error todo cleanup tech debt
                 if (interaction.channel.name === blacklisted) {
                     isBlacklistedChannel = true;
                 }
@@ -136,7 +136,7 @@ class RedditLinkCommand extends DiscordBotCommand {
             if (this.whitelist.length > 0) {
                 isWhitelisted = false;
                 this.whitelist.every(whitelisted => {
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     if (interaction.channel.name === whitelisted) {
                         isWhitelisted = true;
                         return false;
@@ -156,7 +156,7 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     constructor(linkData) {
         super(linkData.name);
 
@@ -194,7 +194,7 @@ class RedditLinkCommand extends DiscordBotCommand {
 import { readJsonFile } from '../sys/jsonreader.js'
 
 class RedditLinkPoster {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     #redditLinks;
     #redditLinkCommands: RedditLinkCommand[] = [];
 
@@ -206,7 +206,7 @@ class RedditLinkPoster {
     }
 
     generateSlashCommands() {
-        // @ts-ignore
+        // @ts-expect-error todo cleanup tech debt
         this.#redditLinks.forEach(linkData => {
             this.#redditLinkCommands.push(new RedditLinkCommand(linkData));
         });

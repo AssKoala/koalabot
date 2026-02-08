@@ -13,3 +13,4 @@ deploy-logs
 dist
 data
 environment
+.p4config

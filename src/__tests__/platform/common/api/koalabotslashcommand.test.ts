@@ -30,9 +30,9 @@ describe('KoalaBotSlashCommand', () => {
         });
 
         test('Modify', () => {
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             command.setName(null);
-            // @ts-ignore
+            // @ts-expect-error todo cleanup tech debt
             command.setDescription(null);
 
             expect(command.getName()).toBe(null);

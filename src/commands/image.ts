@@ -5,7 +5,7 @@
 import { KoalaSlashCommandRequest } from '../koala-bot-interface/koala-slash-command.js';
 
 import { SlashCommandBuilder, AttachmentBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { OpenAIHelper } from '../helpers/openaihelper.js';
+import { OpenAiApi } from '../llm/api/openai.js';
 import { DownloaderHelper } from 'node-downloader-helper';
 import { mkdir, rm } from 'node:fs/promises';
 import { got } from 'got';
@@ -118,7 +118,7 @@ class OpenAI {
             switch (imageGenData.model) {
                 case 'dall-e-3':
                     // Create the image with OpenAI
-                    response = await OpenAIHelper.getInterface().images.generate({
+                    response = await OpenAiApi.getInterface().images.generate({
                         model: `${imageGenData.model}`,
                         prompt: `${imageGenData.getGeneratedPrompt()}`,
                         n: 1,
@@ -131,7 +131,7 @@ class OpenAI {
                     const quality = imageGenData.quality == 'standard' ? 'auto' : imageGenData.quality
 
                     if (imageGenData.base_images.length == 0) {
-                        response = await OpenAIHelper.getInterface().images.generate({
+                        response = await OpenAiApi.getInterface().images.generate({
                             model: `${imageGenData.model}`,
                             prompt: `${imageGenData.getGeneratedPrompt()}`,
                             size: `${imageGenData.size}` as any,
@@ -155,7 +155,7 @@ class OpenAI {
                             ),
                         );
 
-                        response = await OpenAIHelper.getInterface().images.edit({
+                        response = await OpenAiApi.getInterface().images.edit({
                             model: `${imageGenData.model}`,
                             prompt: `${imageGenData.getGeneratedPrompt()}`,
                             size: `${imageGenData.size}` as any,
@@ -389,27 +389,27 @@ class ImageCommand extends DiscordBotCommand {
         }
     } // handleImageCommand
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private appendGptImageSubCommand(imageCommand) {
         return imageCommand
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     .addSubcommandGroup((group) =>
                         group
                             .setName('gpt-image-1')
                             .setDescription('Generate an image using GPT Image')
-                            // @ts-ignore
+                            // @ts-expect-error todo cleanup tech debt
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate')
                                     .setDescription('Generate an image using GPT Image')
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
@@ -422,7 +422,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_quality')
@@ -435,7 +435,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('transparency')
@@ -446,7 +446,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('base_images')
@@ -457,27 +457,27 @@ class ImageCommand extends DiscordBotCommand {
                     );
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private appendDalleSubCommand(imageCommand) {
         return imageCommand
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     .addSubcommandGroup((group) =>
                         group
                             .setName('dall-e-3')
                             .setDescription('Generate an image using Dall-E')
-                            // @ts-ignore
+                            // @ts-expect-error todo cleanup tech debt
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate')
                                     .setDescription('Generate an image using Dall-E')
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
@@ -489,7 +489,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_quality')
@@ -500,7 +500,7 @@ class ImageCommand extends DiscordBotCommand {
                                             )
                                             .setRequired(false),
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('force_prompt')
@@ -515,7 +515,7 @@ class ImageCommand extends DiscordBotCommand {
                     );
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private appendStableDiffusionSubCommand(imageCommand) {
         // Pull in checkpoints dynamically for use in the slash command we send to discord
         const checkpoints = config.get<string>("ImageGeneration.StableDiffusion.checkpoints").split(',');
@@ -544,31 +544,31 @@ class ImageCommand extends DiscordBotCommand {
         });
 
         return imageCommand
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     .addSubcommandGroup((group) =>
                         group
                             .setName('stablediffusion')
                             .setDescription('Generate an image using Stable Diffusion')
-                            // @ts-ignore
+                            // @ts-expect-error todo cleanup tech debt
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate')
                                     .setDescription('Generate an image using Stable Diffusion')
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true)
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
                                             .setDescription('Image size to generate (1024x1024 default)')
                                             .setRequired(false)
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('sd_model_checkpoint')
@@ -582,34 +582,34 @@ class ImageCommand extends DiscordBotCommand {
                     );
     }
 
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     private appendGetimgAiFluxSubCommand(imageCommand) {
         return imageCommand
-                    // @ts-ignore
+                    // @ts-expect-error todo cleanup tech debt
                     .addSubcommandGroup((group) =>
                         group
                             .setName('getimgai')
                             .setDescription('Generate an image using getimg.ai')
-                            // @ts-ignore
+                            // @ts-expect-error todo cleanup tech debt
                             .addSubcommand((subcommand) =>
                                 subcommand
                                     .setName('generate_flux')
                                     .setDescription('Generate an image using getimg.ai')
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_details')
                                             .setDescription('Details of what to generate')
                                             .setRequired(true)
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addStringOption((option) =>
                                         option
                                             .setName('image_size')
                                             .setDescription('Image size to generate (1024x1024 default, range 256-1280x256-1280)')
                                             .setRequired(false)
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addIntegerOption((option) =>
                                         option
                                             .setName("steps")
@@ -618,7 +618,7 @@ class ImageCommand extends DiscordBotCommand {
                                             .setMinValue(1)
                                             .setMaxValue(4)
                                     )
-                                    // @ts-ignore
+                                    // @ts-expect-error todo cleanup tech debt
                                     .addIntegerOption((option) =>
                                         option
                                             .setName("seed")

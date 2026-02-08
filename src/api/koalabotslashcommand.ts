@@ -47,12 +47,15 @@ export class KoalaBotArgumentOption {
     value: KoalaBotArgumentOptionValueType;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type KoalaCommandChoiceValueType = any;
+
 export class KoalaCommandChoice {
     private name: string;
     private description: string;
-    private value: any;
+    private value: KoalaCommandChoiceValueType; // It's not currently worth the effort to type this more strictly
     
-    constructor(name: string, value: any, description: string = "") {
+    constructor(name: string, value: KoalaCommandChoiceValueType, description: string = "") {
         this.name = name;
         this.value = value;
         this.description = description;
@@ -62,11 +65,11 @@ export class KoalaCommandChoice {
 
     getName(): string { return this.name;}
     getDescription(): string { return this.description; }
-    getValue(): any { return this.value; }
+    getValue() { return this.value; }
     
     setName(name: string) { this.name = name; }
     setDescription(description: string) { this.description = description; }
-    setValue(value: any) { this.value = value; }
+    setValue(value: KoalaCommandChoiceValueType) { this.value = value; }
 }
 
 export class KoalaBotSlashCommandArgument extends KoalaCommand {

@@ -8,9 +8,9 @@ import { PerformanceCounter } from '../performancecounter.js';
 import config from 'config';
 
 export class ShortenUrlResult {
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     shortUrl: string = null;
-    // @ts-ignore
+    // @ts-expect-error todo cleanup tech debt
     fetchResult: Response = null;
     responseData: any = null;
     error: unknown = null;

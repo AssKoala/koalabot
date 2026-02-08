@@ -6,11 +6,12 @@ import * as Discord from 'discord.js';
 import { Stenographer } from '../app/stenographer/discordstenographer.js';
 import { DiscordStenographerMessage } from "../app/stenographer/discordstenographermessage.js";
 import { UserSettingsManager } from '../app/user/usersettingsmanager.js';
-import { PerformanceCounter, SimplePerformanceCounter } from '../performancecounter.js';
+import { PerformanceCounter } from '../performancecounter.js';
+import { LLMInteractionMessage, LLMInteractionMessageFactory } from './llminteractionmessage.js';
 
 import config from 'config';
 import { LLMToolManager } from './llmtoolmanager.js';
-import { OpenAIHelper } from '../helpers/openaihelper.js';
+import { getCommonLogger } from '../logging/logmanager.js';
 
 export interface LLMGeneratedImageData {
     imageBytes: Buffer;
@@ -18,7 +19,7 @@ export interface LLMGeneratedImageData {
 }
 
 export interface LLMCompletion {
-    getResponseRaw(): any;
+    getResponseRaw(): any;  // eslint-disable-line @typescript-eslint/no-explicit-any
     getResponseImageData(): LLMGeneratedImageData | undefined;
     getResponseText(): string;
 }
@@ -64,18 +65,19 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         };
     }
 
-    protected abstract getVisionContent(promptText: string, imageUrls: string[]): any[];
-    protected abstract getCompletion(runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker): Promise<LLMCompletion>;
-    protected abstract getImageCompletion(runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, imageInputUrls: string[]): Promise<LLMCompletion>;
+    protected abstract getVisionContent(_promptText: string, _imageUrls: string[]): Promise<unknown[]>;
+    protected abstract getCompletion(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _tracker: LLMMessageTracker): Promise<LLMCompletion>;
+    protected abstract getImageCompletion(_runtimeData: DiscordBotRuntimeData, _systemPrompt: string, _promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion>;
     protected abstract hasAutomaticImageGeneration(): boolean; 
-    protected abstract isMessageRequestForImageGeneration(runtimeData: DiscordBotRuntimeData, message: Discord.Message): Promise<boolean>;
-    protected abstract getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: Discord.Message, systemPrompt: string): Promise<LLMMessageTracker>;
+    protected abstract isMessageRequestForImageGeneration(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage): Promise<boolean>;
+    protected abstract getGeneralRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string): Promise<LLMMessageTracker>;
+    protected abstract getVisionRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string, _imageUrls: string[]): Promise<LLMMessageTracker>;
     
-    protected async callTool(toolName: string, args: any): Promise<string> {
+    protected async callTool(toolName: string, args: unknown): Promise<string> {
         return LLMToolManager.callTool(toolName, args);
     }
 
-    protected getTools(): any[] {
+    protected getTools(): unknown[] {
         return LLMToolManager.getToolDefinitions();
     }
 
@@ -98,7 +100,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         return message.content;
     }
 
-    public static async replyImage(runtimeData: DiscordBotRuntimeData, message: Discord.Message, imageData: LLMGeneratedImageData) {                    
+    public static async replyImage(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, imageData: LLMGeneratedImageData) {                    
         const TITLE_MAX_LEN = config.get<number>("Discord.attachmentTitleMaxLength");
         const DESCR_MAX_LEN = config.get<number>("Discord.attachmentDescriptionMaxLength");
 
@@ -107,8 +109,8 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
 
             if (config.get<boolean>("Stenographer.storeImages")) {
                 Stenographer.pushMessage(new DiscordStenographerMessage(
-                    message.guildId!,
-                    message.channelId,
+                    message.getGuildId(),
+                    message.getChannelId(),
                     runtimeData.bot().client().user!.username,
                     runtimeData.bot().client().user!.id,
                     imageData.prompt,
@@ -126,7 +128,11 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         });
 
         const embed = new Discord.EmbedBuilder();
-        embed.setTitle(LLMBot.getQuestion(message).replace(`<@${runtimeData.botId()}>`,'').trim().substring(0, TITLE_MAX_LEN));
+        embed.setTitle(message.getQuestion()
+                .replace(`<@${runtimeData.botId()}>`,'')    // strip bot name
+                .replace('/chat','')                        // strip command name
+                .trim().substring(0, TITLE_MAX_LEN));
+
         if (config.get("Chat.enableLongDescription")) {
             const text = "-# " + imageData.prompt;
             embed.setDescription(text.substring(0, DESCR_MAX_LEN));
@@ -137,13 +143,13 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         await message.reply({ embeds: [embed], files: [image] });
     }
 
-    public static async replyText(runtimeData: DiscordBotRuntimeData, message: Discord.Message, responseText: string) {
-        runtimeData.logger().logInfo(`LLMBot::replyText(): ${message.content}, got: ${responseText}`);
+    private static async replyText(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, responseText: string) {
+        runtimeData.logger().logInfo(`LLMBot::replyText(): ${message.getQuestion()}, got: ${responseText}`);
 
         // Add the response to our list of stuff
         Stenographer.pushMessage(new DiscordStenographerMessage(
-            message.guildId!,
-            message.channelId,
+            message.getGuildId()!,
+            message.getChannelId()!,
             runtimeData.bot().client().user!.username,
             runtimeData.bot().client().user!.id,
             responseText,
@@ -151,15 +157,20 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         ));
 
         try {
+            const pChannel = await runtimeData.bot().client().channels.cache.get(message.getChannelId());
+
             const messages = LLMBot.splitText(responseText);
             await message.reply(messages[0]);
 
-            for (let i = 1; i < messages.length; i++) {
-                if ('send' in message.channel) {
-                    await message.channel.send(messages[i]);
-                } else {
-                    runtimeData.logger().logErrorAsync(`LLMBot::replyText(): Failed to send split message, message channel lacks send method`);
-                    return;
+            const channel = await pChannel;
+            if (channel) {
+                for (let i = 1; i < messages.length; i++) {
+                    if ('send' in channel) {
+                        await channel.send(messages[i]);
+                    } else {
+                        runtimeData.logger().logErrorAsync(`LLMBot::replyText(): Failed to send split message, message channel lacks send method`);
+                        return;
+                    }
                 }
             }
         } catch (e) {
@@ -173,35 +184,56 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             const buf = await res.blob();
 
             if (buf.type.startsWith("image/")) return url;
-        } catch (e) { }
+        } catch (e) { 
+            getCommonLogger().logError(`LLMBot::getIfImageUrl(): Failed to fetch url ${url}, got error ${e}`);
+        }
 
         return "";
     }
 
-    private async getImageUrlsFromMessages(messages: (Discord.Message | Discord.OmitPartialGroupDMChannel<Discord.Message<boolean>> | undefined)[]): Promise<string[]> {
+    private getUrlsFromString(content: string): string[] {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = content.match(urlRegex);
+        return urls || [];
+    }
+
+    private async getImageUrlsFromMessages(messages: (Discord.Message | Discord.OmitPartialGroupDMChannel<Discord.Message<boolean>> | LLMInteractionMessage | undefined)[]): Promise<string[]> {
         const imageUrls: string[] = [];
         const promises: Promise<string>[] = [];
 
         messages.forEach(message => {
-            message?.attachments.forEach(attachment => {
-                if (attachment.contentType?.startsWith("image/")) {
-                    imageUrls.push(attachment.url);
-                }
-            });
+            if (!message) return;
+
+            if ('attachments' in message) {
+                message.attachments.forEach(attachment => {
+                    if (attachment.contentType?.startsWith("image/")) {
+                        imageUrls.push(attachment.url);
+                    }
+                });
+            }
             
-            message?.embeds.forEach(embed => {
-                if (embed.image) {
-                    imageUrls.push(embed.image.url);
-                }
-            });
+            if ('embeds' in message) {
+                message.embeds.forEach(embed => {
+                    if (embed.image) {
+                        imageUrls.push(embed.image.url);
+                    }
+                });
+            }
 
-            // Scan the content for URL's that might be images
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            const urls = message?.content.match(urlRegex);
+            let content = "";
+            if ('content' in message) {
+                content = message.content;
+            } else if ('getQuestion' in message) {
+                content = message.getQuestion();
+            }
+            
+            if (content) {
+                const urls = this.getUrlsFromString(content);
 
-            if (urls) {
-                for (let i = 0; i < urls.length; i++) {
-                    promises.push(this.getIfImageUrl(urls[i]));
+                if (urls) {
+                    for (let i = 0; i < urls.length; i++) {
+                        promises.push(this.getIfImageUrl(urls[i]));
+                    }
                 }
             }
         });
@@ -217,132 +249,103 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         return imageUrls;
     }
 
-    private async getVisionRequestTracker(runtimeData: DiscordBotRuntimeData, message: Discord.Message, systemPrompt: string, imageUrls: string[])
-    {
-        if (imageUrls.length > config.get<number>("Chat.ImageVision.maxImages")) {
-            throw new Error(`Too many images provided (${imageUrls.length}), Chat.ImageVision.maxImages is currently ${config.get("Chat.ImageVision.maxImages")}.`);
+    public async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Discord.Message) {
+        const botId = runtimeData.bot().client().user!.id;
+        
+        if (!message.author.bot && message.mentions.has(botId)) {
+            const interactionMsg = LLMInteractionMessageFactory.createFromDiscordMessage(message);
+
+            // Send typing indicator
+            try {
+                const channel = await runtimeData.bot().client().channels.cache.get(interactionMsg.getChannelId());
+                if (channel && 'sendTyping' in channel) {
+                    channel.sendTyping();
+                }
+                runtimeData.logger().logInfo("LLMBot::handleUserInteraction(): Sent typing indicator");
+            } catch (e) {
+                runtimeData.logger().logError(`LLMBot::handleUserInteraction(): Failed to get channel to send typing indicator, got: ${e}`);
+            }
+
+            return this.handleUserInteraction(runtimeData, interactionMsg);
         }
-
-        if (message.content?.trim().length == 0) {
-            throw new Error(`No prompt text provided with image(s), please provide a prompt describing what you want.`);
-        }
-
-        const tempTracker = new LLMMessageTracker(
-                                config.get("Chat.maxMessages"),
-                                config.get("Chat.maxTokenCount"),
-                                systemPrompt,
-                                this.getTokenCountFunction(runtimeData));
-        // Get all images
-        const images: string[] = [];
-        let imageCount = 0;
-
-        await imageUrls.forEach(url => {
-            images.push(url);
-            imageCount++;
-        });
-
-        const content = this.getVisionContent(message.content, images);
-
-        // Push all to tracker
-        tempTracker.unshiftMessage({
-            "role": "user",
-            "content": content
-        });
-
-        return tempTracker;
     }
 
-    public async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Discord.Message) {
+    public async handleUserInteraction(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage) {
+        using _perfCounter = PerformanceCounter.Create("LLMBot::handleUserInteraction(): ", performance.now(), runtimeData.logger(), true);
+
         try {
-            const botId = runtimeData.bot().client().user!.id;
-            const userData = UserSettingsManager.get().get(message.author.username);
+            const userData = UserSettingsManager.get().get(message.getUserName());
 
-            if (!message.author.bot && message.mentions.has(botId)) {
-                using perfCounter = PerformanceCounter.Create("LLMBot::onDiscordMessageCreate(): ", performance.now(), runtimeData.logger(), true);
-                runtimeData.logger().logInfo(`LLMBot::onDiscordMessageCreate(): Message mentions bot, processing as LLM request.`);
+            runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Message mentions bot, processing as LLM request.`);
 
-                const channelId = message.channelId;
-                const systemPrompt = userData.chatSettings.customPrompt.length > 0 ? 
-                                        userData.chatSettings.customPrompt 
-                                        : config.get<string>("Chat.systemPrompt");
+            const systemPrompt = userData.chatSettings.customPrompt.length > 0 ? 
+                                    userData.chatSettings.customPrompt 
+                                    : config.get<string>("Chat.systemPrompt");
 
-                // Store reference to replied to message
-                const referencedMessage = message.reference ? await message.fetchReference() : undefined;
+            // Store reference to replied to message
+            const referencedMessage = message.getInternalData().reference ? await message.getInternalData().fetchReference() : undefined;
 
-                // Send typing indicator
+            // Call the LLM to get a response
+            let completion;
+            const imageUrls = await this.getImageUrlsFromMessages([referencedMessage, message]);    // Get any image urls that might be in the message(s)
+
+            if (!this.hasAutomaticImageGeneration() && await this.isMessageRequestForImageGeneration(runtimeData, message)) {
+                runtimeData.logger().logInfo("LLMBot::handleUserInteraction(): Detected image generation request when automatic generation is not supported.");
                 try {
-                    const channel: any = await runtimeData.bot().client().channels.cache.get(channelId);
-                    channel.sendTyping();
-                    runtimeData.logger().logInfo("LLMBot::onDiscordMessageCreate(): Sent typing indicator");
+                    completion = await this.getImageCompletion(runtimeData, systemPrompt, message.getQuestion(), imageUrls);
                 } catch (e) {
-                    runtimeData.logger().logError(`LLMBot::onDiscordMessageCreate(): Failed to get channel to send typing indicator, got: ${e}`);
+                    runtimeData.logger().logError("LLMBot::handleUserInteraction(): Failed to generate image, got ${e}");
+                    message.reply(`Failed to generate image, got error ${e}`);
+                    return;
                 }
+            } else {
+                // Fill out context information
+                let tempTracker: LLMMessageTracker;
 
-                // Call the LLM to get a response
-                let completion;
-                const imageUrls = await this.getImageUrlsFromMessages([referencedMessage, message]);    // Get any image urls that might be in the message(s)
-
-                if (!this.hasAutomaticImageGeneration() && await this.isMessageRequestForImageGeneration(runtimeData, message)) {
-                    runtimeData.logger().logInfo("LLMBot::onDiscordMessageCreate(): Detected image generation request when automatic generation is not supported.");
+                if (config.get("Chat.ImageVision.enable")   // If vision is enabled
+                    && imageUrls.length > 0                 // and we found some image urls in the message or the referenced message
+                ) {
+                    runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Attachments or embeds found, processing as vision request.`);
+                    
                     try {
-                        completion = await this.getImageCompletion(runtimeData, systemPrompt, message.content, imageUrls);
+                        tempTracker = await this.getVisionRequestTracker(runtimeData, message, systemPrompt, imageUrls);
                     } catch (e) {
-                        runtimeData.logger().logError("LLMBot::onDiscordMessageCreate(): Failed to generate image, got ${e}");
-                        message.reply(`Failed to generate image, got error ${e}`);
+                        runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): Failed to get vision request tracker, got error ${e}`);
+                        message.reply(`Failed to process vision request: ${e}`);
                         return;
                     }
                 } else {
-                    // Fill out context information
-                    let tempTracker: LLMMessageTracker;
-
-                    if (config.get("Chat.ImageVision.enable")   // If vision is enabled
-                        && ( // And either we're responding to a message from the bot with an image
-                            (referencedMessage && (referencedMessage.attachments.size > 0 || referencedMessage.embeds.length > 0))
-                            || (message.attachments.size > 0 || message.embeds.length > 0) // Or the message itself has an attachment
-                        )
-                    ) {
-                        runtimeData.logger().logInfo(`LLMBot::onDiscordMessageCreate(): Attachments or embeds found, processing as vision request.`);
-                        
-                        try {
-                            tempTracker = await this.getVisionRequestTracker(runtimeData, message, systemPrompt, imageUrls);
-                        } catch (e) {
-                            runtimeData.logger().logErrorAsync(`LLMBot::onDiscordMessageCreate(): Failed to get vision request tracker, got error ${e}`);
-                            message.reply(`Failed to process vision request: ${e}`);
-                            return;
-                        }
-                    } else {
-                        runtimeData.logger().logInfo(`LLMBot::onDiscordMessageCreate(): Processing as general request`);
-                        tempTracker = await this.getGeneralRequestTracker(runtimeData, message, systemPrompt);
-                    }
-
-                    try {
-                        completion = await this.getCompletion(runtimeData, tempTracker);
-                    } catch (e) {
-                        const errMsg = `Failed to get ${this.aiModel} completion, got error ${e}`;
-                        runtimeData.logger().logErrorAsync(`LLMBot::onDiscordMessageCreate(): ${errMsg}`);
-                        message.reply(errMsg);
-                        return;
-                    }
+                    runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Processing as general request`);
+                    tempTracker = await this.getGeneralRequestTracker(runtimeData, message, systemPrompt);
                 }
 
-                const imageData = completion.getResponseImageData();
-                const responseText = completion.getResponseText();
-            
-                if (imageData) {
-                    runtimeData.logger().logInfo(`LLMBot::onDiscordMessageCreate(): Results contain image data, responding with image.`);
-                    LLMBot.replyImage(runtimeData, message, imageData);
-                } else if (responseText) {
-                    runtimeData.logger().logInfo(`LLMBot::onDiscordMessageCreate() Results contain text, replying with text.`);
-                    LLMBot.replyText(runtimeData, message, responseText);
-                } else {
-                    const errMsg = `Response has neither text or image data or there was an error retrieving it.`;
-                    runtimeData.logger().logError(`LLMBot::onDiscordMessageCreate() ${errMsg}`);
+                try {
+                    completion = await this.getCompletion(runtimeData, message, tempTracker);
+                } catch (e) {
+                    const errMsg = `Failed to get ${this.aiModel} completion, got error ${e}`;
+                    runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): ${errMsg}`);
                     message.reply(errMsg);
+                    return;
                 }
-            } 
+            }
+
+            const imageData = completion.getResponseImageData();
+            const responseText = completion.getResponseText();
+        
+            if (imageData) {
+                runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Results contain image data, responding with image.`);
+                LLMBot.replyImage(runtimeData, message, imageData);
+            } else if (responseText) {
+                runtimeData.logger().logInfo(`LLMBot::handleUserInteraction() Results contain text, replying with text.`);
+                LLMBot.replyText(runtimeData, message, responseText);
+            } else {
+                const errMsg = `Response has neither text or image data or there was an error retrieving it.`;
+                runtimeData.logger().logError(`LLMBot::handleUserInteraction() ${errMsg}`);
+                message.reply(errMsg);
+            }
         } catch (e) {
-            const errMsg = `LLMBot::onDiscordMessageCreate(): Failed to process message, got error ${e}`;
-            runtimeData.logger().logErrorAsync(`LLMBot::onDiscordMessageCreate(): ${errMsg}`);
+            const errMsg = `LLMBot::handleUserInteraction(): Failed to process message, got error ${e}`;
+            runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): ${errMsg}`);
             message.reply(errMsg);
         }
     }
@@ -357,7 +360,6 @@ export class LLMBotManager implements DiscordMessageCreateListener {
     }
 
     async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Discord.Message): Promise<void> {
-        const botId = runtimeData.bot().client().user!.id;
         const userData = UserSettingsManager.get().get(message.author.username);
         const preferredAiModel = userData.chatSettings.preferredAiModel || config.get<string>("Chat.aiModel");
 

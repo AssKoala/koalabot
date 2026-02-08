@@ -40,7 +40,7 @@ describe('DiscordBotSlashCommand', () => {
             });
 
             // afterAll(() => {
-            //     // @ts-ignore
+            //     // @ts-expect-error todo cleanup tech debt
             //     commandArg = null;
             // });
         });
@@ -56,7 +56,7 @@ describe('DiscordBotSlashCommand', () => {
             });
 
             // afterAll(() => {
-            //     // @ts-ignore
+            //     // @ts-expect-error todo cleanup tech debt
             //     commandArg = null;
             // });
         });
@@ -90,11 +90,11 @@ describe('DiscordBotSlashCommand', () => {
     //     });
 
     //     afterEach(() => {
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         command = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         argString = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         argBoolean = null;
     //         discordCommand = null;
     //     });
@@ -227,21 +227,21 @@ describe('DiscordBotSlashCommand', () => {
     //     });
 
     //     afterEach(() => {
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         command = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         argString = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         argBoolean = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         discordCommand = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         subcommandA = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         subcommandB = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         groupA = null;
-    //         // @ts-ignore
+    //         // @ts-expect-error todo cleanup tech debt
     //         groupB = null;
     //     });
 

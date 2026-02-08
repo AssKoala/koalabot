@@ -5,6 +5,11 @@ import { PerformanceCounter } from '../../performancecounter.js';
 import * as Discord from 'discord.js'
 import config from 'config';
 
+export interface DiscordClientCommandType {
+    data: Discord.SlashCommandOptionsOnlyBuilder | Discord.SlashCommandSubcommandsOnlyBuilder;
+    execute: (interaction: Discord.ChatInputCommandInteraction) => Promise<void>;
+}
+
 // Handles Discord platform functionality
 export class DiscordBot {
     private _client?: Discord.Client = undefined;
@@ -17,7 +22,7 @@ export class DiscordBot {
         this.logger = logger;
     }
 
-    async init(discordToken: string = config.get<string>("Discord.token")) {
+    async init() {
         this._client = new Discord.Client({
 			intents: [
 				Discord.GatewayIntentBits.Guilds,
@@ -47,7 +52,7 @@ export class DiscordBot {
                 (reaction: Discord.MessageReaction | Discord.PartialMessageReaction, user: Discord.User | Discord.PartialUser) => this.onMessageReactionAdd(reaction, user));
 
         // Create commands collection based on convention
-        this.client().commands = new Discord.Collection<any,any>();
+        this.client().commands = new Discord.Collection<string, DiscordClientCommandType>();
     }
 
     async onClientReady() {
@@ -55,23 +60,26 @@ export class DiscordBot {
     }
 
     async onInteractionCreate(interaction: Discord.Interaction) {
-        if (!interaction.isChatInputCommand()) return;
+        if (!interaction.isChatInputCommand()) {
+            this.logger.logInfo("Received non-command interaction, ignoring");
+            return;
+        }
+        
+        using perfCounter = PerformanceCounter.Create(`DiscordBot::onInteractionCreate(), command: ${interaction.commandName}`, performance.now(), this.logger, true);
         
         this.logger.logInfo(interaction.toString());
     
         const command = interaction.client.commands.get(interaction.commandName);
     
         if (!command) {
-            console.error(`No command matching ${interaction.commandName} was found.`);
+            this.logger.logError(`No command matching ${interaction.commandName} was found.`);
             return;
         }
-
-        using perfCounter = PerformanceCounter.Create('DiscordBot::onInteractionCreate(), command: ${interaction.commandName}', performance.now(), this.logger, true);
 
         try {
             await command.execute(interaction);
         } catch (error) {
-            console.error(error);
+            this.logger.logError(`Failed to execute comman, got error: ${error}`);
             await interaction.reply(
                 { 
                     content: 'There was an error while executing this command!', 
