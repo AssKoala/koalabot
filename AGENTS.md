@@ -239,6 +239,28 @@ If config values are currently comma-delimited strings:
 - [ ] Tests added/updated or manual test steps documented.
 - [ ] No drive-by formatting or mass refactors.
 - [ ] Change improves code quality within scope (typing, clarity, safety).
+- [ ] No imports from `src/db/` in feature modules outside dedicated DB integration points.
+- [ ] New event-driven behavior added via listener/adapter modules, not injected into unrelated components.
+- [ ] No duplicated timing instrumentation when existing performance helpers already exist.
+- [ ] No exposed mutable internals from cache/state classes.
+
+---
+
+## 12) Architecture Rules
+
+- Keep dependency direction clean: persistence observes application behavior; feature modules should not own DB writes.
+- `src/app/`, `src/listeners/`, and `src/commands/` should not import `src/db/` directly, except dedicated DB integration points such as a persistence listener/sync module.
+- New side-effect behavior should be introduced as a dedicated listener/module instead of being bolted onto unrelated classes.
+- Keep Stenographer lightweight and extractable: no database persistence responsibilities inside Stenographer internals.
+- Do not expose mutable internal structures (for example internal `Map` instances) outside component boundaries.
+- Reuse existing performance infrastructure (`PerformanceCounter`) instead of ad-hoc timing markers.
+- Avoid bundling unrequested telemetry/analytics scope into unrelated feature PRs.
+
+## 13) Additional Style Rules
+
+- Preserve the surrounding file’s formatting style; avoid collapsing intentionally readable multi-line code.
+- Match the brace/spacing conventions already dominant in the file being edited.
+- For fire-and-forget persistence paths, prefer centralized repository/listener logging and avoid silent failures with no diagnosability.
 
 ---
 
