@@ -77,8 +77,11 @@ Stenographer.init(LogManager.get());
 
 // Load user settings
 import { UserSettingsManager } from './app/user/usersettingsmanager.js';
+import { UserSettingsDbSync } from './db/usersettingsdbsync.js';
+import { DatabaseBootstrapSync } from './db/databasebootstrapsync.js';
 UserSettingsManager.init(`${config.get("Global.dataPath")}/settings.json`);
-await UserSettingsManager.get().loadFromDatabase();
+UserSettingsDbSync.attachPersistence(UserSettingsManager.get());
+await UserSettingsDbSync.syncStartup(UserSettingsManager.get());
 
 /* Initialize the bot */
 import { Bot } from './bot.js'
@@ -90,6 +93,14 @@ Dict.init();
 
 import { CommandManager } from './commandmanager.js'
 await CommandManager.register(Bot.get().client());  // Register
+const leaderboardModule = await import('./commands/leaderboard.js');
+await DatabaseBootstrapSync.syncLeaderboardStartupData({
+    guildCaches: Stenographer.getAllGuildCaches(),
+    getInMemoryLeaderboardRows: leaderboardModule.getInMemoryLeaderboardRowsForPersistence,
+    applyDatabaseLeaderboardRowsForGuild: leaderboardModule.applyDatabaseLeaderboardRowsForGuild,
+    getInMemoryMessageCount: (guildId: string, userName: string) => Stenographer.getMessageCount(guildId, userName),
+    setInMemoryMessageCount: leaderboardModule.setPersistedMessageCountForUser,
+});
 await CommandManager.deployDiscordSlashCommands(    // Deploy
     config.get("Discord.clearSlashCommandsOnStartup"), 
     config.get("Discord.deployGuildSlashCommandsOnStartup"), 
@@ -98,6 +109,30 @@ await CommandManager.deployDiscordSlashCommands(    // Deploy
 /* Import all listeners */
 import { ListenerManager } from './listenermanager.js';
 await ListenerManager.importListeners();
+const enabledListeners = config.get<string>('Listeners.listenerList')
+    .split(',')
+    .map(listener => listener.trim())
+    .filter(listener => listener.length > 0);
+
+if (enabledListeners.includes('badwordlistener')) {
+    const badwordModule = await import('./listeners/badwordlistener.js');
+    const trackedBadWords = badwordModule.getTrackedBadWordsForPersistence();
+    const trackedChannelIds = config.get<string>("Listeners.BadWordListener.trackingChannelIds")
+        .split(',')
+        .map(channelId => channelId.trim())
+        .filter(channelId => channelId.length > 0);
+
+    for (const badword of trackedBadWords) {
+        await DatabaseBootstrapSync.syncBadWordStartupData({
+            getBadWord: () => badword,
+            getTrackingChannels: () => trackedChannelIds,
+            getTrackedEvents: (channelId: string) => badwordModule.getTrackedEventsForPersistence(badword, channelId),
+            mergeTrackedEvents: (channelId: string, events) => {
+                badwordModule.mergeTrackedEventsForPersistence(badword, channelId, events);
+            }
+        }, LogManager.get().commonLogger);
+    }
+}
 
 /* Create all the LLM instances. */
 Bot.get().createSubBots();

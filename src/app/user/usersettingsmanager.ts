@@ -1,9 +1,8 @@
 import { GetKoalaBotSystem } from '../../api/koalabotsystem.js';
 import fs from 'fs'
 import config from 'config';
-import { DatabaseManager } from '../../db/databasemanager.js';
-import { UserSettingsRepository } from '../../db/usersettingsrepository.js';
-import { getCommonLogger } from '../../logging/logmanager.js';
+
+type UserSettingsPersistHook = (userSettingsData: UserSettingsData) => void;
 
 export class UserWeatherSettings {
     location: string;
@@ -48,6 +47,7 @@ export class UserSettingsManager {
 
     private userSettings: Map<string, UserSettingsData>;
     private settingsJsonFile: string;
+    private persistHook: UserSettingsPersistHook | null = null;
     
     private constructor(settingsJsonFile: string) {
         this.userSettings = new Map<string, UserSettingsData>();
@@ -55,58 +55,21 @@ export class UserSettingsManager {
         this.reload(this.settingsJsonFile);
     }
 
-    /**
-     * Load user settings from DB. If DB has data, use it.
-     * If DB is empty but JSON file had data, migrate JSON data to DB.
-     * Called after construction (async).
-     */
-    async loadFromDatabase(): Promise<void> {
-        if (!DatabaseManager.isAvailable()) return;
+    setPersistenceHook(persistHook: UserSettingsPersistHook | null): void {
+        this.persistHook = persistHook;
+    }
 
+    getAllSettings(): UserSettingsData[] {
+        return Array.from(this.userSettings.values());
+    }
+
+    setInMemoryOnly(userSettingsData: UserSettingsData): boolean {
         try {
-            const isEmpty = await UserSettingsRepository.isEmpty();
-
-            if (isEmpty && this.userSettings.size > 0) {
-                // Migrate JSON data to DB
-                for (const [_name, data] of this.userSettings) {
-                    await UserSettingsRepository.upsert(data.name, {
-                        weatherSettings: data.weatherSettings,
-                        chatSettings: data.chatSettings
-                    });
-                }
-                getCommonLogger().logInfo(`UserSettingsManager: Migrated ${this.userSettings.size} user settings to database.`);
-            } else if (!isEmpty) {
-                // Load from DB, but don't overwrite users already loaded from JSON.
-                // JSON is always written on every set(), so if the user changed settings
-                // while the DB was down, the JSON file has fresher data.
-                const rows = await UserSettingsRepository.getAll();
-                let loadedCount = 0;
-                for (const row of rows) {
-                    if (this.userSettings.has(row.user_name)) continue; // JSON data is fresher
-
-                    const json = row.settings_json as any;
-                    const newData = new UserSettingsData(
-                        row.user_name,
-                        json.weatherSettings?.location || "Johannesburg, South Africa",
-                        json.weatherSettings?.preferredUnits || "rankine",
-                        json.chatSettings?.preferredAiModel || config.get<string>('Chat.aiModel'),
-                        json.chatSettings?.customPrompt || ""
-                    );
-                    this.userSettings.set(row.user_name, newData);
-                    loadedCount++;
-                }
-                getCommonLogger().logInfo(`UserSettingsManager: Loaded ${loadedCount} user settings from database (${rows.length - loadedCount} already in JSON).`);
-
-                // Re-sync JSON-loaded settings back to DB (in case they were changed during outage)
-                for (const [_name, data] of this.userSettings) {
-                    UserSettingsRepository.upsert(data.name, {
-                        weatherSettings: data.weatherSettings,
-                        chatSettings: data.chatSettings
-                    }).catch(() => {});
-                }
-            }
+            this.userSettings.set(userSettingsData.name, userSettingsData);
+            return true;
         } catch (e) {
-            getCommonLogger().logErrorAsync(`UserSettingsManager: Failed to load from database, got ${e}`);
+            GetKoalaBotSystem().getLogger().logError(`Failed to set in-memory user data, got exception ${e}`);
+            return false;
         }
     }
 
@@ -145,12 +108,9 @@ export class UserSettingsManager {
                 this.flush();
             }
 
-            // Fire-and-forget DB persistence
-            if (DatabaseManager.isAvailable()) {
-                UserSettingsRepository.upsert(userSettingsData.name, {
-                    weatherSettings: userSettingsData.weatherSettings,
-                    chatSettings: userSettingsData.chatSettings
-                }).catch(() => {});
+            // Fire-and-forget persistence (DB hook installed from startup sync module)
+            if (this.persistHook) {
+                this.persistHook(userSettingsData);
             }
 
             return true;

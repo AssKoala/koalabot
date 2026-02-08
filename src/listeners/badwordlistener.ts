@@ -6,8 +6,6 @@ import fs from "fs";
 import fsPromises from "fs/promises";
 import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
 import { readJsonFileSync } from '../sys/jsonreader.js'
-import { DatabaseManager } from '../db/databasemanager.js';
-import { BadWordEventRepository } from '../db/badwordeventrepository.js';
 
 export function GetBadWordSaveFolder() {
     return path.join(GetKoalaBotSystem().getConfigVariable("Global.dataPath"), GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.saveDir"));
@@ -21,7 +19,7 @@ export function GetBadWordSaveFilePath(badword: string, channelId: string) {
     return path.join(GetBadWordSaveFolder(), GetBadWordSaveFileName(badword, channelId));
 }
 
-interface IBadWordEvent {
+export interface BadWordTrackedEvent {
     timestamp: number;
     userId: string;
     userName: string;
@@ -33,7 +31,7 @@ enum BadWordResponseType {
     NONE
 }
 
-class BadWordEvent implements IBadWordEvent { 
+class BadWordEvent implements BadWordTrackedEvent { 
     constructor(userId: string, userName: string) {
         this.userId = userId;
         this.userName = userName;
@@ -46,11 +44,11 @@ class BadWordEvent implements IBadWordEvent {
 }
 
 class BadWordTracker {
-    private badWordEvents: IBadWordEvent[];
+    private badWordEvents: BadWordTrackedEvent[];
     // @ts-expect-error todo cleanup tech debt
     private longestStreak: number;
 
-    constructor(badWordEvents: IBadWordEvent[] = []) {
+    constructor(badWordEvents: BadWordTrackedEvent[] = []) {
         this.badWordEvents = badWordEvents;
 
         if (this.badWordEvents.length > 1) {
@@ -101,7 +99,7 @@ class BadWordTracker {
         return JSON.stringify(this.badWordEvents);//, null, 2);
     }
 
-    public getEvents(): readonly IBadWordEvent[] {
+    public getEvents(): readonly BadWordTrackedEvent[] {
         return this.badWordEvents;
     }
 
@@ -214,77 +212,40 @@ class BadWordListener implements WordListener {
                     }
                 });
             }
-            // Async-in-constructor: these fire-and-forget calls migrate JSON events to DB
-            // and load from DB when JSON is missing. There is a brief window during startup
-            // where lastUsedMap may not yet reflect DB data. The defensive check at
-            // onWordDetected (line ~307: `if (!this.lastUsedMap.has(...)`) handles this
-            // gracefully by creating a new tracker if data hasn't loaded yet.
-            this.migrateEventsToDatabase();
-            this.loadMissingFromDatabase();
         } catch (e) {
             GetKoalaBotSystem().getLogger().logError(`Failed to load badword historic data, got ${e}`);
         }
     }
 
-    /**
-     * Migrate existing JSON-loaded events to the database (fire-and-forget, runs once per channel+word).
-     */
-    private migrateEventsToDatabase(): void {
-        if (!DatabaseManager.isAvailable()) return;
-        if (this.lastUsedMap.size === 0) return;
-
-        for (const [channelId, tracker] of this.lastUsedMap.entries()) {
-            const events = tracker.getEvents();
-            if (events.length === 0) continue;
-
-            // Check if DB already has events for this channel+word; if so, skip
-            BadWordEventRepository.getEvents(channelId, this._badword).then(existingRows => {
-                if (existingRows.length > 0) {
-                    GetKoalaBotSystem().getLogger().logInfo(`BadWordListener: DB already has ${existingRows.length} events for "${this._badword}" in channel ${channelId}, skipping migration.`);
-                    return;
-                }
-
-                const bulkEvents = events.map(e => ({
-                    channelId,
-                    badword: this._badword,
-                    userId: e.userId,
-                    userName: e.userName,
-                    timestamp: e.timestamp,
-                }));
-
-                GetKoalaBotSystem().getLogger().logInfo(`BadWordListener: Migrating ${bulkEvents.length} events for "${this._badword}" in channel ${channelId} to DB.`);
-                return BadWordEventRepository.bulkInsert(bulkEvents);
-            }).catch(e => {
-                GetKoalaBotSystem().getLogger().logError(`BadWordListener: Migration failed for "${this._badword}" in channel ${channelId}, got ${e}`);
-            });
-        }
+    getBadWord(): string {
+        return this._badword;
     }
 
-    /**
-     * For channels where JSON files are missing, load events from DB if available.
-     */
-    private loadMissingFromDatabase(): void {
-        if (!DatabaseManager.isAvailable()) return;
+    getTrackingChannels(): readonly string[] {
+        return this.trackingChannels;
+    }
 
-        for (const channel of this.trackingChannels) {
-            if (this.lastUsedMap.has(channel)) continue; // Already loaded from JSON
+    hasTrackingData(channelId: string): boolean {
+        return this.lastUsedMap.has(channelId);
+    }
 
-            BadWordEventRepository.getEvents(channel, this._badword).then(dbRows => {
-                if (dbRows.length === 0) return;
-                if (this.lastUsedMap.has(channel)) return; // Loaded by another path while we waited
+    getTrackedEvents(channelId: string): readonly BadWordTrackedEvent[] {
+        return this.lastUsedMap.get(channelId)?.getEvents() ?? [];
+    }
 
-                const events: IBadWordEvent[] = dbRows.map(row => ({
-                    userId: row.user_id,
-                    userName: row.user_name,
-                    timestamp: Number(row.timestamp),
-                }));
+    mergeTrackedEvents(channelId: string, events: readonly BadWordTrackedEvent[]): void {
+        const dedup = new Map<string, BadWordTrackedEvent>();
+        const add = (event: BadWordTrackedEvent) => {
+            dedup.set(`${event.userId}:${event.timestamp}`, event);
+        };
 
-                this.lastUsedMap.set(channel, new BadWordTracker(events));
-                GetKoalaBotSystem().getLogger().logInfo(`BadWordListener: Loaded ${events.length} events for "${this._badword}" in channel ${channel} from DB.`);
-            }).catch(e => {
-                GetKoalaBotSystem().getLogger().logError(`BadWordListener: Failed to load from DB for "${this._badword}" in channel ${channel}, got ${e}`);
-            });
-        }
+        this.getTrackedEvents(channelId).forEach(add);
+        events.forEach(add);
+
+        const mergedEvents = Array.from(dedup.values());
+        mergedEvents.sort((left, right) => left.timestamp - right.timestamp);
+
+        this.lastUsedMap.set(channelId, new BadWordTracker(mergedEvents));
     }
 
     private printMessage(message: Message, diff: number, average: number, longestStreak: number, isNewRecord: boolean) {
@@ -335,28 +296,48 @@ class BadWordListener implements WordListener {
 
             await this.fileOpHandle;
             this.fileOpHandle = fsPromises.writeFile(this.getBadWordSaveFilePath(this._badword, message.channelId), tracker.toJson(), {encoding: "utf8"});
-
-            // Fire-and-forget DB persistence
-            if (DatabaseManager.isAvailable()) {
-                BadWordEventRepository.insert(
-                    message.channelId,
-                    this._badword,
-                    newEvent.userId,
-                    newEvent.userName,
-                    newEvent.timestamp
-                ).catch(() => {});
-            }
         }
     }
 }
 
+const badWordListeners: Map<string, BadWordListener> = new Map();
+
+export function getTrackedBadWordsForPersistence(): string[] {
+    return [...badWordListeners.keys()].filter(badword => badword.length > 0);
+}
+
+export function hasTrackedEventsForPersistence(badword: string, channelId: string): boolean {
+    const listener = badWordListeners.get(badword);
+    if (!listener) return false;
+
+    return listener.hasTrackingData(channelId);
+}
+
+export function getTrackedEventsForPersistence(badword: string, channelId: string): readonly BadWordTrackedEvent[] {
+    const listener = badWordListeners.get(badword);
+    if (!listener) return [];
+
+    return listener.getTrackedEvents(channelId);
+}
+
+export function mergeTrackedEventsForPersistence(badword: string, channelId: string, events: readonly BadWordTrackedEvent[]): void {
+    const listener = badWordListeners.get(badword);
+    if (!listener) return;
+
+    listener.mergeTrackedEvents(channelId, events);
+}
+
 try {
     GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.badwords").split(",").forEach(badword => {
+        let listener: BadWordListener;
         if (badword == 'retard') {
-            GetKoalaBotSystem().registerWordListener(new BadWordListener(badword, BadWordResponseType.ALL), badword);
+            listener = new BadWordListener(badword, BadWordResponseType.ALL);
         } else {
-            GetKoalaBotSystem().registerWordListener(new BadWordListener(badword, BadWordResponseType.NEW_RECORD), badword);
+            listener = new BadWordListener(badword, BadWordResponseType.NEW_RECORD);
         }
+
+        badWordListeners.set(badword, listener);
+        GetKoalaBotSystem().registerWordListener(listener, badword);
     });
 } catch (e) {
     GetKoalaBotSystem().getLogger().logError(`Failed to load badwords, got ${e}`);

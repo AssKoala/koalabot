@@ -100,7 +100,7 @@
 		attachmentDescriptionMaxLength: 1024,           // Description length for image embeds
     },
     Listeners: {
-        listenerList: "loglistener,deletebotmessagereactionlistener",       // Comma separated List of listener modules to load
+        listenerList: "loglistener,deletebotmessagereactionlistener,databaselistener",       // Comma separated List of listener modules to load
         BadWordListener: {
             badwords: "",                               // Comma separated list of bad words to track
             trackingChannelIds: "",                     // Comma separated list of discord channel id's to track for bad words

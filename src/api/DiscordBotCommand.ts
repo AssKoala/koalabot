@@ -2,8 +2,6 @@ import { SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder, Cha
 import { DiscordBotRuntimeData } from './discordbotruntimedata.js';
 import { Bot } from '../bot.js'
 import { getCommonLogger } from '../logging/logmanager.js'
-import { DatabaseManager } from '../db/databasemanager.js';
-import { CommandUsageRepository } from '../db/commandusagerepository.js';
 
 /**
  * Holds the common command information for all commands to be compatible with the DiscordBotCommand interface.
@@ -84,20 +82,7 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
                         await interaction.deferReply();
                     }
 
-                    const startTime = performance.now();
                     await botCommand.handle(interaction);
-                    const latencyMs = performance.now() - startTime;
-
-                    // Fire-and-forget command usage tracking
-                    if (DatabaseManager.isAvailable()) {
-                        CommandUsageRepository.insert(
-                            interaction.guildId,
-                            interaction.user.id,
-                            interaction.user.username,
-                            botCommand.name(),
-                            latencyMs
-                        ).catch(() => {});
-                    }
                 }
             }
 

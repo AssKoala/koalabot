@@ -10,8 +10,6 @@ import { getCommonLogger, LogManager } from '../../logging/logmanager.js';
 
 import * as Discord from 'discord.js';
 import config from 'config';
-import { DatabaseManager } from '../../db/databasemanager.js';
-import { MessageCountRepository } from '../../db/messagecountrepository.js';
 
 /**
  * Caches discord messages in memory for use in bot processing
@@ -138,10 +136,6 @@ class DiscordStenographer implements DiscordMessageCreateListener
 
     getMessages(channelId: string) {
         return this.getChannelCache(channelId).messages();
-    }
-
-    setGuildAuthorMessageCount(guildId: string, author: string, count: number) {
-        this.getGuildCache(guildId).setAuthorMessageCount(author, count);
     }
 
     getTotalMessages(): number {
@@ -326,11 +320,6 @@ class DiscordStenographer implements DiscordMessageCreateListener
                 );
 
                 this.pushMessage(msg);
-
-                // Fire-and-forget DB message count increment
-                if (DatabaseManager.isAvailable()) {
-                    MessageCountRepository.incrementMessageCount(message.guildId!, message.author.username).catch(() => {});
-                }
             }
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to log ${message} to stenographer, got ${e}`);
@@ -375,10 +364,6 @@ class Stenographer {
 
     static getMessageCount(guildId: string, author: string) {
         return Stenographer.stenographer!.getMessageCount(guildId, author);
-    }
-
-    static setGuildAuthorMessageCount(guildId: string, author: string, count: number) {
-        Stenographer.stenographer!.setGuildAuthorMessageCount(guildId, author, count);
     }
 
     static pushMessage(msg: DiscordStenographerMessage) {

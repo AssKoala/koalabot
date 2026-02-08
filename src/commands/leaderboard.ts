@@ -13,11 +13,22 @@ import { readJsonFile } from '../sys/jsonreader.js';
 import { DiscordPlatform } from '../platform/discord/discordplatform.js';
 
 import config from 'config';
-import { DatabaseManager } from '../db/databasemanager.js';
-import { LeaderboardRepository } from '../db/leaderboardrepository.js';
-import { MessageCountRepository } from '../db/messagecountrepository.js';
 
 const profanities = await readJsonFile(`${config.get<string>("Global.dataPath")}/profanity.json`);
+const persistedMessageCounts: Map<string, Map<string, number>> = new Map();
+
+function getPersistedMessageCountForUser(guildId: string, userName: string): number {
+    if (!persistedMessageCounts.has(guildId)) return -1;
+    const guildCounts = persistedMessageCounts.get(guildId)!;
+    if (!guildCounts.has(userName)) return -1;
+    return guildCounts.get(userName)!;
+}
+
+function getEffectiveMessageCount(guildId: string, userName: string): number {
+    const inMemoryCount = Stenographer.getMessageCount(guildId, userName);
+    const persistedCount = getPersistedMessageCountForUser(guildId, userName);
+    return Math.max(inMemoryCount, persistedCount);
+}
 
 class ProfanityStats {
     private _profanityMap: Map<string, number> = new Map<string, number>();
@@ -36,7 +47,7 @@ class ProfanityStats {
 }
 
 class ProfanityLeaderboard {
-    _leaderboardMap: Map<string, Map<string, ProfanityStats>> = new Map<string, Map<string, ProfanityStats>>();
+    private _leaderboardMap: Map<string, Map<string, ProfanityStats>> = new Map<string, Map<string, ProfanityStats>>();
     
     recalculateProfanityLeaders()
     {
@@ -85,12 +96,6 @@ class ProfanityLeaderboard {
                 profanity.matches.every((regex: string) => {
                     if (discordStenographerMsg.message.toLowerCase().match(regex) != null) {
                         profanityLeaders.get(author)!.add(profanity.profanity);
-
-                        // Fire-and-forget DB persistence
-                        if (DatabaseManager.isAvailable()) {
-                            LeaderboardRepository.incrementWordCount(guildId, author, profanity.profanity).catch(() => {});
-                        }
-
                         return false;
                     }
                     return true;
@@ -125,7 +130,7 @@ class ProfanityLeaderboard {
                 // @ts-expect-error todo cleanup tech debt
                 if (ignoreList.includes(author)) continue;
 
-                const authorTotalMessages = Stenographer.getMessageCount(guildId, author);
+                const authorTotalMessages = getEffectiveMessageCount(guildId, author);
 
                 if (leader != null) 
                 {
@@ -344,8 +349,8 @@ class ProfanityLeaderboard {
                     sortedLeaders.push({ "author": key, "count": count });
             }
             sortedLeaders.sort((a, b) => {
-                const a_total = perCapita ? Stenographer.getMessageCount(guildId, a.author) : 1;
-                const b_total = perCapita ? Stenographer.getMessageCount(guildId, b.author) : 1;
+                const a_total = perCapita ? getEffectiveMessageCount(guildId, a.author) : 1;
+                const b_total = perCapita ? getEffectiveMessageCount(guildId, b.author) : 1;
 
                 const left = a.count / a_total;
                 const right = b.count / b_total;
@@ -364,7 +369,7 @@ class ProfanityLeaderboard {
                     + "-------------------------\n";
                 sortedLeaders.forEach(entry => {
                     outputString += `${entry.author}:`.padEnd(14, " ");
-                    outputString += perCapita ? `${(100*(entry.count / Stenographer.getMessageCount(guildId, entry.author))).toPrecision(2)}%\n` : `${entry.count}\n`;
+                    outputString += perCapita ? `${(100*(entry.count / getEffectiveMessageCount(guildId, entry.author))).toPrecision(2)}%\n` : `${entry.count}\n`;
                 });
 
                 outputString += "```";
@@ -375,6 +380,39 @@ class ProfanityLeaderboard {
             }
         } catch (e) {
             await getCommonLogger().logErrorAsync(`Failed to handle custom leaderboard, got ${e}`, interaction, true);
+        }
+    }
+
+    getRowsForPersistence(): { guildId: string; userName: string; word: string; count: number }[] {
+        const rows: { guildId: string; userName: string; word: string; count: number }[] = [];
+
+        for (const [guildId, guildLeaders] of this._leaderboardMap) {
+            for (const [userName, stats] of guildLeaders) {
+                // @ts-expect-error todo cleanup tech debt
+                profanities.forEach(profanity => {
+                    const count = stats.get(profanity.profanity) ?? 0;
+                    if (count > 0) {
+                        rows.push({ guildId, userName, word: profanity.profanity, count });
+                    }
+                });
+            }
+        }
+
+        return rows;
+    }
+
+    applyDatabaseRowsForGuild(guildId: string, rows: { user_name: string; word: string; count: number }[]): void {
+        if (!this._leaderboardMap.has(guildId)) {
+            this._leaderboardMap.set(guildId, new Map());
+        }
+
+        const guildLeaders = this._leaderboardMap.get(guildId)!;
+        for (const row of rows) {
+            const stats = ensureUserStats(guildLeaders, row.user_name);
+            const currentCount = stats.get(row.word) ?? 0;
+            if (row.count > currentCount) {
+                stats.set(row.word, row.count);
+            }
         }
     }
 }
@@ -471,95 +509,37 @@ registerDiscordBotCommand(leaderboardInstance, false);
 // Initial calculation of leaders
 leaderboardInstance.profanityLeaderboard().recalculateProfanityLeaders();
 
-// Sync in-memory leaderboard data with DB (blocks until complete before listeners are registered)
-if (DatabaseManager.isAvailable()) {
-    try {
-        const guildCaches = Stenographer.getAllGuildCaches();
-        const leaderboardMap = leaderboardInstance.profanityLeaderboard()._leaderboardMap;
+type LeaderboardDatabaseRow = { user_name: string; word: string; count: number };
 
-        // Check if DB already has data (skip bulk upsert on subsequent startups)
-        let dbAlreadyHasData = false;
-        for (const [guildId] of guildCaches) {
-            const existing = await LeaderboardRepository.getAllForGuild(guildId);
-            if (existing.length > 0) { dbAlreadyHasData = true; break; }
-        }
+function ensureUserStats(guildLeaders: Map<string, ProfanityStats>, userName: string): ProfanityStats {
+    if (!guildLeaders.has(userName)) {
+        guildLeaders.set(userName, new ProfanityStats());
+        // @ts-expect-error todo cleanup tech debt
+        profanities.forEach(profanity => {
+            guildLeaders.get(userName)!.set(profanity.profanity, 0);
+        });
+    }
 
-        if (!dbAlreadyHasData) {
-            // First startup: bulk-import in-memory data to DB
-            const rows: { guildId: string; userName: string; word: string; count: number }[] = [];
+    return guildLeaders.get(userName)!;
+}
 
-            for (const [guildId, _cache] of guildCaches) {
-                const profanityLeaders = leaderboardMap.get(guildId);
-                if (!profanityLeaders) continue;
+export function getInMemoryLeaderboardRowsForPersistence(): { guildId: string; userName: string; word: string; count: number }[] {
+    return leaderboardInstance.profanityLeaderboard().getRowsForPersistence();
+}
 
-                for (const [author, stats] of profanityLeaders) {
-                    profanities.forEach((profanity: any) => {
-                        const count = stats.get(profanity.profanity);
-                        if (count && count > 0) {
-                            rows.push({ guildId, userName: author, word: profanity.profanity, count });
-                        }
-                    });
-                }
-            }
+export function applyDatabaseLeaderboardRowsForGuild(guildId: string, rows: LeaderboardDatabaseRow[]): void {
+    leaderboardInstance.profanityLeaderboard().applyDatabaseRowsForGuild(guildId, rows);
+}
 
-            if (rows.length > 0) {
-                await LeaderboardRepository.bulkUpsert(rows);
-            }
+export function setPersistedMessageCountForUser(guildId: string, userName: string, count: number): void {
+    if (!persistedMessageCounts.has(guildId)) {
+        persistedMessageCounts.set(guildId, new Map());
+    }
 
-            // Also bulk-import message counts
-            const countRows: { guildId: string; userName: string; count: number }[] = [];
-            for (const [guildId, cache] of guildCaches) {
-                for (const [author, count] of cache.getAuthorCounts()) {
-                    if (count > 0) {
-                        countRows.push({ guildId, userName: author, count });
-                    }
-                }
-            }
-
-            if (countRows.length > 0) {
-                await MessageCountRepository.bulkUpsertMessageCounts(countRows);
-            }
-        }
-
-        // Always reload from DB into memory (DB has lifetime-accurate counts)
-        for (const [guildId] of guildCaches) {
-            const dbRows = await LeaderboardRepository.getAllForGuild(guildId);
-            if (dbRows.length === 0) continue;
-
-            if (!leaderboardMap.has(guildId)) {
-                leaderboardMap.set(guildId, new Map());
-            }
-            const guildLeaders = leaderboardMap.get(guildId)!;
-
-            for (const row of dbRows) {
-                if (!guildLeaders.has(row.user_name)) {
-                    guildLeaders.set(row.user_name, new ProfanityStats());
-                    // Initialize all profanity slots
-                    profanities.forEach((profanity: any) => {
-                        guildLeaders.get(row.user_name)!.set(profanity.profanity, 0);
-                    });
-                }
-                const currentCount = guildLeaders.get(row.user_name)!.get(row.word) ?? 0;
-                if (row.count > currentCount) {
-                    guildLeaders.get(row.user_name)!.set(row.word, row.count);
-                }
-            }
-
-            // Load lifetime message counts from DB into the Stenographer cache
-            // This fixes per-capita calculations: without this, profanity counts are
-            // lifetime-accurate (from DB) but message counts only reflect the capped
-            // log cache, producing inflated per-capita percentages after restart.
-            const dbMessageCounts = await MessageCountRepository.getAllMessageCountsForGuild(guildId);
-            for (const row of dbMessageCounts) {
-                const cacheCount = Stenographer.getMessageCount(guildId, row.user_name);
-                if (row.count > cacheCount) {
-                    Stenographer.setGuildAuthorMessageCount(guildId, row.user_name, row.count);
-                }
-            }
-        }
-        getCommonLogger().logInfo('Leaderboard: Loaded lifetime counts from database.');
-    } catch (e) {
-        getCommonLogger().logErrorAsync(`Failed to sync leaderboard data with DB: ${e}`);
+    const guildCounts = persistedMessageCounts.get(guildId)!;
+    const currentCount = guildCounts.get(userName) ?? -1;
+    if (count > currentCount) {
+        guildCounts.set(userName, count);
     }
 }
 
