@@ -38,11 +38,11 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@eslint/json": "^0.14.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.1",
     "globals": "^17.1.0",
     "jiti": "^2.6.1",
     "ts-node": "^10.9.2",
-    "typescript-eslint": "^8.53.1",
+    "typescript-eslint": "^8.56.0",
     "vitest": "^4.0.16"
   }
 }
