@@ -9,13 +9,16 @@ async function generateVersionFile()
     const versionString = `${buildDateString}/${secondsFromEpoch}`;
 
     console.log(`Writing to ${versionFilePath}`);
-    await fs.writeFile(versionFilePath, JSON.stringify({
-        buildDate: buildDate,
-        buildSecondsSinceEpoch: secondsFromEpoch,
-        versionString: versionString
-
-    }, null, 4));
-    console.log(`..Done!`);
+    try {
+        await fs.writeFile(versionFilePath, JSON.stringify({
+            buildDate: buildDate,
+            buildSecondsSinceEpoch: secondsFromEpoch,
+            versionString: versionString
+        }, null, 4));
+        console.log(`..Done!`);
+    } catch (e) {
+        console.error(`ERROR: Failed to write version file, got exception: ${e}`);
+    }
 }
 
 const versionFilePath = process.argv[2];

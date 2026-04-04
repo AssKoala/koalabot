@@ -8,6 +8,7 @@ import * as TikToken from "tiktoken";
 import config from 'config';
 import { LLMInteractionMessage } from '../llminteractionmessage.js';
 import * as OpenAiSdk from 'openai';
+import { getCommonLogger } from '../../logging/logmanager.js';
 
 interface ImageContentType {
     type: "input_text" | "input_image";
@@ -67,7 +68,7 @@ export class OpenAIResponse implements LLMCompletion {
                 }
             }           
         } catch {
-            console.error("Error extracting message text from response");
+            getCommonLogger().logError("Error extracting message text from response");
         }
 
         return "";

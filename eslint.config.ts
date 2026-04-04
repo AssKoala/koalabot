@@ -61,7 +61,8 @@ export default defineConfig([
                     "argsIgnorePattern": "^_",
                     "ignoreRestSiblings": true,
                     "ignoreUsingDeclarations": true
-                }]
+                }],
+            "no-undef": "off"
         }
     }
 ]);

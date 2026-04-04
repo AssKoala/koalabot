@@ -11,7 +11,6 @@ import { SlashCommandBuilder, AttachmentBuilder, ChatInputCommandInteraction } f
 import { OpenAiApi } from '../llm/api/openai.js';
 import { DownloaderHelper } from 'node-downloader-helper';
 import { mkdir, rm } from 'node:fs/promises';
-import { got } from 'got';
 import fs from 'node:fs';
 import crypto from 'crypto';
 import config from 'config';
@@ -64,7 +63,7 @@ class ImageGenerationData {
 
         const base_images = request.getSubcommand().getOptionValueString("base_images", undefined);
 
-        if (base_images != null) {
+        if (base_images) {
             const base_images_array = base_images.split('|');
             base_images_array.forEach(image => {
                 this.base_images.push(image);
@@ -255,7 +254,17 @@ class StableDiffusion {
             };
 
             const address = config.get("ImageGeneration.StableDiffusion.webUiAddress");
-            const data = <any> await got.post(`http://${address}/sdapi/v1/txt2img`, { json: payload }).json();
+            const response = await fetch(`http://${address}/sdapi/v1/txt2img`, 
+                { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload), 
+                    headers: 
+                    { 'Content-Type': 'application/json' } 
+                });
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}, response: ${await response.text()}`);
+
+            const data = <any> await response.json();
 
             const hash = crypto.createHash('md5').update(data.images[0]).digest('hex');
             const filename = hash + '.png';
@@ -528,8 +537,8 @@ class ImageCommand extends DiscordBotCommand {
 
         const getEntry = function (checkpointString: string) {
             const split = checkpointString.split('(');
-            let name = ''
-            let value = '';
+            let name;
+            let value;
             
             if (split.length > 1) 
             {

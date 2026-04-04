@@ -8,7 +8,9 @@ import { DiscordStenographerMessage } from "../app/stenographer/discordstenograp
 import { UserSettingsManager } from '../app/user/usersettingsmanager.js';
 import { PerformanceCounter } from '../performancecounter.js';
 import { LLMInteractionMessage, LLMInteractionMessageFactory } from './llminteractionmessage.js';
-
+import { DiscordPlatform } from '../platform/discord/discordplatform.js';
+import crypto from 'crypto';
+import fs from 'fs/promises';
 import config from 'config';
 import { LLMToolManager } from './llmtoolmanager.js';
 import { getCommonLogger } from '../logging/logmanager.js';
@@ -70,8 +72,8 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
     protected abstract getImageCompletion(_runtimeData: DiscordBotRuntimeData, _systemPrompt: string, _promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion>;
     protected abstract hasAutomaticImageGeneration(): boolean; 
     protected abstract isMessageRequestForImageGeneration(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage): Promise<boolean>;
-    protected abstract getGeneralRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string): Promise<LLMMessageTracker>;
-    protected abstract getVisionRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string, _imageUrls: string[]): Promise<LLMMessageTracker>;
+    protected abstract getGeneralRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string, _overrideQuery?: string): Promise<LLMMessageTracker>;
+    protected abstract getVisionRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string, _imageUrls: string[], _overrideQuery?: string): Promise<LLMMessageTracker>;
     
     protected async callTool(toolName: string, args: unknown): Promise<string> {
         return LLMToolManager.callTool(toolName, args);
@@ -104,6 +106,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         const TITLE_MAX_LEN = config.get<number>("Discord.attachmentTitleMaxLength");
         const DESCR_MAX_LEN = config.get<number>("Discord.attachmentDescriptionMaxLength");
 
+        // Store the image in the stenographer as a base64 string
         try {
             const imageUrl = `data:image/png;base64,${imageData.imageBytes.toString("base64")}`;
 
@@ -122,25 +125,52 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             runtimeData.logger().logError(`LLMBot::replyImage(): Failed to store image message in stenographer, got: ${e}`);
         }
 
-		const image = new Discord.AttachmentBuilder(imageData.imageBytes, {
-            name: 'image.png',
-            description: imageData.prompt.substring(0, DESCR_MAX_LEN)
-        });
+        // Write the image to disk if enabled
+        if (config.get<boolean>("ImageGeneration.saveImages")) {
+            const hash = crypto.createHash('sha256').update(imageData.imageBytes).digest('hex');
+            const saveFolder = config.get<string>("ImageGeneration.imageSavePath")
+            const imageFilePath = `${saveFolder}/${hash}.png`;
+            const metadataFilePath = `${saveFolder}/${hash}.xml`;
+            
+            try {
+                runtimeData.logger().logDebug(`LLMBot::replyImage(): Creating image save path directory if it doesn't exist: ${saveFolder}`);
+                await fs.mkdir(saveFolder, { recursive: true });
 
-        const embed = new Discord.EmbedBuilder();
-        embed.setTitle(message.getQuestion()
-                .replace(`<@${runtimeData.botId()}>`,'')    // strip bot name
-                .replace('/chat','')                        // strip command name
-                .trim().substring(0, TITLE_MAX_LEN));
+                runtimeData.logger().logDebug(`LLMBot::replyImage(): Saving image to path: ${imageFilePath} and metadata to path: ${metadataFilePath}`);
+                fs.writeFile(imageFilePath, imageData.imageBytes);  // No await, we don't care when it gets done
 
-        if (config.get("Chat.enableLongDescription")) {
-            const text = "-# " + imageData.prompt;
-            embed.setDescription(text.substring(0, DESCR_MAX_LEN));
+                // Write the image info as xml alongside it
+                const xmlContent = `<image><prompt>${imageData.prompt}</prompt><timestamp>${Date.now()}</timestamp></image>`;
+                fs.writeFile(metadataFilePath, xmlContent);  // No await, we don't care when it gets done
+            } catch (e) {
+                runtimeData.logger().logError(`LLMBot::replyImage(): Failed to write image or metadata to save path, got error ${e}. imagePath: ${imageFilePath}, metadataPath: ${metadataFilePath}`);
+            }
         }
 
-        embed.setImage(`attachment://image.png`);
+        // reply the image to the user on discord
+        try {
+            const image = new Discord.AttachmentBuilder(imageData.imageBytes, {
+                name: 'image.png',
+                description: imageData.prompt.substring(0, DESCR_MAX_LEN)
+            });
 
-        await message.reply({ embeds: [embed], files: [image] });
+            const embed = new Discord.EmbedBuilder();
+            embed.setTitle(message.getQuestion()
+                    .replace(`<@${runtimeData.botId()}>`,'')    // strip bot name
+                    .replace('/chat','')                        // strip command name
+                    .trim().substring(0, TITLE_MAX_LEN));
+
+            if (config.get("Chat.enableLongDescription")) {
+                const text = "-# " + imageData.prompt;
+                embed.setDescription(text.substring(0, DESCR_MAX_LEN));
+            }
+
+            embed.setImage(`attachment://image.png`);
+
+            await message.reply({ embeds: [embed], files: [image] });
+        } catch (e) {
+            runtimeData.logger().logErrorAsync(`LLMBot::replyImage(): Failed to discord reply with image, got error ${e}`);
+        }
     }
 
     private static async replyText(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, responseText: string) {
@@ -255,78 +285,75 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         if (!message.author.bot && message.mentions.has(botId)) {
             const interactionMsg = LLMInteractionMessageFactory.createFromDiscordMessage(message);
 
-            // Send typing indicator
-            try {
-                const channel = await runtimeData.bot().client().channels.cache.get(interactionMsg.getChannelId());
-                if (channel && 'sendTyping' in channel) {
-                    channel.sendTyping();
-                }
-                runtimeData.logger().logInfo("LLMBot::handleUserInteraction(): Sent typing indicator");
-            } catch (e) {
-                runtimeData.logger().logError(`LLMBot::handleUserInteraction(): Failed to get channel to send typing indicator, got: ${e}`);
-            }
-
             return this.handleUserInteraction(runtimeData, interactionMsg);
         }
     }
 
+    private async getTracker(runtimeData: DiscordBotRuntimeData,  message: LLMInteractionMessage, systemPrompt: string, imageUrls: string[], overrideQuery?: string): Promise<LLMMessageTracker | null> {
+        let newTracker: LLMMessageTracker;
+
+        if (config.get("Chat.ImageVision.enable")   // If vision is enabled
+            && imageUrls.length > 0                 // and we found some image urls in the message or the referenced message
+        ) {
+            runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Attachments or embeds found, processing as vision request.`);
+            
+            try {
+                newTracker = await this.getVisionRequestTracker(runtimeData, message, systemPrompt, imageUrls, overrideQuery);
+            } catch (e) {
+                runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): Failed to get vision request tracker, got error ${e}`);
+                await message.reply(`Failed to process vision request: ${e}`);
+                return null;
+            }
+        } else {
+            runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Processing as general request`);
+            newTracker = await this.getGeneralRequestTracker(runtimeData, message, systemPrompt, overrideQuery);
+        }
+
+        return newTracker;
+    }
+
     public async handleUserInteraction(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage) {
         using _perfCounter = PerformanceCounter.Create("LLMBot::handleUserInteraction(): ", performance.now(), runtimeData.logger(), true);
+        using _autoTyper = DiscordPlatform.createTypingObject(message.getInternalData().channel);
+        
+        runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Message mentions bot, processing as LLM request.`);
 
         try {
             const userData = UserSettingsManager.get().get(message.getUserName());
-
-            runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Message mentions bot, processing as LLM request.`);
-
-            const systemPrompt = userData.chatSettings.customPrompt.length > 0 ? 
+            const systemPrompt = (userData.chatSettings.customPrompt.length > 0 ? 
                                     userData.chatSettings.customPrompt 
-                                    : config.get<string>("Chat.systemPrompt");
+                                    : config.get<string>("Chat.systemPrompt")) 
+                                + "\n\n" + config.get<string>("Chat.commonPrompt");
 
             // Store reference to replied to message
             const referencedMessage = message.getInternalData().reference ? await message.getInternalData().fetchReference() : undefined;
 
-            // Call the LLM to get a response
-            let completion;
+            // Pull any images
             const imageUrls = await this.getImageUrlsFromMessages([referencedMessage, message]);    // Get any image urls that might be in the message(s)
+            
+            // Will store actual response we send to the user
+            let completion: LLMCompletion;
 
+            // If the model doesn't have automatic prompting, we need to generate a proper image prompt and then call the image completion directly                
             if (!this.hasAutomaticImageGeneration() && await this.isMessageRequestForImageGeneration(runtimeData, message)) {
                 runtimeData.logger().logInfo("LLMBot::handleUserInteraction(): Detected image generation request when automatic generation is not supported.");
-                try {
-                    completion = await this.getImageCompletion(runtimeData, systemPrompt, message.getQuestion(), imageUrls);
-                } catch (e) {
-                    runtimeData.logger().logError(`LLMBot::handleUserInteraction(): Failed to generate image, got ${e}`);
-                    message.reply(`Failed to generate image, got error ${e}`);
-                    return;
-                }
+
+                const tempTracker = await this.getTracker(runtimeData, 
+                                                        message, 
+                                                        config.get<string>("Chat.genericSystemPrompt"),     // Use the generic prompt to avoid any weird behaviors
+                                                        imageUrls, 
+                                                        config.get<string>("Chat.imageGenDescriptionPrompt") + message.getQuestion());
+
+                if (!tempTracker) throw new Error("Failed to get message tracker for image generation prompt.");
+
+                completion = await this.getCompletion(runtimeData, message, tempTracker);
+                const imageGenPrompt = completion.getResponseText();
+                completion = await this.getImageCompletion(runtimeData, systemPrompt, imageGenPrompt, imageUrls);
             } else {
-                // Fill out context information
-                let tempTracker: LLMMessageTracker;
+                const tempTracker = await this.getTracker(runtimeData, message, systemPrompt, imageUrls);
 
-                if (config.get("Chat.ImageVision.enable")   // If vision is enabled
-                    && imageUrls.length > 0                 // and we found some image urls in the message or the referenced message
-                ) {
-                    runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Attachments or embeds found, processing as vision request.`);
-                    
-                    try {
-                        tempTracker = await this.getVisionRequestTracker(runtimeData, message, systemPrompt, imageUrls);
-                    } catch (e) {
-                        runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): Failed to get vision request tracker, got error ${e}`);
-                        message.reply(`Failed to process vision request: ${e}`);
-                        return;
-                    }
-                } else {
-                    runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Processing as general request`);
-                    tempTracker = await this.getGeneralRequestTracker(runtimeData, message, systemPrompt);
-                }
-
-                try {
-                    completion = await this.getCompletion(runtimeData, message, tempTracker);
-                } catch (e) {
-                    const errMsg = `Failed to get ${this.aiModel} completion, got error ${e}`;
-                    runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): ${errMsg}`);
-                    message.reply(errMsg);
-                    return;
-                }
+                if (!tempTracker) throw new Error("Failed to get message tracker for user interaction.");
+                completion = await this.getCompletion(runtimeData, message, tempTracker);
             }
 
             const imageData = completion.getResponseImageData();
@@ -334,19 +361,17 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         
             if (imageData) {
                 runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Results contain image data, responding with image.`);
-                LLMBot.replyImage(runtimeData, message, imageData);
+                await LLMBot.replyImage(runtimeData, message, imageData);
             } else if (responseText) {
                 runtimeData.logger().logInfo(`LLMBot::handleUserInteraction() Results contain text, replying with text.`);
-                LLMBot.replyText(runtimeData, message, responseText);
+                await LLMBot.replyText(runtimeData, message, responseText);
             } else {
-                const errMsg = `Response has neither text or image data or there was an error retrieving it.`;
-                runtimeData.logger().logError(`LLMBot::handleUserInteraction() ${errMsg}`);
-                message.reply(errMsg);
+                throw new Error(`Response has neither text or image data or there was an error retrieving it.`);
             }
         } catch (e) {
-            const errMsg = `LLMBot::handleUserInteraction(): Failed to process message, got error ${e}`;
+            const errMsg = `Failed to process message, got error ${e}`;
             runtimeData.logger().logErrorAsync(`LLMBot::handleUserInteraction(): ${errMsg}`);
-            message.reply(errMsg);
+            await message.reply(errMsg);
         }
     }
 }
@@ -363,7 +388,30 @@ export class LLMBotManager implements DiscordMessageCreateListener {
         const userData = UserSettingsManager.get().get(message.author.username);
         const preferredAiModel = userData.chatSettings.preferredAiModel || config.get<string>("Chat.aiModel");
 
-        const llmBot = LLMBotManager.getLLMBot(preferredAiModel);
+        let llmBot = undefined;
+        
+        // Check if the user is overring the model in the request
+        if (message.content.startsWith("/")) {
+            try {
+                const overrideModel = message.content.split(" ")[0].substring(1);
+                if (this.llmBots.has(overrideModel)) {
+                    runtimeData.logger().logInfo(`LLMBotManager::onDiscordMessageCreate(): User has overridden AI model in message with ${overrideModel}, using that instead of preferred model ${preferredAiModel}`);
+                    llmBot = this.llmBots.get(overrideModel);
+                    // Strip the override command from the message content for downstream processing
+                    message.content = message.content.substring(overrideModel.length + 2);
+                } else {
+                    runtimeData.logger().logInfo(`LLMBotManager::onDiscordMessageCreate(): User has overridden AI model in message with ${overrideModel}, but no bot is registered for that model, falling back to preferred model ${preferredAiModel}`);
+                }
+            } catch (e) {
+                runtimeData.logger().logWarning(`LLMBotManager::onDiscordMessageCreate(): Failed to process override model, got error ${e}`);
+            }
+            
+        }
+
+        // Assuming no override, let's use the preferred model
+        if (!llmBot) {
+            llmBot = LLMBotManager.getLLMBot(preferredAiModel);
+        }
         
         // If we have a bot for this model and its enabled, chain the message to it
         if (llmBot && llmBot.isEnabled()) {

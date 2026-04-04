@@ -77,21 +77,14 @@ export class GeminiBot extends LLMBot {
         super(aiModel, enabled);
     }
 
-    protected override async getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string): Promise<LLMMessageTracker> {
+    protected override async getGeneralRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string, overrideQuery?: string): Promise<LLMMessageTracker> {
         const tempTracker = new LLMMessageTracker(
                                 config.get("Chat.maxMessages"),
                                 config.get("Chat.maxTokenCount"),
                                 systemPrompt,
                                 this.getTokenCountFunction(runtimeData));
-                                    
-        // Regular chat request
-        // Stenographer runs before all others, this includes the user's question as the most recent message
-        Stenographer.getChannelMessages(message.getChannelId()).slice().reverse().every(entry => {
-            if (entry.imageUrl.length != 0) return true;    // Skip any images
 
-            const role = entry.authorId == runtimeData.bot().client().user!.id ? "model" : "user";
-            const content = entry.getStandardDiscordMessageFormat();
-
+        const unshiftEntry = (role: string, content: string) => {
             const apiMessageData = {
                 "role": role,
                 "parts": [{ text: content}]
@@ -102,18 +95,41 @@ export class GeminiBot extends LLMBot {
             }
 
             return true;
+        }
+
+        // Stenographer runs before all others, this includes the user's question as the most recent message
+        let stenographerCache = Stenographer.getChannelMessages(message.getChannelId()).slice().reverse();
+
+        if (overrideQuery) {
+            if (!unshiftEntry("user", overrideQuery)) {
+                runtimeData.logger().logError(`GeminiBot::getGeneralRequestTracker(): Failed to add override query to tracker, message too long even by itself.`);
+                throw new Error("Failed to add override query to tracker, message too long even by itself.");
+            }
+            stenographerCache = stenographerCache.slice(1); // Remove the original user question
+        }
+
+        // Regular chat request
+        stenographerCache.every(entry => {
+            if (entry.imageUrl.length != 0) return true;    // Skip any images
+
+            const role = entry.authorId == runtimeData.bot().client().user!.id ? "model" : "user";
+            const content = entry.getStandardDiscordMessageFormat();
+
+            return unshiftEntry(role, content);
         });
 
         return tempTracker;
     }
 
-    protected override async getVisionRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string, imageUrls: string[]): Promise<LLMMessageTracker>
+    protected override async getVisionRequestTracker(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, systemPrompt: string, imageUrls: string[], overrideQuery?: string): Promise<LLMMessageTracker>
     {
         if (imageUrls.length > config.get<number>("Chat.ImageVision.maxImages")) {
             throw new Error(`Too many images provided (${imageUrls.length}), Chat.ImageVision.maxImages is currently ${config.get("Chat.ImageVision.maxImages")}.`);
         }
 
-        if (message.getQuestion().trim().length == 0) {
+        const question = overrideQuery ? overrideQuery : message.getQuestion().trim();
+
+        if (question.length == 0) {
             throw new Error(`No prompt text provided with image(s), please provide a prompt describing what you want.`);
         }
 
@@ -129,7 +145,7 @@ export class GeminiBot extends LLMBot {
             images.push(url);
         });
 
-        const content = await this.getVisionContent(message.getQuestion(), images);
+        const content = await this.getVisionContent(question, images);
 
         // Push all to tracker
         tempTracker.unshiftMessage({
@@ -233,12 +249,19 @@ export class GeminiBot extends LLMBot {
         let geminiResponse: GeminiResponse;
 
         if (prompt && prompt.contents && prompt?.contents.length > 0) {
+            
             // Vision request
             const response = await genai.models.generateContent({
                 model: this.aiModel,
                 contents: prompt.contents,
                 config: {
-                    systemInstruction: tracker.getSystemPrompt()
+                    systemInstruction: tracker.getSystemPrompt(),
+                    tools: 
+                    [
+                        { googleSearch:{} },
+                        { urlContext: {} },
+                        //...this.getTools() as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ]
                 },
             });
 
@@ -248,7 +271,13 @@ export class GeminiBot extends LLMBot {
                 model: this.aiModel,
                 history: tracker.getMessageDataRaw() as GoogleGenAI.Content[],
                 config: {
-                    systemInstruction: tracker.getSystemPrompt()
+                    systemInstruction: tracker.getSystemPrompt(),
+                    tools: 
+                    [
+                        { googleSearch:{} },
+                        { urlContext: {} },
+                        //...this.getTools() as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ]
                 },
             });
 
@@ -269,8 +298,8 @@ export class GeminiBot extends LLMBot {
             model: config.get("AiModel.Gemini.imageAiModel"),
             contents: promptText,
             config: {
-                systemInstruction: systemPrompt
-            },
+                //tools: this.getTools() as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+            }
         });
 
         return new GeminiResponse(response, promptText);
@@ -289,7 +318,15 @@ export class GeminiBot extends LLMBot {
 
             const response = await genai.models.generateContent({
                 model: this.aiModel,
-                contents: `${prompt}: ${message.getQuestion()}`
+                contents: `${prompt}: ${message.getQuestion()}`,
+                config: {
+                    tools: 
+                    [
+                        { googleSearch:{} },
+                        { urlContext: {} },
+                        //...this.getTools() as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ]
+                }
             });
 
             return response.text!.toLowerCase().includes('yes');

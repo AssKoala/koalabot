@@ -1,10 +1,6 @@
 import { performance } from 'perf_hooks';
 import { Logger } from './api/koalabotsystem.js'
 
-interface Disposable {
-    [Symbol.dispose](): void
-}
-
 export class SimplePerformanceCounter {
     public readonly description: string;
     private startTime: number;

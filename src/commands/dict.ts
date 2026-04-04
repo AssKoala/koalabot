@@ -8,8 +8,9 @@ import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotc
 import { readJsonFile } from '../sys/jsonreader.js'
 import { PerformanceCounter } from '../performancecounter.js';
 import { getCommonLogger } from '../logging/logmanager.js'
+import { DiscordPlatform }  from '../platform/discord/discordplatform.js';
 import * as Discord from 'discord.js';
-import fs from 'fs'
+import fs from 'fs/promises';
 
 import config from 'config';
 
@@ -20,10 +21,12 @@ type DictEntry = {
 }
 
 export class Dict {
-    private dictData!: DictEntry[];
+    private dictMap: Map<string, DictEntry> = new Map<string, DictEntry>();    
     private readonly dictDataPath: string;
     
     private static instance: Dict = new Dict();
+    private static get(): Dict { return Dict.instance; }
+
     private constructor(dataPath = `${config.get("Global.dataPath")}/dictdata.json`) {
         this.dictDataPath = dataPath;
     }
@@ -34,30 +37,18 @@ export class Dict {
         registerDiscordBotCommand(new DefineCommand('define'), false);
         registerDiscordBotCommand(new IndexCommand('index'), false);
 
-        Dict.instance.dictData = await readJsonFile(Dict.instance.dictDataPath) as DictEntry[];
-        Dict.sortDictData();
-    }
+        const rawDictData = await readJsonFile(Dict.instance.dictDataPath) as DictEntry[];
 
-    /**
-     * Sorts the dict data that's been loaded -- enforces ordering even if the
-     * file has been edited outside the program
-     */
-    static sortDictData() {
-        using perfCounter = PerformanceCounter.Create("sortDictData(): ");
-        try {
-            Dict.instance.dictData.sort((a: DictEntry, b: DictEntry) => {
-                return a.entry.localeCompare(b.entry, undefined, { sensitivity: 'accent' })
-            });
-            getCommonLogger().logInfo(`Sorted ${this.getDictDataEntryCount()} dictionary items.`);
-        } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to sort dict data, got ${e}`);
+        if (rawDictData != undefined) {
+            for (const entry of rawDictData) {
+                Dict.get().dictMap.set(entry.entry.toLocaleLowerCase(), entry);
+            }
         }
-        
     }
 
     static getDictDataEntryCount() {
         try {
-            return Dict.instance.dictData.length;
+            return Dict.get().dictMap.size;
         } catch (e) {
             getCommonLogger().logErrorAsync(`dict data not defined, got ${e}`);
             return 0;
@@ -73,68 +64,18 @@ export class Dict {
         using perfCounter = PerformanceCounter.Create("flushDictData(): ");
 
         try {
-            const jsonString = JSON.stringify(Dict.instance.dictData, null, 2);
-            fs.writeFile(Dict.instance.dictDataPath, jsonString, err => {
-                if (err) {
-                    getCommonLogger().logErrorAsync(`Error flushing dict data file, got ${err}`);
-                    return false;
-                } else {
-                    getCommonLogger().logInfo('Successfully wrote dict data');
-                    return true;
-                }
-            });
+            const jsonString = JSON.stringify(Array.from(Dict.get().dictMap.values()), null, 2);
+            await fs.writeFile(Dict.get().dictDataPath, jsonString);
+            getCommonLogger().logInfo('Successfully wrote dict data');
+            return true;
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to flush dict data to disk, got error ${e}`);
+            return false;
         }
-    }
-
-    static getIndexOf(array: DictEntry[], target: string, compareFunc: ( left: DictEntry, right: string) => number): number {
-        try {
-            let start = 0;
-            let end = array.length - 1;
-
-            while (start <= end) {
-                const middle = Math.floor((start + end) / 2);
-                const result = compareFunc(array[middle], target);
-
-                if (result === 0) {
-                    return middle;
-                } else if (result < 0) {
-                    start = middle + 1;
-                } else {
-                    end = middle - 1;
-                }
-            }
-        } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to getIndexOf(${array},${target},${compareFunc}), got ${e}`);
-        }
-
-        return -1;
     }
 
     static findDictionaryEntry(entryName: string): DictEntry | undefined {
-        try {
-            const foundIndex = this.getIndexOf(Dict.instance.dictData, entryName,
-                (x: DictEntry, y: string) => {
-                    const left = x.entry;
-                    const right = y;
-                    const result = left.localeCompare(right, undefined, { sensitivity: 'accent' });
-
-                    return result;
-                });
-
-            if (foundIndex != -1) {
-                return {
-                    "author": Dict.instance.dictData[foundIndex].author,
-                    "entry": Dict.instance.dictData[foundIndex].entry,
-                    "definition": Dict.instance.dictData[foundIndex].definition
-                };
-            }
-        } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to find dictionary entry ${entryName}, got ${e}`);
-        }
-
-        return undefined;
+        return this.get().dictMap.get(entryName.toLocaleLowerCase());
     }
 
     static async handleDictCommand(interaction: Discord.ChatInputCommandInteraction) {
@@ -174,13 +115,15 @@ export class Dict {
         using perfCounter = PerformanceCounter.Create("handleDefineCommand(): ");
 
         try {
+            await interaction.deferReply();
+
             if (interaction.options.data.length < 1) {
                 await getCommonLogger().logErrorAsync(`Invalid interaction object sent to dict, data length 0!`, interaction);
                 return;
             }
 
             if (interaction.options.data.length < 2) {
-                await interaction.reply('Missing entries for define command, need phrase and definiton plzsir');
+                await interaction.editReply('Missing entries for define command, need phrase and definiton plzsir');
                 getCommonLogger().logWarning(`Failed to get data for define command, got ${interaction.options.data}`);
                 return;
             }
@@ -196,7 +139,7 @@ export class Dict {
             });
 
             if (entryName == '') {
-                await interaction.reply('Missing entry name for define command, need phrase to define.');
+                await interaction.editReply('Missing entry name for define command, need phrase to define.');
                 return;
             }
 
@@ -209,20 +152,21 @@ export class Dict {
                     "entry": entryName,
                     "definition": definition
                 }
+                this.get().dictMap.set(entryName.toLocaleLowerCase(), newEntry);
+                const success = await Dict.flushDictData();
 
-                Dict.instance.dictData.push(newEntry);
-                Dict.sortDictData(); // insertion sort would be faster but screw it I'm lazy
-                Dict.flushDictData();
-
-                await interaction.reply(`**DICT:** Definition for ${entryName} added successfully.`);
+                if (success) {
+                    await interaction.editReply(`**DICT:** Definition for ${entryName} added successfully.`);
+                } else {
+                    await interaction.editReply(`**DICT:** Definition for ${entryName} added successfully. However, failed to flush data to disk, so it may not be saved, check error logs for details.`);
+                }
+                
             } else {
-                await interaction.reply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry.definition} by ${existingEntry.author}`);
+                await interaction.editReply(`**DICT:** Definition for ${entryName} already exists as: ${existingEntry.definition} by ${existingEntry.author}`);
             }
         } catch (e) {
-            await getCommonLogger().logErrorAsync(`Failed to set definition, got error ${e}`, interaction);
-        }
-
-        
+            await getCommonLogger().logErrorAsync(`Failed to set definition, got error ${e}`, interaction, true);
+        }        
     }
 
     static async handleIndexCommand(interaction: Discord.ChatInputCommandInteraction) {
@@ -233,29 +177,44 @@ export class Dict {
 
             const search_string = interaction.options.data[0].value!.toString().trim().toLowerCase();
 
-            const matches = Dict.instance.dictData.filter((entry: DictEntry) => entry.definition.toLowerCase().includes(search_string));
+            const dictMatches = Array.from(this.get().dictMap.values()).filter((entry: DictEntry) => entry.entry.toLowerCase().includes(search_string));
+            const defMatches = Array.from(this.get().dictMap.values()).filter((entry: DictEntry) => entry.definition.toLowerCase().includes(search_string));
 
-            let outputString;
+            let outputString = '';
 
-            if (matches.length > 0) {
-                outputString = `Search string ${search_string} found in entries: `;
-                for (let i = 0; i < matches.length; i++) {
+            if (dictMatches.length > 0) {
+                outputString += `Search string ${search_string} found in entry name(s): `;
+                for (let i = 0; i < dictMatches.length; i++) {
                     if (i > 0) {
                         outputString += ", ";
                     }
-                    outputString += "\"" + matches[i].entry + "\"";
+                    outputString += "\"" + dictMatches[i].entry + "\"";
                 }
+                outputString += "\n";
             } else {
-                outputString = `Search string ${search_string} not found in entries.`;
+                outputString += `Search string ${search_string} not found in entries.\n`;
             }
 
-            await interaction.editReply(outputString);
+            if (defMatches.length > 0) {
+                outputString += `Search string ${search_string} found in definition(s) for: `;
+                for (let i = 0; i < defMatches.length; i++) {
+                    if (i > 0) {
+                        outputString += ", ";
+                    }
+                    outputString += "\"" + defMatches[i].entry + "\"";
+                }
+                outputString += "\n";
+            } else {
+                outputString += `Search string ${search_string} not found in definitions.\n`;
+            }
+
+            outputString += "Use /dict [entry] to see the definition.";
+
+            await DiscordPlatform.editAndSplitReply(interaction, outputString);
 
         } catch (e) {
-            await getCommonLogger().logErrorAsync(`Failed to handle index command, got error ${e}`);
+            await getCommonLogger().logErrorAsync(`Failed to handle index command, got error ${e}`, interaction, true);
         }
-
-        
     }
 }
 

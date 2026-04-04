@@ -21,6 +21,7 @@
         messageLogFilename: "discord_messages.log",                         // Log file to write discord messages to
         logLevel: "info",                                                   // Logging level.  See logger.ts enum LogLevel for available levels.
         pythonBinary: "python",                                             // Path to python binary
+        rebootFile: "./temp/reboot.txt",                                    // File used to trigger reboots when written to, should be touchable by the bot process
         sudoList: "",                                                       // Comma separated list of discord user id's that have sudo access to bot.
         versionInfoFile: "./version.json"                                   // Path to version information file
     },
@@ -42,6 +43,8 @@
             // E.g. a value of "deliberate_v6" will result in attempting to use deliberate_v6.safetensors from disk
             checkpoints: "deliberate(Deliberate_v6.safetensors),dreamshaper(dreamshaper_8.safetensors)"
         },
+        saveImages: true,                  // If true save images.  Image info will be stored as xml alongside.
+        imageSavePath: "./generated_images" // Path to save generated images if saveImages is true.
     },
     APIKey: { // Keep these private.  Defaults are here for reference.  Optionally loads from environment variables.
         anthropic: "",
@@ -76,14 +79,21 @@
             enable: true,                               // If true, enable image vision (use as input) in chat
             maxImages: 5                                // Max number of images to send as input in a single request
         },
-        systemPrompt: "You are a helpul assistant.",    // Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant)
+        // Common prompt to include in all messages (appended to the systemPrompt) to tell the bot how to format its responses, etc.
+        commonPrompt: "When replying with text, do not include your name or discord id at the front of the response as in a chat log, just respond with the message content.",   
+        // Generic prompt when you want a proper response
+        genericSystemPrompt: "You are a helpful assistant.",
+        // Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant)
+        systemPrompt: "You are a helpul assistant.",
+        // Prompt to use to generate an image description for image gen from text completion
+        imageGenDescriptionPrompt: "Generate a detailed description of an image based on the following question and chat room context that can be used as the prompt to an AI image generator to respond to the following message, without any additional fluff, snark or personality: "
     },
     AiModel: {
         Ollama: {
             serverAddress: "http://127.0.0.1:11434"     // Ollama server
         },
         Gemini: {
-            imageAiModel: "gemini-3-pro-image-preview"  // Default gemini image model
+            imageAiModel: "gemini-3.1-flash-image-preview"  // Default gemini image model
         },
         Grok: {
             imageAiModel: "grok-2-image"               // Grok image generation model to use by default
@@ -98,6 +108,7 @@
         deployGlobalSlashCommandsOnStartup: false,      // Deploy slash commands globally for bot, recommend to always be false
         attachmentTitleMaxLength: 256,                  // Title length for image embeds
 		attachmentDescriptionMaxLength: 1024,           // Description length for image embeds
+        maxTypingTimeMs: 120000                         // Max time to send typing indicator for long responses (e.g. image generation)
     },
     Listeners: {
         listenerList: "loglistener,deletebotmessagereactionlistener",       // Comma separated List of listener modules to load

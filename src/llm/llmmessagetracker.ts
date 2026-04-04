@@ -117,7 +117,7 @@ export class LLMMessageTracker {
         return this.messageData.shift();
     }
 
-    public pushDiscordMessage(message: Discord.Message) {
+    public discordMessageToString(message: Discord.Message) {
         return `${message.author.displayName}<@${message.author.id}>: ${message.content}`;
     }
 

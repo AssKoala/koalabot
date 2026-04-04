@@ -48,7 +48,7 @@ if (config.get("Developer.timingEnable")) {
 
 // Register handlers, depend on logger
 process.on('unhandledRejection', error => {
-    LogManager.get().commonLogger.logErrorAsync(`Unhandled Process Rejection, got ${error}`);
+    LogManager.get().commonLogger.logErrorAsync(`[CRITICAL] Top-level unhandled Process rejection, system is in undefined state, got ${error}`);
 });
 
 // Load previous logs

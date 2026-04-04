@@ -14,15 +14,15 @@ class SlimelineListener implements DiscordMessageCreateListener {
             if (config.has("TwoCpu.skullUserId")) {
                 this.responseList.push((message: Message) => {
                     if (message.guildId == config.get<string>("TwoCpu.guildId") && message.content.includes('@slimeline')) {
-                        message.reply(`Hey <@${config.get<string>("TwoCpu.skullUserId")}>, ${message.author.username} wants you!`);
+                        message.reply(`Hey <@${config.get<string>("TwoCpu.skullUserId")}>, ${message.author.username} wants you ╭∩╮( ͡° ͜ʖ ͡°)╭∩╮`);
                     }
                 });
             }
 
-            if (config.has("TwoCpu.gigaUserId")) {
+            if (config.has("TwoCpu.chompsUserId")) {
                 this.responseList.push((message: Message) => {
-                    if (message.guildId == config.get<string>("TwoCpu.guildId") && message.content.includes('@cuck')) {
-                        message.reply(`Hey <@${config.get<string>("TwoCpu.gigaUserId")}>, ${message.author.username} wants you!`);
+                    if (message.guildId == config.get<string>("TwoCpu.guildId") && message.content.includes('@chomps')) {
+                        message.reply(`Hey <@${config.get<string>("TwoCpu.chompsUserId")}>, ${message.author.username} desires you (☞ ͡° ͜ʖ ͡°)☞`);
                     }
                 });
             }

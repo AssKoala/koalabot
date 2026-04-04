@@ -9,28 +9,15 @@ import { GrokApi } from '../../llm/api/grok.js';
 import { OpenAIBot } from './openaibot.js';
 import { LLMInteractionMessage } from '../llminteractionmessage.js';
 import { getCommonLogger } from '../../logging/logmanager.js';
-
+import { NetUtils } from '../../sys/net.js';
 
 class GrokImageData implements LLMGeneratedImageData {
     imageBytes: Buffer;
     prompt: string;
 
-    private constructor(prompt: string, image: Buffer) {
+    constructor(prompt: string, image: Buffer) {
         this.imageBytes = image;
         this.prompt = prompt;
-    }
-
-    static async downloadFromUrl(url: string, prompt: string): Promise<GrokImageData | undefined> {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error("GrokImageData::downloadFromUrl(): Failed to download from url: ${url}");
-            }
-            const buf = Buffer.from(await response.arrayBuffer());
-            return new GrokImageData(prompt, buf);
-        } catch {
-            return undefined;
-        }
     }
 }
 
@@ -94,8 +81,12 @@ export class GrokBot extends OpenAIBot {
             prompt: promptText,
         });
 
-        const imageData = await GrokImageData.downloadFromUrl(completion.data![0].url!, completion.data![0].revised_prompt!);
+        const imageBuf = await NetUtils.downloadFromUrl(completion.data![0].url!, completion.data![0].revised_prompt!);
+        if (!imageBuf) {
+            throw new Error("GrokBot::getImageCompletion(): Failed to download generated image from Grok.");
+        }
 
+        const imageData = new GrokImageData(promptText, imageBuf);
         return new GrokResponse(completion, imageData);
     }
 

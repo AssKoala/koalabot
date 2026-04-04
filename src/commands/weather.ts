@@ -70,21 +70,6 @@ function degreesToCompass(degrees: number): string
     return directions[val % 16];
 }
 
-function getUserPreferredUnits(interaction: Discord.ChatInputCommandInteraction): string
-{
-    try {
-        const userData = UserSettingsManager.get().get(interaction.user.username);
-
-        if (userData) {
-            return userData.weatherSettings.preferredUnits;
-        }
-    } catch (e) {
-        getCommonLogger().logErrorAsync(`Failed to get preferred units, got ${e}`);
-    }
-
-    return "rankine";
-}
-
 async function getWeatherLocation(interaction: Discord.ChatInputCommandInteraction): Promise<string | undefined>
 {
     let location = undefined;
@@ -208,13 +193,13 @@ async function printWeatherUsingOneApiv3(locationData: WeatherLocationData, inte
 
             if ('editReply' in interaction) {
                 await interaction.editReply(
-                    `**${city} Weather** :: ${getTemperatureString(weatherData.current.temp)} (Humidity: ${weatherData.current.humidity}%)`
-                    + ` | **Feels Like:** ${getTemperatureString(weatherData.current.feels_like)}`
-                    + ` | **Dew Point:** ${getTemperatureString(weatherData.current.dew_point)}`
-                    + ` | **Wind:** ${degreesToCompass(weatherData.current.wind_deg)}@${weatherData.current.wind_speed}km/h`
-                    + ` | **Today's High:** ${getTemperatureString(weatherData.daily[0].temp.max)}`
-                    + ` | **Today's Low:** ${getTemperatureString(weatherData.daily[0].temp.min)}`
-                    + ` | **Current Conditions:** ${weatherData.current.weather[0].description}`
+                    `**${city} Weather** :: ${getTemperatureString(weatherData.current.temp)} (Humidity: ${weatherData.current.humidity}%)\n`
+                    + `-# - **Feels Like:** ${getTemperatureString(weatherData.current.feels_like)}\n`
+                    + `-# - **Dew Point:** ${getTemperatureString(weatherData.current.dew_point)}\n`
+                    + `-# - **Wind:** ${degreesToCompass(weatherData.current.wind_deg)} @ ${weatherData.current.wind_speed}km/h\n`
+                    + `-# - **Today's High:** ${getTemperatureString(weatherData.daily[0].temp.max)}\n`
+                    + `-# - **Today's Low:** ${getTemperatureString(weatherData.daily[0].temp.min)}\n`
+                    + `-# - **Current Conditions:** ${weatherData.current.weather[0].description}`
                 );
             }
         } 
@@ -251,7 +236,7 @@ async function printHourlyForecast(locationData: WeatherLocationData, interactio
         for (let i = 0; i < 5 && i < weatherData.hourly.length; i++) { 
             const tempStrFeels = getTemperatureString(weatherData.hourly[i].feels_like);
             const tempStr = getTemperatureString(weatherData.hourly[i].temp);
-            hourlyWeatherString += `**:: ${i} hrs:** ${tempStr}, **Feels like:** ${tempStrFeels} ::  ${weatherData.hourly[i].humidity}% humidity, ${weatherData.hourly[i].weather[0].description}\n`;
+            hourlyWeatherString += `-# - **${i} hrs**: ${tempStr}, **Feels like:** ${tempStrFeels} ::  ${weatherData.hourly[i].humidity}% humidity, ${weatherData.hourly[i].weather[0].description}\n`;
         }
 
         await interaction.editReply(hourlyWeatherString);
@@ -302,7 +287,7 @@ async function printMinutelyForecast(locationData: WeatherLocationData, interact
             }
         }
 
-        await interaction.editReply(`**Minutely forecast for ${locationData.locationName}** :: ` + messageStr);
+        await interaction.editReply(`**Minutely forecast for ${locationData.locationName}**\n` + `-# ${messageStr}`);
     }
     catch (e) {
         await getCommonLogger().logErrorAsync(`Failed to get minutely weather, got ${e}`, interaction, true);
@@ -350,17 +335,17 @@ function getEmojiFromConditions(weather: any): string { // eslint-disable-line @
 
 async function printDailyForecast(locationData: WeatherLocationData, interaction: Discord.ChatInputCommandInteraction, weatherData: any) {  // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
-        const preferredUnits = getUserPreferredUnits(interaction);
-        const unitsShort = preferredUnits[0].toUpperCase();
-
-        let dailyWeatherString = `**${locationData.locationName}** :: 8-Day Forecast `;
-        const date = new Date();
+        let dailyWeatherString = `**${locationData.locationName}** :: 8-Day Forecast\n`;
 
         for (let i = 0; i < 8 && i < weatherData.daily.length; i++)
         {
-            const highTemp = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.max, preferredUnits).toFixed(0)}${unitsShort}`;
-            const lowTemp = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.min, preferredUnits).toFixed(0)}${unitsShort}`;
-            const tempStr = `:: **${getDayFromIndex(date.getDay()+i)}:** ${getEmojiFromConditions(weatherData.daily[i].weather[0])} (${highTemp}/${lowTemp})`;
+            const date = new Date(weatherData.daily[i].dt * 1000);
+            const highTempF = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.max, "fahrenheit").toFixed(0)}F`;
+            const lowTempF = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.min, "fahrenheit").toFixed(0)}F`;
+            const highTempC = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.max, "celsius").toFixed(0)}C`;
+            const lowTempC = `${convertKelvinToPreferredUnits(weatherData.daily[i].temp.min, "celsius").toFixed(0)}C`;
+            
+            const tempStr = `-# - **${getDayFromIndex(date.getDay())}** : ${getEmojiFromConditions(weatherData.daily[i].weather[0])} : ${highTempF}/${highTempC} : ${lowTempF}/${lowTempC}\n`;
             dailyWeatherString += tempStr;
         }
 
