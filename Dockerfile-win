@@ -1,0 +1,42 @@
+##
+# BUILDER
+
+# Use Windows Server Core as the base
+FROM mcr.microsoft.com/windows/servercore:ltsc2025 AS builder
+
+# Get nodejs installed in the container
+RUN powershell.exe -Command Invoke-WebRequest -OutFile c:\\nodejs.zip -Uri "https://www.asskoala.com/dev/nodejs.zip"
+RUN powershell.exe -Command Expand-Archive -Path c:\\nodejs.zip -DestinationPath c:\\
+RUN powershell.exe -Command Rename-Item -Path c:\\node-v24.14.1-win-x64 -NewName c:\\nodejs
+RUN powershell.exe -Command Remove-Item -Path c:\\nodejs.zip
+RUN powershell.exe -Command "$env:Path += ';c:\\nodejs'; [Environment]::SetEnvironmentVariable('Path', $env:Path, [EnvironmentVariableTarget]::Machine)"
+
+# Build KoalaBot
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+RUN npm run generate-version-info
+RUN powershell.exe -Command "Get-ChildItem -Path 'c:\\app\\dist' -Filter '*.js.map' -Recurse -File | Remove-Item -Force"
+RUN powershell.exe -Command Remove-Item -Recurse -Force 'c:\\app\\dist\\__mocks__'
+RUN powershell.exe -Command Remove-Item -Recurse -Force 'c:\\app\\dist\\__tests__'
+
+##
+# PRODUCTION
+
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2025 AS production
+
+# TODO install python and praw
+#RUN apt-get update && apt-get install -y python3 python-is-python3 python3-praw
+
+WORKDIR /app
+COPY --from=builder /nodejs c:\\nodejs
+RUN setx PATH "%PATH%;c:\\nodejs"
+COPY --from=builder /app/package.json /app/package-lock.json ./
+RUN npm install --omit=dev
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/scripts ./scripts
+
+CMD ["node", "./dist/main.js"]

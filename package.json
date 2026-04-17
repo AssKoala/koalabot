@@ -6,24 +6,24 @@
   "author": "AssKoala",
   "type": "module",
   "dependencies": {
-    "@ai-sdk/xai": "^3.0.77",
-    "@anthropic-ai/sdk": "^0.82.0",
-    "@google/genai": "^1.48.0",
-    "@types/node": "^25.5.2",
+    "@ai-sdk/xai": "^3.0.83",
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@google/genai": "^1.50.1",
+    "@types/node": "^25.6.0",
     "@types/validator": "^13.15.10",
-    "ai": "^6.0.145",
+    "ai": "^6.0.168",
     "config": "^4.4.1",
-    "discord.js": "^14.26.0",
-    "dotenv": "^17.4.0",
+    "discord.js": "^14.26.3",
+    "dotenv": "^17.4.2",
     "mime": "^4.1.0",
     "node-downloader-helper": "^2.1.11",
-    "node-fetch": "^3.3.2",
     "ollama": "^0.6.3",
-    "openai": "^6.33.0",
+    "openai": "^6.34.0",
     "tiktoken": "^1.0.22",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "validator": "^13.15.35",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "yahoo-finance2": "^3.14.0"
   },
   "scripts": {
     "build": "tsc -p .",
@@ -36,11 +36,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^1.2.0",
-    "eslint": "^10.1.0",
-    "globals": "^17.4.0",
-    "jiti": "^2.6.1",
+    "eslint": "^10.2.0",
+    "globals": "^17.5.0",
     "ts-node": "^10.9.2",
-    "typescript-eslint": "^8.58.0",
-    "vitest": "^4.1.2"
+    "typescript-eslint": "^8.58.2",
+    "vitest": "^4.1.4"
   }
 }

@@ -11,8 +11,6 @@ import { UserSettingsManager } from "../app/user/usersettingsmanager.js";
 import * as Discord from 'discord.js';
 import config from 'config';
 
-const clearString: string = '!clear';
-
 async function setUserLocation(interaction: Discord.ChatInputCommandInteraction)
 {
     try {
@@ -82,11 +80,11 @@ async function setPreferredUnits(interaction)
 async function setPreferredAiModel(interaction: Discord.ChatInputCommandInteraction)
 {
     try {
-        const aiModel = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
+        const aiModel = interaction!.options!.data![0]!.options![0]!.options![0]?.value as string | undefined;
 
         const userData = UserSettingsManager.get().get(interaction.user.username);
         
-        if (aiModel === clearString) {
+        if (!aiModel) {
             userData.chatSettings.preferredAiModel = "";
             await interaction.editReply(`Clearing your preferred AI model. Will use default model now.`);
         } else {
@@ -103,7 +101,7 @@ async function setPreferredAiModel(interaction: Discord.ChatInputCommandInteract
 async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteraction)
 {
     try {
-        const customPrompt = interaction!.options!.data![0]!.options![0]!.options![0]!.value! as string;
+        const customPrompt = interaction!.options!.data![0]!.options![0]!.options![0]?.value as string | undefined;
         const customUsername = interaction!.options!.data![0]!.options![0]!.options![1]?.value as string | undefined;
         let userToLoad = interaction.user.username;
 
@@ -126,12 +124,13 @@ async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteractio
         const userData = UserSettingsManager.get().get(userToLoad);
         const oldPrompt = userData.chatSettings.customPrompt;
 
-        if (customPrompt === clearString) {
+        if (!customPrompt) {
             userData.chatSettings.customPrompt = "";
             await interaction.editReply(`**Clearing *${userToLoad}*'s custom AI prompt. Will use default global prompt now.**`);
         } else {
             userData.chatSettings.customPrompt = customPrompt;
-            await interaction.editReply(`**Setting *${userToLoad}*'s custom AI prompt to** *${userData.chatSettings.customPrompt}* **from** *${oldPrompt}*`);
+            const realOldPrompt = oldPrompt || config.get<string>('Chat.systemPrompt');
+            await interaction.editReply(`**Setting *${userToLoad}*'s custom AI prompt to** *${userData.chatSettings.customPrompt}* **from** *${realOldPrompt}*`);
         }
 
         UserSettingsManager.get().set(userData, true);
@@ -294,8 +293,7 @@ class SettingsCommand extends DiscordBotCommand {
                                 .addStringOption((option) =>
                                     option
                                         .setName('preferred_ai_model')
-                                        .setDescription(`Ai Model (use get available_ai_models to see options or ${clearString} to clear)`)
-                                        .setRequired(true),
+                                        .setDescription(`Ai Model (empty to clear, get available_ai_models to see options)`)
                                 )
                         )
                         .addSubcommand((subcommand) =>
@@ -305,8 +303,7 @@ class SettingsCommand extends DiscordBotCommand {
                                 .addStringOption((option) =>
                                     option
                                         .setName('custom_prompt')
-                                        .setDescription(`Custom AI prompt to use (e.g. You are a helpful assistant...)`)
-                                        .setRequired(true),
+                                        .setDescription(`Custom AI prompt to use (e.g. You are a helpful assistant...), empty to clear`)
                                 )
                                 .addStringOption((option) =>
                                     option

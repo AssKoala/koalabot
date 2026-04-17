@@ -1,14 +1,14 @@
-services:
-  koalabot:
-    container_name: koalabot-dev
-    build:
-      dockerfile: ./Dockerfile
-    environment:
-      - NODE_ENV=production
-    volumes:
-      # override config settings, necessary for sensitive settings such as API keys
-      - ./production.json5:/app/config/production.json5
-      - ./data:/data
-      - ./logs:/logs
-      - ./temp:/temp
-    restart: unless-stopped
+services:
+  koalabot:
+    container_name: koalabot-dev
+    build:
+      dockerfile: ./Dockerfile
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # override config settings, necessary for sensitive settings such as API keys
+      - ./production.json5:/app/config/production.json5
+      - ./data:/data
+      - ./logs:/logs
+      - ./temp:/temp
+    restart: unless-stopped

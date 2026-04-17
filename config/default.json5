@@ -11,7 +11,7 @@
     Global: {
         botName: "KoalaBot",
         commandPath: "./commands",                                          // Path to commands folder allowing override. Don't mess with this if you don't know what you're doing.
-        commandList: "settings,coinflip,diceroll,leaderboard",              // Comma separate list of commands to load.  All commands are expected to be in the commandPath folder and implement the DiscordBotCommand interface.
+        commandList: "settings,coinflip,diceroll,leaderboard,stock,market",        // Comma separate list of commands to load.  All commands are expected to be in the commandPath folder and implement the DiscordBotCommand interface.
         dataPath: "./data",                                                 // Path to JSON data to be loaded by commands
         tempPath: "./temp",                                                 // Path to write temporary files
         scriptPath: "./scripts",                                            // Path to load external scripts from
