@@ -37,13 +37,7 @@ export class Dict {
         registerDiscordBotCommand(new DefineCommand('define'), false);
         registerDiscordBotCommand(new IndexCommand('index'), false);
 
-        const rawDictData = await readJsonFile(Dict.instance.dictDataPath) as DictEntry[];
-
-        if (rawDictData != undefined) {
-            for (const entry of rawDictData) {
-                Dict.get().dictMap.set(entry.entry.toLocaleLowerCase(), entry);
-            }
-        }
+        await Dict.reloadDictData();
     }
 
     static getDictDataEntryCount() {
@@ -55,13 +49,36 @@ export class Dict {
         }
     }
 
+    static async clearDictData(flush: boolean = false) {
+        Dict.get().dictMap.clear();
+        
+        if (flush) {
+            return Dict.flushDictData();
+        }
+
+        return true;
+    }
+
+    static async reloadDictData() {
+        using _perfCounter = PerformanceCounter.Create("reloadDictData(): ");
+
+        const rawDictData = await readJsonFile(Dict.instance.dictDataPath) as DictEntry[];
+
+        if (rawDictData != undefined) {
+            await Dict.clearDictData();
+            for (const entry of rawDictData) {
+                Dict.get().dictMap.set(entry.entry.toLocaleLowerCase(), entry);
+            }
+        }
+    }
+
     /**
      * Flush the dictionary data to disk in JSON format.
      * 
      * The data should flush out sorted, though it will be sorted on load just in case.
      */
     static async flushDictData() {
-        using perfCounter = PerformanceCounter.Create("flushDictData(): ");
+        using _perfCounter = PerformanceCounter.Create("flushDictData(): ");
 
         try {
             const jsonString = JSON.stringify(Array.from(Dict.get().dictMap.values()), null, 2);
@@ -235,6 +252,10 @@ class DictCommand extends DiscordBotCommand {
                         );
 
         return dictCommand;
+    }
+
+    override async onConfigReload(): Promise<void> {
+        return Dict.reloadDictData();
     }
 }
 

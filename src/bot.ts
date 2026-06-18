@@ -16,7 +16,6 @@ import { GeminiBot } from "./llm/llmbots/geminibot.js";
 
 import config from 'config';
 import { LogManager } from './logging/logmanager.js';
-
 import { DiscordBot } from './platform/discord/discordbot.js'
 
 export class Bot {
@@ -61,7 +60,7 @@ export class Bot {
         const enabledModels = config.get<string>("Chat.AiModels.enabledModels").split(",");
 
         for (const model of availableModels) {
-            let llmBot: OpenAIBot | GrokBot | GeminiBot | null = null;
+            let llmBot: OpenAIBot | GrokBot | GeminiBot | null;
 
             if (model.startsWith("gpt")) {
                 llmBot = new OpenAIBot(model);
@@ -69,6 +68,8 @@ export class Bot {
                 llmBot = new GrokBot(model);
             } else if (model.startsWith("gemini")) {
                 llmBot = new GeminiBot(model);
+            } else if (model.startsWith("openai/gpt-oss")) {
+                llmBot = new OpenAIBot(model);
             } else {
                 LogManager.get().commonLogger.logWarning(`Bot::createSubBots(): Unknown LLM model ${model}, skipping registration.`);
                 continue;

@@ -1,4 +1,4 @@
-import { KoalaBotSystem, Logger } from "../koalabotsystem.js";
+import { ConfigReloadListener, KoalaBotSystem, Logger } from "../koalabotsystem.js";
 import { DiscordMessageCreateListener, WordListener } from "../discordmessagelistener.js";
 
 class MockLogger implements Logger {
@@ -19,6 +19,12 @@ class KoalaBotSystemMock implements KoalaBotSystem {
         throw new Error("Method not implemented.");
     }
     registerDiscordMessageCreateListener(_listener: DiscordMessageCreateListener): void {
+        throw new Error("Method not implemented.");
+    }
+    registerOnConfigReloadListener(_listener: ConfigReloadListener): void {
+        throw new Error("Method not implemented.");
+    }
+    reloadConfigs(): Promise<void> {
         throw new Error("Method not implemented.");
     }
     getConfigVariable(_key: string): string {

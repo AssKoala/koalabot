@@ -1,6 +1,7 @@
 import { GetKoalaBotSystem } from '../../api/koalabotsystem.js';
 import fs from 'fs'
 import config from 'config';
+import crypto from 'crypto';
 
 export class UserWeatherSettings {
     location: string;
@@ -13,12 +14,89 @@ export class UserWeatherSettings {
 }
 
 export class UserChatSettings {
-    customPrompt: string;
-    preferredAiModel: string;
+    private _customPrompt: string;
+    accessor preferredAiModel: string;
+    private _mdFileName: string;
+    private mdFileContents: string | null = null;
 
-    constructor(preferredAiModel: string = "", customPrompt: string = "") {
+    constructor(preferredAiModel: string = "", customPrompt: string = "", mdFileName: string = "") {
         this.preferredAiModel = preferredAiModel;
-        this.customPrompt = customPrompt;
+        this._customPrompt = customPrompt;
+        this._mdFileName = mdFileName;
+    }
+
+    private getPromptsDir(): string {
+        return `${GetKoalaBotSystem().getConfigVariable("Global.localDataPath")}/prompts`;
+    }
+
+    private getMdFilePath(): string {
+        const mdFilePath = this._mdFileName ? `${this.getPromptsDir()}/${this._mdFileName}` : "";
+        return mdFilePath;
+    }
+
+    get mdFileName(): string {
+        return this._mdFileName;
+    }
+
+    set mdFileName(value: string) {
+        if (value !== this._mdFileName) {
+            this._mdFileName = value;
+            this.mdFileContents = null; // reset cached contents when filename changes
+        }
+    }
+
+    get customPrompt() : string {
+        if (this._mdFileName) {
+            if (this.mdFileContents) {
+                return this.mdFileContents;
+            }
+
+            try {
+                const mdFilePath = this.getMdFilePath();
+                const fileContent = fs.readFileSync(mdFilePath, 'utf-8');
+                this.mdFileContents = fileContent;  // cache the contents so we don't have to read from disk every time
+                return fileContent;
+            } catch (e) {
+                GetKoalaBotSystem().getLogger().logError(`Failed to read custom prompt from markdown file at ${this.getMdFilePath()}, got error ${e}`);
+                // safely fall to custom prompt string
+            }
+        }
+
+        return this._customPrompt;
+    }
+
+    set customPrompt(value: string) {
+        this._customPrompt = value;
+    }
+
+    createMdFile(mdContent: string): void {
+        // validate contents
+        if (!mdContent || mdContent.trim() === "") {
+            throw new Error("Failed to create markdown file, content is empty or whitespace.");
+        }
+
+        // Check content length
+        const maxLength = 4 * +GetKoalaBotSystem().getConfigVariable("Chat.maxSoulTokens"); // rough estimate of token to character ratio
+        if (mdContent.length > maxLength) {
+            throw new Error(`Failed to create markdown file, content length (${mdContent.length}) exceeds maximum allowed (${maxLength}).`);
+        }
+
+        // generate unique enough filename
+        const promptsDir = this.getPromptsDir();
+        const contentHash = crypto.createHash('md5').update(mdContent).digest('hex');
+        this.mdFileName = `${contentHash}.md`;
+        this.mdFileContents = mdContent; // cache the contents
+
+        // create file
+        try {
+            if (!fs.existsSync(promptsDir)) {
+                fs.mkdirSync(promptsDir, { recursive: true });
+            }
+            const mdFilePath = `${promptsDir}/${this._mdFileName}`;
+            fs.writeFileSync(mdFilePath, mdContent, 'utf-8');
+        } catch (e) {
+            throw new Error(`Failed to create markdown file at ${promptsDir}`, { cause: e });
+        }
     }
 }
 
@@ -27,9 +105,9 @@ export class UserSettingsData {
     chatSettings: UserChatSettings;
     weatherSettings: UserWeatherSettings;
 
-    constructor(name: string, location: string = "Johannesburg, South Africa", preferredUnits: string = "rankine", preferredAiModel: string = "", customPrompt: string = "") {
+    constructor(name: string, location: string = "Johannesburg, South Africa", preferredUnits: string = "rankine", preferredAiModel: string = "", customPrompt: string = "", mdFileName: string = "") {
         this.name = name;
-        this.chatSettings = new UserChatSettings(preferredAiModel, customPrompt);
+        this.chatSettings = new UserChatSettings(preferredAiModel, customPrompt, mdFileName);
         this.weatherSettings = new UserWeatherSettings(location, preferredUnits);
     }
 }
@@ -141,7 +219,8 @@ export class UserSettingsManager {
                     item.weatherSettings?.location || "Johannesburg, South Africa",
                     item.weatherSettings?.preferredUnits || "rankine",
                     item.chatSettings?.preferredAiModel || config.get<string>('Chat.aiModel'),
-                    item.chatSettings?.customPrompt || ""
+                    item.chatSettings?.customPrompt || "",
+                    item.chatSettings?.mdFileName || ""
                 );
                 
                 this.userSettings.set(item.name, newData);

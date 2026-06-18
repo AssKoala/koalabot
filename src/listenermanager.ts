@@ -4,7 +4,7 @@ import { DiscordBotRuntimeData } from './api/discordbotruntimedata.js';
 import { getCommonLogger, LogManager } from './logging/logmanager.js'
 import { Bot } from './bot.js'
 import { PerformanceCounter } from './performancecounter.js';
-
+import { ConfigReloadListener } from './api/koalabotsystem.js';
 import config from 'config';
 
 // Listeners are processed by priority and then round-robin lists (assume random sorting)
@@ -20,12 +20,14 @@ export abstract class ListenerManager {
 
     private static messageCreateHandlers: Map<ListenerPriority, DiscordMessageCreateListener[]> = new Map();
 	private static messageReactionAddHandlers: Map<ListenerPriority, DiscordReactionAddListener[]> = new Map();
+    private static configReloadListeners: Map<ListenerPriority, ConfigReloadListener[]> = new Map();
     
     // Resets all handler lists to empty.  Also serves as an init to allocate all the internal objects.
     static reset() {
         for (let i = ListenerPriority.Critical; i < ListenerPriority.LISTENER_PRIORITY_COUNT; i++) {
             this.messageCreateHandlers.set(i, []);
             this.messageReactionAddHandlers.set(i, []);
+            this.configReloadListeners.set(i, []);
         }
     }
 
@@ -55,6 +57,10 @@ export abstract class ListenerManager {
         } catch (e) {
             getCommonLogger().logErrorAsync(`Failed to import all listeners, got error ${e}`);
         }
+    }
+
+    static registerConfigReloadListener(listener: ConfigReloadListener, priority: ListenerPriority = ListenerPriority.Low): void {
+        this.configReloadListeners.get(priority)!.push(listener);
     }
 
 	/**
@@ -127,6 +133,18 @@ export abstract class ListenerManager {
                     handler.onDiscordMessageReactionAdd(new DiscordBotRuntimeData(Bot.get(), getCommonLogger(), guildLogger, channelLogger), reaction, user);
                 } catch (e) {
                     getCommonLogger().logErrorAsync(`Error with onMessageReactionAdd listender for ${handler}, got ${e}`);
+                }
+            });
+        }
+    }
+
+    static async processConfigReloadListeners() {
+        for (let i = 0; i < ListenerPriority.LISTENER_PRIORITY_COUNT; i++) {
+            ListenerManager.configReloadListeners.get(i)!.forEach(async handler => {
+                try {
+                    await handler.onConfigReload();
+                } catch (e) {
+                    getCommonLogger().logErrorAsync(`Error with onConfigReload listender for ${handler}, got ${e}`);
                 }
             });
         }

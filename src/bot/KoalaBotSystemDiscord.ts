@@ -1,5 +1,5 @@
 import { DiscordMessageCreateListener, WordListener } from "../api/discordmessagelistener.js";
-import { KoalaBotSystem } from "../api/koalabotsystem.js";
+import { KoalaBotSystem, ConfigReloadListener } from "../api/koalabotsystem.js";
 import { ListenerManager } from "../listenermanager.js";
 import { WordTracker } from "../sys/wordtracker.js";
 import { Logger } from '../api/koalabotsystem.js'
@@ -33,5 +33,13 @@ export class KoalaBotSystemDiscord implements KoalaBotSystem {
         this._wordTracker.registerListener(listener, word);
     }
 
+    registerOnConfigReloadListener(listener: ConfigReloadListener): void {
+        ListenerManager.registerConfigReloadListener(listener);
+    }
+
+    async reloadConfigs(): Promise<void> {
+        // Just trigger the config reload listeners, the rest of the system should be able to handle itself
+        await ListenerManager.processConfigReloadListeners();
+    }
 }
 

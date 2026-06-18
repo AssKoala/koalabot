@@ -5,6 +5,11 @@
         timingEnable: false,                                                // If true, enable timing markers that output call timings to TTY and logs
         Flags: {
             enableExperimentalChatSystem: false                            // If true, enables the experimental chat system that is under development.
+        },
+        Hacks: {
+            // openAiOssApiKey: "lm-studio",                                  // API key for gpt-oss
+            // openAiOssBaseUrl: "http://192.168.69.69:1234/v1"               // Base URL for gpt-oss model calls.  If provided, will route any model named gpt-oss-* to this endpoint.
+            // responseTimeout: 300000                                        // Timeout in ms for waiting for responses from the LLM, increase if you are getting timeouts with larger models or during high load, decrease if you want faster failure when the LLM is not responding.
         }
     },
     // Global Settings
@@ -12,7 +17,8 @@
         botName: "KoalaBot",
         commandPath: "./commands",                                          // Path to commands folder allowing override. Don't mess with this if you don't know what you're doing.
         commandList: "settings,coinflip,diceroll,leaderboard,stock,market",        // Comma separate list of commands to load.  All commands are expected to be in the commandPath folder and implement the DiscordBotCommand interface.
-        dataPath: "./data",                                                 // Path to JSON data to be loaded by commands
+        dataPath: "./data",                                                 // Path to general data storage
+        localDataPath: "./data/local",                                      // Path where bot instance specific data can be stored, such as guild specific settings, etc.  This allows for easier separation of data if you are running multiple instances of the bot with the same data path.
         tempPath: "./temp",                                                 // Path to write temporary files
         scriptPath: "./scripts",                                            // Path to load external scripts from
         logMaxEntries: 2048,                                                // Maximum number of log entries to keep in memory, should be the same or slightly higher than GPT_MAX_MESSAGES.
@@ -48,9 +54,9 @@
     },
     APIKey: { // Keep these private.  Defaults are here for reference.  Optionally loads from environment variables.
         anthropic: "",
-        gemini: "",
+        gemini: "",         // API key requires google vertex AI access.  Attach svc account with Vertex User Permissions at least.
         getimgai: "",
-        googleMaps: "",
+        googleMaps: "",     // API Key requires google geocode API access
         grok: "",
         ollama: "",
         openai: "",
@@ -62,13 +68,14 @@
         aiModelNano: "gpt-5-nano",                     // Default LLM nano model to use for smaller responses
         AiModels: {
             // Comma separated list of available models, do not override unless you know what you are doing.
-            availableModels: "gpt-4o,gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,grok-4-1-fast,gemini-2.5-flash,gemini-3-flash-preview",
+            availableModels: "gpt-4o,gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,gpt-5.5,grok-4.3,gemini-2.5-flash,gemini-3-flash-preview",
             // Remove models from the list to disable their use.  New models won't be available automatically if overriden.
-            enabledModels: "gpt-4o,gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,grok-4-1-fast,gemini-2.5-flash,gemini-3-flash-preview"
+            enabledModels: "gpt-4o,gpt-5-nano,gpt-5,gpt-5.1,gpt-5.2,gpt-5.5,grok-4.3,gemini-2.5-flash,gemini-3-flash-preview"
         },
         enableLongDescription: true,                    // If enabled, responses with images will include the revised prompt as the embed description
         maxMessages: 2048,                              // Max number of message history to send during chat interaction
-        maxTokenCount: 8192,                            // Max number of tokens to send during chat interaction
+        maxSoulTokens: 3500,                            // Max number of tokens to send from soul during chat interaction
+        maxTokenCount: 16384,                           // Max number of tokens to send during chat interaction
         ImageGeneration: {
             enable: true,                               // If true, enable image generation in chat
         },
@@ -84,7 +91,9 @@
         // Generic prompt when you want a proper response
         genericSystemPrompt: "You are a helpful assistant.",
         // Prompt to tell the robot how to behave.  It is prepended automatically to tell the bot its own name, discord Id, and chat format, so just give it the details of how to act (e.g. you are a helpful assistant)
-        systemPrompt: "You are a helpul assistant.",
+        systemPrompt: "You are a helpful assistant.",
+        // Path to a system soul file, relative to localDataPath, overrides the systemPrompt if provided.
+        systemSoul: "systemSoul.md",
         // Prompt to use to generate an image description for image gen from text completion
         imageGenDescriptionPrompt: "Generate a detailed description of an image based on the following question and chat room context that can be used as the prompt to an AI image generator to respond to the following message, without any additional fluff, snark or personality: "
     },
@@ -115,7 +124,7 @@
         BadWordListener: {
             badwords: "",                               // Comma separated list of bad words to track
             trackingChannelIds: "",                     // Comma separated list of discord channel id's to track for bad words
-            saveDir: "/badword-tracking"                // Path to save badword tracking data (appended to data path, e.g. ./data/badword-tracking/badword.json)
+            saveDir: "/badword-tracking"                // Path to save badword tracking data (appended to local data path, e.g. ./data/local/badword-tracking/badword.json)
         },
         WordTracker: {
             fileName: "wordtracker.json"                // Filename storing words to track (will load from DATA_PATH)

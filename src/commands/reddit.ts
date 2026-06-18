@@ -22,6 +22,15 @@ class RedditLinks {
     }
 }
 
+interface RedditLinkData {
+    name: string;
+    description: string;
+    blacklistedChannels: string[];
+    whitelistedChannels: string[];
+    subreddits: string[];
+    count: number;
+}
+
 class RedditLinkCommand extends DiscordBotCommand {
     private async getLinks(searchLimit: string, timeFilter: string, subredditList: string[]) {
         try {    
@@ -107,11 +116,19 @@ class RedditLinkCommand extends DiscordBotCommand {
         return this.slashCommand().toJSON();
     }
 
-    private readonly whitelist: string[] = [];
-    private readonly blacklist: string[] = [];
-    private readonly subreddits: string[] = [];
-    private readonly lookupCount: number = 0;
-    private readonly description: string;
+    updateLinkData(linkData: RedditLinkData) {
+        this.blacklist = linkData.blacklistedChannels;
+        this.whitelist = linkData.whitelistedChannels;
+        this.subreddits = linkData.subreddits;
+        this.lookupCount = linkData.count;
+        this.description = linkData.description;
+    }
+
+    private whitelist: string[] = [];
+    private blacklist: string[] = [];
+    private subreddits: string[] = [];
+    private lookupCount: number = 0;
+    private description: string = "";
 
     async handle(interaction: ChatInputCommandInteraction) {
         try {
@@ -155,16 +172,10 @@ class RedditLinkCommand extends DiscordBotCommand {
         }
     }
 
-    // @ts-expect-error todo cleanup tech debt
-    constructor(linkData) {
+    
+    constructor(linkData: RedditLinkData) {
         super(linkData.name);
-
-        this.blacklist = linkData.blacklistedChannels;
-        this.whitelist = linkData.whitelistedChannels;
-        this.subreddits = linkData.subreddits;
-        this.lookupCount = linkData.count;
-        this.description = linkData.description;
-
+        this.updateLinkData(linkData);
         registerDiscordBotCommand(this);
     }
 
@@ -191,27 +202,43 @@ class RedditLinkCommand extends DiscordBotCommand {
 }
 
 import { readJsonFile } from '../sys/jsonreader.js'
+import { ConfigReloadListener } from '../api/koalabotsystem.js';
 
-class RedditLinkPoster {
-    // @ts-expect-error todo cleanup tech debt
-    #redditLinks;
-    #redditLinkCommands: RedditLinkCommand[] = [];
+class RedditLinkPoster implements ConfigReloadListener {
+    private redditLinks!: RedditLinkData[];
+    private redditLinkCommands: RedditLinkCommand[] = [];
 
-    constructor() {
+    constructor(private configJsonFilePath: string) {
     }
 
-    async init(configJsonFilePath: string) {
-        this.#redditLinks = await readJsonFile(configJsonFilePath);
+    async init() {
+        this.redditLinks = await readJsonFile(this.configJsonFilePath) as RedditLinkData[];
     }
 
     generateSlashCommands() {
-        // @ts-expect-error todo cleanup tech debt
-        this.#redditLinks.forEach(linkData => {
-            this.#redditLinkCommands.push(new RedditLinkCommand(linkData));
+        this.redditLinks.forEach(linkData => {
+            this.redditLinkCommands.push(new RedditLinkCommand(linkData));
+        });
+    }
+
+    async onConfigReload() {
+        const tempRedditLinks = await readJsonFile(this.configJsonFilePath) as RedditLinkData[];
+
+        tempRedditLinks.forEach(linkData => {
+            const existingCommand = this.redditLinkCommands.find(command => command.name() === linkData.name);
+
+            if (existingCommand) {
+                existingCommand.updateLinkData(linkData);
+            } else {
+                this.redditLinkCommands.push(new RedditLinkCommand(linkData));
+            }
         });
     }
 }
 
-const redditLinkPoster = new RedditLinkPoster();
-await redditLinkPoster.init(`${config.get<string>("Global.dataPath")}/redditlinks.json`);
+import { Bot } from '../bot.js';
+
+const redditLinkPoster = new RedditLinkPoster(`${config.get<string>("Global.dataPath")}/redditlinks.json`);
+await redditLinkPoster.init();
 redditLinkPoster.generateSlashCommands();
+Bot.get().koalaBotSystem().registerOnConfigReloadListener(redditLinkPoster);

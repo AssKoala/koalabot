@@ -227,7 +227,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
         return urls || [];
     }
 
-    private async getImageUrlsFromMessages(messages: (Discord.Message | Discord.OmitPartialGroupDMChannel<Discord.Message<boolean>> | LLMInteractionMessage | undefined)[]): Promise<string[]> {
+    private async getImageUrlsFromMessages(messages: (Discord.Message | Discord.OmitPartialGroupDMChannel<Discord.Message<boolean>>)[]): Promise<string[]> {
         const imageUrls: string[] = [];
         const promises: Promise<string>[] = [];
 
@@ -253,8 +253,6 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             let content = "";
             if ('content' in message) {
                 content = message.content;
-            } else if ('getQuestion' in message) {
-                content = message.getQuestion();
             }
             
             if (content) {
@@ -311,6 +309,25 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
 
         return newTracker;
     }
+    
+    private static _defaultSoul: string;
+
+    private async getDefaultSystemPrompt(): Promise<string> {
+        if (!LLMBot._defaultSoul) {
+            try {
+                LLMBot._defaultSoul = await fs.readFile(config.get<string>("Global.localDataPath") + "/" + config.get<string>("Chat.systemSoul"), "utf-8");
+                if (LLMBot._defaultSoul.length / 4 > config.get<number>("Chat.maxSoulTokens")) {
+                    getCommonLogger().logWarning(`LLMBot::getDefaultSystemPrompt(): System soul prompt length of ${LLMBot._defaultSoul.length} exceeds max length of ${config.get<number>("Chat.maxSoulTokens") * 4}, truncating.`);
+                    LLMBot._defaultSoul = LLMBot._defaultSoul.substring(0, config.get<number>("Chat.maxSoulTokens") * 4);
+                }
+            } catch (e) {
+                getCommonLogger().logError(`LLMBot::getDefaultSystemPrompt(): Failed to read system soul file, got error ${e}, falling back to default system prompt until next reboot.`);
+                LLMBot._defaultSoul = config.get<string>("Chat.systemPrompt");
+            }
+        } 
+        
+        return LLMBot._defaultSoul;
+    }
 
     public async handleUserInteraction(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage) {
         using _perfCounter = PerformanceCounter.Create("LLMBot::handleUserInteraction(): ", performance.now(), runtimeData.logger(), true);
@@ -322,14 +339,14 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             const userData = UserSettingsManager.get().get(message.getUserName());
             const systemPrompt = (userData.chatSettings.customPrompt.length > 0 ? 
                                     userData.chatSettings.customPrompt 
-                                    : config.get<string>("Chat.systemPrompt")) 
+                                    : await this.getDefaultSystemPrompt()) 
                                 + "\n\n" + config.get<string>("Chat.commonPrompt");
 
             // Store reference to replied to message
             const referencedMessage = message.getInternalData().reference ? await message.getInternalData().fetchReference() : undefined;
 
             // Pull any images
-            const imageUrls = await this.getImageUrlsFromMessages([referencedMessage, message]);    // Get any image urls that might be in the message(s)
+            const imageUrls = await this.getImageUrlsFromMessages([referencedMessage, message.getInternalData()]);    // Get any image urls that might be in the message(s)
             
             // Will store actual response we send to the user
             let completion: LLMCompletion;

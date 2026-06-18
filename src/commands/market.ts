@@ -14,7 +14,7 @@ type PricePoint = {
     close: number;
 };
 
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 const MARKET_INDICES = [
     { ticker: '^GSPC', label: 'S&P 500' },

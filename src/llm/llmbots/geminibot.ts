@@ -205,18 +205,42 @@ export class GeminiBot extends LLMBot {
             }
         };
 
-        const uploadFunc = GeminiApi.getInterface().files.upload;
-        type UploadedFileType = Awaited<ReturnType<typeof uploadFunc>>;
+        const _uploadFunc = GeminiApi.getInterface().files.upload;
+        type UploadedFileType = Awaited<ReturnType<typeof _uploadFunc>>;
 
         const uploadedFiles: UploadedFileType[] = [];
 
         // We start at 1 so we always send index 0 as the inline data and the rest as uploads
+        const downloadedFiles = [];
+
         for (let i = 1; i < inlineData.length; i++) {
-            const uploadedFile = await uploadFunc({
-                file: inlineData[i].data,
-                config: { mimeType: mimeTypes[i]! },
-            });
-            uploadedFiles.push(uploadedFile);
+            try {
+                // Write file to temp storage then upload to gemini
+                const data = inlineData[i].data;
+                const filename = `gemini_upload_${Date.now()}_${i}`;
+                const tempFilePath = `${config.get('Global.tempPath')}/${filename}`;
+
+                const downloadedFile = await FsUtils.downloadBufferToFile(Buffer.from(data, 'base64'), tempFilePath);
+                downloadedFiles.push(downloadedFile);
+
+                const uploadedFile = await GeminiApi.getInterface().files.upload({
+                    file: downloadedFile.fullpath,
+                    config: { mimeType: mimeTypes[i]! },
+                });
+                uploadedFiles.push(uploadedFile);
+            } catch (e) {
+                getCommonLogger().logError(`GeminiBot::getVisionContent(): Failed to upload image, skipping. Error: ${e}`);
+            } finally {
+                // Clean up temp files
+                downloadedFiles.forEach(async (file) => {
+                    try {
+                        await FsUtils.deleteFile(file.fullpath);
+                    } catch (e) {
+                        getCommonLogger().logError(`GeminiBot::getVisionContent(): Failed to delete temp file ${file.fullpath}. Error: ${e}`);
+                    }
+                });
+            }
+            
         }
 
         let contents: unknown[] = [];

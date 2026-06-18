@@ -87,7 +87,10 @@ export class OpenAIBot extends LLMBot {
         }
     }
 
-    protected override hasAutomaticImageGeneration(): boolean { 
+    protected override hasAutomaticImageGeneration(): boolean {
+        if (this.aiModel.includes("gpt-oss")) {
+            return false;   // GPT-OSS does not currently support the image_generation tool, so we have to handle it manually in getImageCompletion
+        }
         return true;
     }
 
@@ -220,13 +223,19 @@ export class OpenAIBot extends LLMBot {
             ];
         }
 
-        const completion = await OpenAiApi.getInterface().responses.create({
+        let responseOptions: OpenAiSdk.OpenAI.RequestOptions = {};
+
+        if (this.aiModel.includes("gpt-oss")) {
+            responseOptions.timeout = config.get("Developer.Hacks.responseTimeout");
+        }
+
+        const completion = await OpenAiApi.getInterface(this.aiModel).responses.create({
             model: this.aiModel,
             instructions: tracker.getSystemPrompt(),
             input: tracker.getMessageDataRaw() as any,  // eslint-disable-line @typescript-eslint/no-explicit-any
             tool_choice: "auto",
             tools: tools
-        });
+        }, responseOptions);
 
         runtimeData.logger().logInfo("getCompletion(): Received response from OpenAI Responses API.");
         return new OpenAIResponse(completion);
@@ -249,8 +258,14 @@ export class OpenAIBot extends LLMBot {
             });
         });
 
-        const completion = await OpenAiApi.getInterface().responses.create({
-            model: this.aiModel,
+        let imageModel = this.aiModel;
+
+        if (this.aiModel.includes("gpt-oss")) {
+            imageModel = "gpt-5.2";   // GPT-OSS does not currently support the image_generation tool, so we have to handle it manually in getImageCompletion, and gpt-5 is the smallest model that supports it
+        }
+
+        const completion = await OpenAiApi.getInterface(this.aiModel).responses.create({
+            model: imageModel,
             instructions: systemPrompt,
             input: 
             [

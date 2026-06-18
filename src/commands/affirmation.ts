@@ -15,7 +15,12 @@ interface AffirmationEntry {
 class AffirmationCommand extends DiscordBotCommand  {
     private affirmationData!: AffirmationEntry[];
     
-    async loadData(affirmationFilePath: string) {
+    override async onConfigReload(): Promise<void> {
+        return this.loadData();
+    }
+
+    async loadData() {
+        const affirmationFilePath = `${config.get("Global.dataPath")}/affirmations.json`;
         this.affirmationData = await this.runtimeData().helpers().readJsonFile(affirmationFilePath) as AffirmationEntry[];
     }
 
@@ -51,7 +56,7 @@ class AffirmationCommand extends DiscordBotCommand  {
 
 const affirmationCommand = new AffirmationCommand('affirmation');
 registerDiscordBotCommand(affirmationCommand, false);
-affirmationCommand.loadData(`${config.get("Global.dataPath")}/affirmations.json`);
+affirmationCommand.loadData();
 
 // Used by system command
 function getAffirmationCount() {

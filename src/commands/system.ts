@@ -17,6 +17,7 @@ import config from 'config';
 import { getCommonLogger, LogManager } from '../logging/logmanager.js';
 import { PerformanceCounter } from '../performancecounter.js';
 import { DiscordPlatform } from '../platform/discord/discordplatform.js'
+import { Bot } from '../bot.js'
 import * as Discord from 'discord.js';
 
 class Administration {
@@ -33,6 +34,12 @@ class Administration {
         );
 
         return isSuper;
+    }
+
+    static throwIfNotSuper(memberId: string) {
+        if (!Administration.isSuper(memberId)) {
+            throw new Error("You aren't super, this will be reported. https://imgs.xkcd.com/comics/incident.png");
+        }
     }
 }
 
@@ -104,13 +111,23 @@ async function showCpuStats(interaction)
 }
 
 // @ts-expect-error todo cleanup tech debt
-async function reboot(interaction) {
+async function reload(interaction) {
     try {
-        if (!Administration.isSuper(interaction.member.id)) {
-            await interaction.editReply("You aren't super, this will be reported. https://imgs.xkcd.com/comics/incident.png");
-            return;
-        }
-        
+        Administration.throwIfNotSuper(interaction.member.id);
+
+        await interaction.editReply("Reloading configs...");
+        await Bot.get().koalaBotSystem().reloadConfigs();
+        await interaction.editReply("Configs reloaded.");
+    } catch (e) {
+        await getCommonLogger().logError(`Failed to reload, got ${e}`);
+    }
+}
+
+// @ts-expect-error todo cleanup tech debt
+async function reboot(interaction) {
+    try {        
+        Administration.throwIfNotSuper(interaction.member.id);
+
         // write file to reboot spot 
         const targetFile = config.get<string>("Global.rebootFile");
 
@@ -130,7 +147,7 @@ async function reboot(interaction) {
         });
 
     } catch (e) {
-        await getCommonLogger().logWarning(`Failed to restart, got ${e}`);
+        await getCommonLogger().logError(`Failed to restart, got ${e}`);
     }
 }
 
@@ -175,6 +192,9 @@ class SystemCommand extends DiscordBotCommand {
                     break;
                 case 'reboob':
                     await reboot(interaction);
+                    break;
+                case 'reload':
+                    await reload(interaction);
                     break;
             }
         } catch (e) {   
@@ -473,6 +493,11 @@ class SystemCommand extends DiscordBotCommand {
                         subcommand
                             .setName('reboob')
                             .setDescription('Restart system')
+                    )
+                    .addSubcommand((subcommand) =>
+                        subcommand
+                            .setName('reload')
+                            .setDescription('Reload system configuration')
                     )
             )
             // Logging commands

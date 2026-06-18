@@ -8,7 +8,7 @@ import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
 import { readJsonFileSync } from '../sys/jsonreader.js'
 
 export function GetBadWordSaveFolder() {
-    return path.join(GetKoalaBotSystem().getConfigVariable("Global.dataPath"), GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.saveDir"));
+    return path.join(GetKoalaBotSystem().getConfigVariable("Global.localDataPath"), GetKoalaBotSystem().getConfigVariable("Listeners.BadWordListener.saveDir"));
 }
 
 export function GetBadWordSaveFileName(badword: string, channelId: string) {
@@ -231,8 +231,7 @@ class BadWordListener implements WordListener {
         if (this.trackingChannels.includes(message.channelId) && message.content.toLowerCase().includes(this._badword.toLowerCase())) {
             // @ts-expect-error todo cleanup tech debt
             const newEvent = new BadWordEvent(message.member.user.id, message.member.user.username);
-            // @ts-expect-error todo cleanup tech debt
-            let tracker: BadWordTracker = null;
+            let tracker: BadWordTracker;
 
             if (!this.lastUsedMap.has(message.channelId)) { // It's the first event
                 this.lastUsedMap.set(message.channelId, new BadWordTracker());

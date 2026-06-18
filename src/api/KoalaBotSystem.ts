@@ -22,6 +22,10 @@ export interface Logger {
     logErrorAsync(message: string, discordReply: Discord.ChatInputCommandInteraction, editReply: boolean): Promise<void>;
 }
 
+export interface ConfigReloadListener {
+    onConfigReload(): Promise<void>;
+}
+
 /*
     Public API for core bot systems.
 
@@ -32,6 +36,9 @@ export interface KoalaBotSystem {
     getLogger(): Logger;
     registerDiscordMessageCreateListener(listener: DiscordMessageCreateListener): void;
     registerWordListener(listener: WordListener, word: string): void;
+    
+    registerOnConfigReloadListener(listener: ConfigReloadListener): void;
+    reloadConfigs(): Promise<void>;
 }
 
 let internalKoalaBotSystem = function(): KoalaBotSystem {

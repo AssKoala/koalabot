@@ -1,7 +1,7 @@
 .git/
 .vs/
 build/
-data/badword-tracking
+data/local/badword-tracking
 dist/
 logs/
 node_modules/

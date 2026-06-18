@@ -57,7 +57,7 @@ Stenographer.init(LogManager.get());
 
 // Load user settings
 import { UserSettingsManager } from './app/user/usersettingsmanager.js';
-UserSettingsManager.init(`${config.get("Global.dataPath")}/settings.json`);
+UserSettingsManager.init(`${config.get("Global.localDataPath")}/settings.json`);
 
 /* Initialize the bot */
 import { Bot } from './bot.js'

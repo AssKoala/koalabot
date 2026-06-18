@@ -2,13 +2,14 @@ import { SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder, Cha
 import { DiscordBotRuntimeData } from './discordbotruntimedata.js';
 import { Bot } from '../bot.js'
 import { getCommonLogger } from '../logging/logmanager.js'
+import { ConfigReloadListener } from './koalabotsystem.js';
 
 /**
  * Holds the common command information for all commands to be compatible with the DiscordBotCommand interface.
  * 
  * Commands should PROBABLY just extend this unless they have a good reason not to.
  */
-export class BasicCommand {
+export class BasicCommand implements ConfigReloadListener {
     private _runtimeData?: DiscordBotRuntimeData;
     runtimeData() {
         return this._runtimeData!;
@@ -25,6 +26,10 @@ export class BasicCommand {
 
     constructor(name: string) {
         this._name = name;
+    }
+
+    onConfigReload(): Promise<void> {
+        return Promise.resolve();
     }
 
     /**
@@ -86,8 +91,11 @@ export function registerDiscordBotCommand(botCommand: DiscordBotCommand, shouldD
                 }
             }
 
-            // Add the command to the command list
+            // Add the command to the Discord command list by convention
             Bot.get().client().commands.set(newCommand.data.name, newCommand);
+
+            // Add the command as a listener for config reloads.
+            Bot.get().koalaBotSystem().registerOnConfigReloadListener(botCommand);
             
             return true;
         }

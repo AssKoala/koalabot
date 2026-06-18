@@ -20,11 +20,11 @@ export interface ImageDownloadedFileInfoType {
 export class FsUtils {
     private constructor() {}
 
-    public static async downloadBufferToFile(image_bytes: Buffer, download_dir: string): Promise<ImageDownloadedFileInfoType> {
+    public static async downloadBufferToFile(image_bytes: Buffer, download_dir: string, filetype: string = "png"): Promise<ImageDownloadedFileInfoType> {
         await mkdir(download_dir, { recursive: true });
 
         const hash = crypto.createHash('md5').update(image_bytes).digest('hex');
-        const downloadFileName = `${hash}.png`;
+        const downloadFileName = `${hash}.${filetype}`;
         const downloadPath = `${download_dir}/${downloadFileName}`;
 
         fs.writeFileSync(downloadPath, image_bytes);
@@ -39,5 +39,11 @@ export class FsUtils {
         }
         const buf = Buffer.from(await response.arrayBuffer());
         return buf;
+    }
+
+    public static async deleteFile(filepath: string): Promise<void> {
+        if (fs.existsSync(filepath)) {
+            await fs.promises.unlink(filepath);
+        }
     }
 }

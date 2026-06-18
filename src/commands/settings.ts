@@ -101,8 +101,29 @@ async function setPreferredAiModel(interaction: Discord.ChatInputCommandInteract
 async function setCustomAiPrompt(interaction: Discord.ChatInputCommandInteraction)
 {
     try {
-        const customPrompt = interaction!.options!.data![0]!.options![0]!.options![0]?.value as string | undefined;
-        const customUsername = interaction!.options!.data![0]!.options![0]!.options![1]?.value as string | undefined;
+        let customPrompt: string | undefined;
+        let customUsername: string | undefined;
+
+        try {
+            interaction!.options!.data![0]!.options![0]!.options!.forEach(option => {
+                switch (option.name) {
+                    case 'custom_prompt':
+                        customPrompt = option.value as string;
+                        break;
+                    case 'username':
+                        customUsername = option.value as string;
+                        break;
+                    default:
+                        throw new Error(`Unexpected option ${option.name} in setCustomAiPrompt`);
+                }      
+            });
+        } catch (e) {
+            const str = `Interaction did not contain expected options, got error ${e}`;
+            getCommonLogger().logErrorAsync(str, interaction);
+            await interaction.editReply(str);
+            return;
+        }
+
         let userToLoad = interaction.user.username;
 
         // If they are trying to set a different user's prompt, make sure they are sudo
@@ -188,6 +209,76 @@ async function getUserSettings(interaction: Discord.ChatInputCommandInteraction)
     }
 }
 
+async function setCustomSoulMd(interaction: Discord.ChatInputCommandInteraction) {
+    try {
+        let soulMdAttachment: Discord.Attachment | undefined;
+        let clearExisting = false;
+        let customUsername: string | undefined;
+
+        try {
+            interaction!.options!.data![0]!.options![0]!.options!.forEach(option => {
+                switch (option.name) {
+                    case 'soul_md':
+                        soulMdAttachment = option.attachment;
+                        break;
+                    case 'clear':
+                        clearExisting = option.value === 'true';
+                        break;
+                    case 'username':
+                        customUsername = option.value as string;
+                        break;
+                    default:
+                        throw new Error(`Unexpected option ${option.name} in setCustomSoulMd`);
+                }      
+            });
+        } catch (e) {
+            const str = `Interaction did not contain expected options, got error ${e}`;
+            getCommonLogger().logErrorAsync(str, interaction);
+            await interaction.editReply(str);
+            return;
+        }
+
+        let userToLoad = interaction.user.username;
+
+        // If they are trying to set a different user's soul.md, make sure they are sudo
+        if (customUsername && customUsername !== interaction.user.username) {
+            const sudoList = config.get<string>('Global.sudoList').split(',').map(id => id.trim());
+            if (!sudoList.includes(interaction.user.id)) {
+                await interaction.editReply(`${interaction.user.username} is not in the Global.sudoList. This incident will be reported.`);
+                return;
+            }
+
+            userToLoad = customUsername;
+        }
+
+        // Copy user data
+        const userData = UserSettingsManager.get().get(userToLoad);
+
+        // Nothing provided, bail
+        if (!soulMdAttachment && !clearExisting) {
+            await interaction.editReply(`No soul.md file provided to upload, and clear option not set to true, so no changes will be made to your current soul.md file.`);
+            return;
+        }
+
+        // attachment provided, overwrite or create
+        if (soulMdAttachment) {
+            const response = await fetch(soulMdAttachment.url);
+            const newSoulMdContent = await response.text();
+
+            userData.chatSettings.createMdFile(newSoulMdContent);
+            await interaction.editReply(`Successfully updated your custom soul.md from attachment ${soulMdAttachment.name}`);
+        } else if (clearExisting) {
+            userData.chatSettings.mdFileName = "";
+            await interaction.editReply(`Cleared your custom soul.md, will use default global soul.md now.`);
+        }
+
+        // Write-back and flush to disk
+        UserSettingsManager.get().set(userData, true);
+    } catch (e) {
+        await getCommonLogger().logErrorAsync(`Failed to set custom soul.md, got error ${e}`, interaction);
+    }
+}
+
 /**
  * Set the user settings using the interaction object
  * @param {Discord.interaction} interaction 
@@ -208,6 +299,9 @@ async function setUserSettings(interaction)
                 break;
             case 'custom_prompt':
                 await setCustomAiPrompt(interaction);
+                break;
+            case 'soul_md':
+                await setCustomSoulMd(interaction);
                 break;
             default:
                 getCommonLogger().logErrorAsync(`Failed to find response for settings set subcommand(${interaction.options._subcommand})`, interaction);
@@ -304,6 +398,26 @@ class SettingsCommand extends DiscordBotCommand {
                                     option
                                         .setName('custom_prompt')
                                         .setDescription(`Custom AI prompt to use (e.g. You are a helpful assistant...), empty to clear`)
+                                )
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('username')
+                                        .setDescription('[SUDO REQUIRED] Username to set for')
+                                )
+                        )
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('soul_md')
+                                .setDescription(`Upload custom AI soul.md file to use for prompt`)
+                                .addAttachmentOption((option) =>
+                                    option
+                                        .setName('soul_md')
+                                        .setDescription(`Custom AI soul.md file to use for prompt.`)
+                                )
+                                .addAttachmentOption((option) =>
+                                    option
+                                        .setName('clear')
+                                        .setDescription(`If true, will clear custom soul.md file.`)
                                 )
                                 .addStringOption((option) =>
                                     option
