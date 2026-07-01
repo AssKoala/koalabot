@@ -59,9 +59,17 @@ Stenographer.init(LogManager.get());
 import { UserSettingsManager } from './app/user/usersettingsmanager.js';
 UserSettingsManager.init(`${config.get("Global.localDataPath")}/settings.json`);
 
+// Register settings manager for config reloads
+import { ListenerManager } from './listenermanager.js';
+ListenerManager.registerConfigReloadListener(UserSettingsManager.get());
+
 /* Initialize the bot */
 import { Bot } from './bot.js'
 await Bot.init();
+
+/* Initialize modules */
+import { HonchoModule } from './modules/honcho.js';
+HonchoModule.init();
 
 /* Initialize Commands */
 import { Dict } from './commands/dict.js'
@@ -75,7 +83,6 @@ await CommandManager.deployDiscordSlashCommands(    // Deploy
     config.get("Discord.deployGlobalSlashCommandsOnStartup"));
 
 /* Import all listeners */
-import { ListenerManager } from './listenermanager.js';
 await ListenerManager.importListeners();
 
 /* Create all the LLM instances. */

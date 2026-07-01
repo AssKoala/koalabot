@@ -23,7 +23,7 @@ class ChatCommand extends DiscordBotCommand {
 
         // Throw this into the stenographer otherwise the robot won't know what's going on since we 
         // funnel it as if it was just a regular message.
-        Stenographer.pushMessage(new DiscordStenographerMessage(
+        await Stenographer.pushMessage(new DiscordStenographerMessage(
             msg.getGuildId(),
             msg.getChannelId(),
             interaction.user.username,

@@ -201,6 +201,7 @@ async function getUserSettings(interaction: Discord.ChatInputCommandInteraction)
             + `* **Preferred Ai Model**: ${userData.chatSettings.preferredAiModel}\n`
             + `  * **Available models**: ${config.get<string>('Chat.AiModels.enabledModels')}\n`
             + `  * **Default model**: ${config.get<string>('Chat.aiModel')}\n`
+            + `* **Use Honcho**: ${userData.chatSettings.useHoncho}\n`
             + `* **Custom Prompt**: ${userData.chatSettings.customPrompt}\n`
             + `  * **Default Prompt**: ${config.get<string>('Chat.systemPrompt')}`
         );
@@ -279,6 +280,57 @@ async function setCustomSoulMd(interaction: Discord.ChatInputCommandInteraction)
     }
 }
 
+async function setUseHoncho(interaction: Discord.ChatInputCommandInteraction) {
+    try {
+        let useHoncho: boolean;
+        let customUsername: string | undefined;
+
+        try {
+            interaction!.options!.data![0]!.options![0]!.options!.forEach(option => {
+                switch (option.name) {
+                    case 'use_honcho':
+                        useHoncho = option.value as boolean;
+                        break;
+                    case 'username':
+                        customUsername = option.value as string;
+                        break;
+                    default:
+                        throw new Error(`Unexpected option ${option.name} in setUseHoncho`);
+                }      
+            });
+        } catch (e) {
+            const str = `Interaction did not contain expected options, got error ${e}`;
+            getCommonLogger().logErrorAsync(str, interaction);
+            await interaction.editReply(str);
+            return;
+        }
+
+        let userToLoad = interaction.user.username;
+
+        // If they are trying to set a different user's soul.md, make sure they are sudo
+        if (customUsername && customUsername !== interaction.user.username) {
+            const sudoList = config.get<string>('Global.sudoList').split(',').map(id => id.trim());
+            if (!sudoList.includes(interaction.user.id)) {
+                await interaction.editReply(`${interaction.user.username} is not in the Global.sudoList. This incident will be reported.`);
+                return;
+            }
+
+            userToLoad = customUsername;
+        }
+
+        // Copy user data
+        const userData = UserSettingsManager.get().get(userToLoad);
+
+        userData.chatSettings.useHoncho = useHoncho!;
+        await interaction.editReply(`Successfully set use_honcho to ${useHoncho!} for user ${userToLoad}`);
+
+        // Write-back and flush to disk
+        UserSettingsManager.get().set(userData, true);
+    } catch (e) {
+        await getCommonLogger().logErrorAsync(`Failed to set use_honcho, got error ${e}`, interaction);
+    }
+}
+
 /**
  * Set the user settings using the interaction object
  * @param {Discord.interaction} interaction 
@@ -302,6 +354,9 @@ async function setUserSettings(interaction)
                 break;
             case 'soul_md':
                 await setCustomSoulMd(interaction);
+                break;
+            case 'use_honcho':
+                await setUseHoncho(interaction);
                 break;
             default:
                 getCommonLogger().logErrorAsync(`Failed to find response for settings set subcommand(${interaction.options._subcommand})`, interaction);
@@ -398,6 +453,22 @@ class SettingsCommand extends DiscordBotCommand {
                                     option
                                         .setName('custom_prompt')
                                         .setDescription(`Custom AI prompt to use (e.g. You are a helpful assistant...), empty to clear`)
+                                )
+                                .addStringOption((option) =>
+                                    option
+                                        .setName('username')
+                                        .setDescription('[SUDO REQUIRED] Username to set for')
+                                )
+                        )
+                        .addSubcommand((subcommand) =>
+                            subcommand
+                                .setName('use_honcho')
+                                .setDescription(`Enable or disable Honcho memory usage`)
+                                .addBooleanOption((option) =>
+                                    option
+                                        .setName('use_honcho')
+                                        .setDescription(`Enable or disable Honcho memory usage`)
+                                        .setRequired(true)
                                 )
                                 .addStringOption((option) =>
                                     option

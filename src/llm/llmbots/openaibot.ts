@@ -203,7 +203,7 @@ export class OpenAIBot extends LLMBot {
         return content;
     }
 
-    protected async getOpenAICompletion(runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker): Promise<LLMCompletion> {
+    protected async getOpenAICompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker): Promise<LLMCompletion> {
         using perfCounter = PerformanceCounter.Create("OpenAIBot::getOpenAICompletion(): ");
         runtimeData.logger().logInfo("OpenAIBot::getOpenAICompletion(): Sending request to OpenAI Responses API...");
 
@@ -223,7 +223,7 @@ export class OpenAIBot extends LLMBot {
             ];
         }
 
-        let responseOptions: OpenAiSdk.OpenAI.RequestOptions = {};
+        const responseOptions: OpenAiSdk.OpenAI.RequestOptions = {};
 
         if (this.aiModel.includes("gpt-oss")) {
             responseOptions.timeout = config.get("Developer.Hacks.responseTimeout");
@@ -234,14 +234,15 @@ export class OpenAIBot extends LLMBot {
             instructions: tracker.getSystemPrompt(),
             input: tracker.getMessageDataRaw() as any,  // eslint-disable-line @typescript-eslint/no-explicit-any
             tool_choice: "auto",
-            tools: tools
+            tools: tools,
+            safety_identifier: safetyTag
         }, responseOptions);
 
         runtimeData.logger().logInfo("getCompletion(): Received response from OpenAI Responses API.");
         return new OpenAIResponse(completion);
     }
 
-    protected override async getImageCompletion(runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, imageInputUrls: string[] = []): Promise<LLMCompletion> {
+    protected override async getImageCompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, imageInputUrls: string[] = []): Promise<LLMCompletion> {
         using perfCounter = PerformanceCounter.Create("OpenAIBot::getImageCompletion(): ");
         runtimeData.logger().logInfo("OpenAIBot::getImageCompletion(): Sending request to OpenAI Responses API...");
 
@@ -274,17 +275,18 @@ export class OpenAIBot extends LLMBot {
             tool_choice: "auto",
             tools: [
                 { type: "image_generation" }
-            ]
+            ],
+            safety_identifier: safetyTag
         });
 
         runtimeData.logger().logInfo("getImageCompletion(): Received response from OpenAI Responses API.");
         return new OpenAIResponse(completion);
     }
 
-    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker): Promise<LLMCompletion> { 
+    protected override async getCompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker): Promise<LLMCompletion> { 
         using perfCounter = PerformanceCounter.Create("OpenAIBot::getCompletion(): ");
 
-        let completion = await this.getOpenAICompletion(runtimeData, tracker);
+        let completion = await this.getOpenAICompletion(safetyTag, runtimeData, tracker);
         
         // Copy all responses into the input for future context
         completion.getResponseRaw().output.forEach((item: unknown) => {
@@ -334,7 +336,7 @@ export class OpenAIBot extends LLMBot {
 
         // If we made a function call, need to get a new completion with the tool output
         if (madeFunctionCall) {
-            completion = await this.getOpenAICompletion(runtimeData, tracker);
+            completion = await this.getOpenAICompletion(safetyTag, runtimeData, tracker);
 
             // Copy all responses into the input for future context
             completion.getResponseRaw().output.forEach((item: unknown) => {

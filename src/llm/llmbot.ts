@@ -14,6 +14,7 @@ import fs from 'fs/promises';
 import config from 'config';
 import { LLMToolManager } from './llmtoolmanager.js';
 import { getCommonLogger } from '../logging/logmanager.js';
+import { HonchoModule } from '../modules/honcho.js';
 
 export interface LLMGeneratedImageData {
     imageBytes: Buffer;
@@ -68,8 +69,8 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
     }
 
     protected abstract getVisionContent(_promptText: string, _imageUrls: string[]): Promise<unknown[]>;
-    protected abstract getCompletion(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _tracker: LLMMessageTracker): Promise<LLMCompletion>;
-    protected abstract getImageCompletion(_runtimeData: DiscordBotRuntimeData, _systemPrompt: string, _promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion>;
+    protected abstract getCompletion(_safetyTag: string, _runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _tracker: LLMMessageTracker): Promise<LLMCompletion>;
+    protected abstract getImageCompletion(_safetyTag: string, _runtimeData: DiscordBotRuntimeData, _systemPrompt: string, _promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion>;
     protected abstract hasAutomaticImageGeneration(): boolean; 
     protected abstract isMessageRequestForImageGeneration(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage): Promise<boolean>;
     protected abstract getGeneralRequestTracker(_runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, _systemPrompt: string, _overrideQuery?: string): Promise<LLMMessageTracker>;
@@ -111,7 +112,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             const imageUrl = `data:image/png;base64,${imageData.imageBytes.toString("base64")}`;
 
             if (config.get<boolean>("Stenographer.storeImages")) {
-                Stenographer.pushMessage(new DiscordStenographerMessage(
+                await Stenographer.pushMessage(new DiscordStenographerMessage(
                     message.getGuildId(),
                     message.getChannelId(),
                     runtimeData.bot().client().user!.username,
@@ -176,16 +177,22 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
     private static async replyText(runtimeData: DiscordBotRuntimeData, message: LLMInteractionMessage, responseText: string) {
         runtimeData.logger().logInfo(`LLMBot::replyText(): ${message.getQuestion()}, got: ${responseText}`);
 
+        const botId = runtimeData.bot().client().user!.id;
+
         // Add the response to our list of stuff
-        Stenographer.pushMessage(new DiscordStenographerMessage(
+        await Stenographer.pushMessage(new DiscordStenographerMessage(
             message.getGuildId()!,
             message.getChannelId()!,
             runtimeData.bot().client().user!.username,
-            runtimeData.bot().client().user!.id,
+            botId,
             responseText,
             Date.now()
         ));
 
+        // Honcho assistant logging
+        await HonchoModule.get().pushMessageToHoncho(botId, message.getChannelId(), responseText);
+
+        // Actually send stuff to the channel
         try {
             const pChannel = runtimeData.bot().client().channels.cache.get(message.getChannelId());
 
@@ -342,6 +349,21 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
                                     : await this.getDefaultSystemPrompt()) 
                                 + "\n\n" + config.get<string>("Chat.commonPrompt");
 
+            const safetyTag = `${runtimeData.botId()}-${message.getUserId()}-${message.getChannelId()}`;
+
+            // Pull honcho memory if it exists 
+            if (userData.chatSettings.useHoncho) {
+                try {
+                    const hanchoPrompt = await HonchoModule.get().getSystemPrompt(runtimeData.botId(), message.getUserId(), message.getChannelId());
+                    if (hanchoPrompt.length > 0) {
+                        getCommonLogger().logInfo(`LLMBot::handleUserInteraction(): Pulled honcho memory for user ${message.getUserName()} in channel ${message.getChannelId()}, length: ${hanchoPrompt.length}`);
+                        systemPrompt.concat(hanchoPrompt);
+                    }
+                } catch (e) {
+                    runtimeData.logger().logError(`LLMBot::handleUserInteraction(): Failed to pull Honcho memory for user ${message.getUserName()} in channel ${message.getChannelId()}, got error ${e}`);
+                }
+            }
+
             // Store reference to replied to message
             const referencedMessage = message.getInternalData().reference ? await message.getInternalData().fetchReference() : undefined;
 
@@ -363,14 +385,14 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
 
                 if (!tempTracker) throw new Error("Failed to get message tracker for image generation prompt.");
 
-                completion = await this.getCompletion(runtimeData, message, tempTracker);
+                completion = await this.getCompletion(safetyTag, runtimeData, message, tempTracker);
                 const imageGenPrompt = completion.getResponseText();
-                completion = await this.getImageCompletion(runtimeData, systemPrompt, imageGenPrompt, imageUrls);
+                completion = await this.getImageCompletion(safetyTag, runtimeData, systemPrompt, imageGenPrompt, imageUrls);
             } else {
                 const tempTracker = await this.getTracker(runtimeData, message, systemPrompt, imageUrls);
 
                 if (!tempTracker) throw new Error("Failed to get message tracker for user interaction.");
-                completion = await this.getCompletion(runtimeData, message, tempTracker);
+                completion = await this.getCompletion(safetyTag, runtimeData, message, tempTracker);
             }
 
             const imageData = completion.getResponseImageData();

@@ -1,4 +1,4 @@
-import { GetKoalaBotSystem } from '../../api/koalabotsystem.js';
+import { GetKoalaBotSystem, ConfigReloadListener } from '../../api/koalabotsystem.js';
 import fs from 'fs'
 import config from 'config';
 import crypto from 'crypto';
@@ -19,7 +19,7 @@ export class UserChatSettings {
     private _mdFileName: string;
     private mdFileContents: string | null = null;
 
-    constructor(preferredAiModel: string = "", customPrompt: string = "", mdFileName: string = "") {
+    constructor(preferredAiModel: string = "", customPrompt: string = "", mdFileName: string = "", public useHoncho: boolean = false) {
         this.preferredAiModel = preferredAiModel;
         this._customPrompt = customPrompt;
         this._mdFileName = mdFileName;
@@ -105,14 +105,21 @@ export class UserSettingsData {
     chatSettings: UserChatSettings;
     weatherSettings: UserWeatherSettings;
 
-    constructor(name: string, location: string = "Johannesburg, South Africa", preferredUnits: string = "rankine", preferredAiModel: string = "", customPrompt: string = "", mdFileName: string = "") {
+    constructor(name: string, 
+                location: string = "Johannesburg, South Africa", 
+                preferredUnits: string = "rankine", 
+                preferredAiModel: string = "", 
+                customPrompt: string = "", 
+                mdFileName: string = "", 
+                useHoncho: boolean = false) 
+    {
         this.name = name;
-        this.chatSettings = new UserChatSettings(preferredAiModel, customPrompt, mdFileName);
+        this.chatSettings = new UserChatSettings(preferredAiModel, customPrompt, mdFileName, useHoncho);
         this.weatherSettings = new UserWeatherSettings(location, preferredUnits);
     }
 }
 
-export class UserSettingsManager {
+export class UserSettingsManager implements ConfigReloadListener {
     private static instance: UserSettingsManager;
     public static init(settingsJsonFile: string) {
         UserSettingsManager.instance = new UserSettingsManager(settingsJsonFile);
@@ -202,8 +209,11 @@ export class UserSettingsManager {
         }
     }
 
-    // @ts-expect-error todo cleanup tech debt
-    reload(jsonFile) : boolean {
+    async onConfigReload(): Promise<void> {
+        this.reload(this.settingsJsonFile);
+    }
+
+    reload(jsonFile: string) : boolean {
         try {
             const data = fs.readFileSync(jsonFile, { encoding: "utf8", flag: "r" });
             const jsonData = JSON.parse(data);
@@ -220,7 +230,8 @@ export class UserSettingsManager {
                     item.weatherSettings?.preferredUnits || "rankine",
                     item.chatSettings?.preferredAiModel || config.get<string>('Chat.aiModel'),
                     item.chatSettings?.customPrompt || "",
-                    item.chatSettings?.mdFileName || ""
+                    item.chatSettings?.mdFileName || "",
+                    item.chatSettings?.useHoncho || false
                 );
                 
                 this.userSettings.set(item.name, newData);

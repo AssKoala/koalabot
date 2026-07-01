@@ -139,5 +139,22 @@
     },
     Stenographer: {
         storeImages: false                  // If true, store images in stenographer logs
+    },
+    Modules: {
+        Honcho: {
+            enabled: true,                          // If true, enable honcho module
+            Config: {
+                workspaceId: "",                        // Override botname as workspace id
+                apiKey: "",                             // Honcho API key
+                baseUrl: "https://api.honcho.dev",      // Honcho API url
+                environment: "production",              // Honcho environment to use (valid values are production or local)
+                timeout: 30000,                         // Timeout in ms for honcho API calls
+                maxRetries: 3                           // Max number of retries for honcho API calls
+            },
+            Constants: {
+                // Internal: prefix to system prompt ahead of honcho info
+                systemPromptPrefix: "Use the following behavioral patterns, user background, and context summary to tailor your tone and answers."
+            }
+        }
     }
 }

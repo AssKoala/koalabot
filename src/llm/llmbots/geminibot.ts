@@ -264,7 +264,7 @@ export class GeminiBot extends LLMBot {
         return contents;
     }
 
-    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker): Promise<LLMCompletion> {
+    protected override async getCompletion(_safetyTag: string, runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker): Promise<LLMCompletion> {
         const genai = GeminiApi.getInterface();
     
         // We need to strip off the last element to use for the chat itself
@@ -315,7 +315,7 @@ export class GeminiBot extends LLMBot {
         return geminiResponse;
     }
 
-    protected override async getImageCompletion(runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion> {
+    protected override async getImageCompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, _imageInputUrls: string[]): Promise<LLMCompletion> {
         const genai = GeminiApi.getInterface();
 
         const response = await genai.models.generateContent({

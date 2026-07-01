@@ -71,7 +71,7 @@ export class GrokBot extends OpenAIBot {
         return false;
     }
 
-    protected override async getImageCompletion(runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, imageInputUrls: string[]): Promise<LLMCompletion> {
+    protected override async getImageCompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, systemPrompt: string, promptText: string, imageInputUrls: string[]): Promise<LLMCompletion> {
         if (imageInputUrls.length > 0) {
             runtimeData.logger().logWarning("GrokBot::getImageCompletion(): Grok does not currently support image inputs for generation.");
         }
@@ -113,7 +113,7 @@ export class GrokBot extends OpenAIBot {
         return content;
     }
 
-    protected override async getOpenAICompletion(runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker): Promise<GrokResponse> {
+    protected override async getOpenAICompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, tracker: LLMMessageTracker): Promise<GrokResponse> {
         using perfCounter = PerformanceCounter.Create("GrokBot::getOpenAICompletion(): ");
         runtimeData.logger().logInfo("GrokBot::getOpenAICompletion(): Sending request to OpenAI Responses API...");
 
@@ -127,10 +127,10 @@ export class GrokBot extends OpenAIBot {
         return new GrokResponse(completion);
     }
 
-    protected override async getCompletion(runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker) { 
+    protected override async getCompletion(safetyTag: string, runtimeData: DiscordBotRuntimeData, _message: LLMInteractionMessage, tracker: LLMMessageTracker) { 
         using perfCounter = PerformanceCounter.Create("GrokBot::getCompletion(): ");
 
-        const completion = await this.getOpenAICompletion(runtimeData, tracker);
+        const completion = await this.getOpenAICompletion(safetyTag, runtimeData, tracker);
         
         // Copy response for future context
         tracker.pushMessage(completion.getResponseRaw());
