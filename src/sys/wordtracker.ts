@@ -1,6 +1,7 @@
 import { DiscordMessageCreateListener, TrackedWord, WordListener } from "../api/discordmessagelistener.js";
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
 import { Message } from 'discord.js';
+import { DiscordPlatform } from '../platform/discord/discordplatform.js';
 import { readJsonFileSync } from './jsonreader.js'
 
 class TrackedWordConcrete implements TrackedWord {
@@ -72,7 +73,7 @@ export class WordTracker implements DiscordMessageCreateListener {
     // @ts-expect-error todo cleanup tech debt
     onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message): Promise<void> {
         // @ts-expect-error todo cleanup tech debt
-        if (message.author.bot) return; // Ignore bot messages
+        if (DiscordPlatform.shouldIgnoreMessage(message)) return; // Ignore bot messages
 
         this.trackedWords.forEach(word => {
             if (word.isInMessage(message.content)) {

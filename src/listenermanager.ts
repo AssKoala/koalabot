@@ -69,7 +69,7 @@ export abstract class ListenerManager {
 	 * All messages are sent to listeners, including bot messages, so protect accordingly.
 	 * 
 	 * You PROBABLY want to have 
-	 * 		if (message.author.bot && message.content.length == 0) return;
+	 * 		if (DiscordPlatform.shouldIgnoreMessage(message)) return;
 	 * at the top of each handler, but maybe not.
 	 * @param listener Listener to register, if not unique, handler will get called twice.
 	 */

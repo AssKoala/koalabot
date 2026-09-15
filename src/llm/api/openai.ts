@@ -32,7 +32,7 @@ export class OpenAiApi {
 
     static getInterface(aiModel?: string): OpenAI {
         // BEGIN HACK.GptOssBaseUrl
-        if (aiModel && aiModel.includes("gpt-oss") && OpenAiApi.openaiOss) {
+        if (aiModel && config.get<string>(`Developer.Hacks.lmstudioModelList`).split(",").includes(aiModel) && OpenAiApi.openaiOss) {
             return OpenAiApi.openaiOss;
         }
         // END HACK.GptOssBaseUrl

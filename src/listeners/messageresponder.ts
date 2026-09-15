@@ -1,5 +1,6 @@
 import { DiscordMessageCreateListener } from "../api/discordmessagelistener.js";
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js';
+import { DiscordPlatform } from '../platform/discord/discordplatform.js';
 import { Message } from 'discord.js';
 import { GetKoalaBotSystem } from "../api/koalabotsystem.js";
 import { OpenAiApi } from '../llm/api/openai.js';
@@ -304,7 +305,7 @@ export class MessageResponder implements DiscordMessageCreateListener {
     
     async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
         try {
-            if (message.author.bot) return;
+            if (DiscordPlatform.shouldIgnoreMessage(message)) return;
 
             for (let i = 0; i < this.dataSet.rules.length; i++) {
                 const response = await this.dataSet.rules[i].search.getResponseType(runtimeData, message);

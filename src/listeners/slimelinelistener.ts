@@ -2,6 +2,7 @@ import { DiscordMessageCreateListener } from "../api/discordmessagelistener.js";
 import { Message } from 'discord.js'
 import { ListenerManager } from "../listenermanager.js"
 import { DiscordBotRuntimeData } from '../api/discordbotruntimedata.js'
+import { DiscordPlatform } from '../platform/discord/discordplatform.js';
 
 import config from 'config';
 
@@ -30,7 +31,7 @@ class SlimelineListener implements DiscordMessageCreateListener {
     }
 
     async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Message) {
-        if (message.author.bot) return;
+        if (DiscordPlatform.shouldIgnoreMessage(message)) return;
 
         this.responseList.forEach((func) => {
             try {

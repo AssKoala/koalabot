@@ -1,17 +1,19 @@
+import config from 'config';
+
 export function formatPercent(value: number | undefined): string {
     if (value === undefined || !Number.isFinite(value)) {
         return 'N/A';
     }
 
     if (value > 0) {
-        return `⬆️ ${Math.abs(value).toFixed(2)}%`;
+        return `${config.get('StockFormatter.upIcon')} ${Math.abs(value).toFixed(2)}%`;
     }
 
     if (value < 0) {
-        return `⬇️ ${Math.abs(value).toFixed(2)}%`;
+        return `${config.get('StockFormatter.downIcon')} ${Math.abs(value).toFixed(2)}%`;
     }
 
-    return `➡️ 0.00%`;
+    return `${config.get('StockFormatter.noChangeIcon')} 0.00%`;
 }
 
 export function formatDate(date: Date): string {

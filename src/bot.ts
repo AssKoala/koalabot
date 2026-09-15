@@ -62,14 +62,14 @@ export class Bot {
         for (const model of availableModels) {
             let llmBot: OpenAIBot | GrokBot | GeminiBot | null;
 
-            if (model.startsWith("gpt")) {
+            if (config.get<string>(`Developer.Hacks.lmstudioModelList`).split(",").includes(model)) {
+                llmBot = new OpenAIBot(model);
+            } else if (model.startsWith("gpt")) {
                 llmBot = new OpenAIBot(model);
             } else if (model.startsWith("grok-4")) {
                 llmBot = new GrokBot(model);
             } else if (model.startsWith("gemini")) {
                 llmBot = new GeminiBot(model);
-            } else if (model.startsWith("openai/gpt-oss")) {
-                llmBot = new OpenAIBot(model);
             } else {
                 LogManager.get().commonLogger.logWarning(`Bot::createSubBots(): Unknown LLM model ${model}, skipping registration.`);
                 continue;

@@ -287,7 +287,7 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
     public async onDiscordMessageCreate(runtimeData: DiscordBotRuntimeData, message: Discord.Message) {
         const botId = runtimeData.bot().client().user!.id;
         
-        if (!message.author.bot && message.mentions.has(botId)) {
+        if (!DiscordPlatform.shouldIgnoreMessage(message) && message.mentions.has(botId)) {
             const interactionMsg = LLMInteractionMessageFactory.createFromDiscordMessage(message);
 
             return this.handleUserInteraction(runtimeData, interactionMsg);
@@ -401,6 +401,13 @@ export abstract class LLMBot implements DiscordMessageCreateListener {
             if (imageData) {
                 runtimeData.logger().logInfo(`LLMBot::handleUserInteraction(): Results contain image data, responding with image.`);
                 await LLMBot.replyImage(runtimeData, message, imageData);
+            } else if (responseText === "") {
+                runtimeData.logger().logInfo(`LLMBot::handleUserInteraction() Results contain empty text, replying with shrug emoji.`);
+                try {
+                    await message.getInternalData().react("🤷");
+                } catch (e) {
+                    runtimeData.logger().logError(`LLMBot::handleUserInteraction() Failed to react with shrug emoji, got error ${e}`);
+                }
             } else if (responseText) {
                 runtimeData.logger().logInfo(`LLMBot::handleUserInteraction() Results contain text, replying with text.`);
                 await LLMBot.replyText(runtimeData, message, responseText);

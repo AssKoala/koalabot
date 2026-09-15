@@ -88,9 +88,10 @@ export class OpenAIBot extends LLMBot {
     }
 
     protected override hasAutomaticImageGeneration(): boolean {
-        if (this.aiModel.includes("gpt-oss")) {
-            return false;   // GPT-OSS does not currently support the image_generation tool, so we have to handle it manually in getImageCompletion
+        if (config.get<string>(`Developer.Hacks.lmstudioModelList`).split(",").includes(this.aiModel)) {
+            return false;
         }
+
         return true;
     }
 

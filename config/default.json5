@@ -7,6 +7,7 @@
             enableExperimentalChatSystem: false                            // If true, enables the experimental chat system that is under development.
         },
         Hacks: {
+            // lmstudioModelList: ""                                       // Any model mathcing this will be routed to lmstudio
             // openAiOssApiKey: "lm-studio",                                  // API key for gpt-oss
             // openAiOssBaseUrl: "http://192.168.69.69:1234/v1"               // Base URL for gpt-oss model calls.  If provided, will route any model named gpt-oss-* to this endpoint.
             // responseTimeout: 300000                                        // Timeout in ms for waiting for responses from the LLM, increase if you are getting timeouts with larger models or during high load, decrease if you want faster failure when the LLM is not responding.
@@ -117,7 +118,8 @@
         deployGlobalSlashCommandsOnStartup: false,      // Deploy slash commands globally for bot, recommend to always be false
         attachmentTitleMaxLength: 256,                  // Title length for image embeds
 		attachmentDescriptionMaxLength: 1024,           // Description length for image embeds
-        maxTypingTimeMs: 120000                         // Max time to send typing indicator for long responses (e.g. image generation)
+        maxTypingTimeMs: 120000,                        // Max time to send typing indicator for long responses (e.g. image generation)
+        safeBotIds: ""                                  // Comma separated list of bot ids that are considered safe to interact with.  If a bot is not in this list, it will be ignored.
     },
     Listeners: {
         listenerList: "loglistener,deletebotmessagereactionlistener",       // Comma separated List of listener modules to load
@@ -139,6 +141,11 @@
     },
     Stenographer: {
         storeImages: false                  // If true, store images in stenographer logs
+    },
+    StockFormatter: {
+        upIcon: "⬆️",
+        downIcon: "⬇️",
+        noChangeIcon: "➡️",
     },
     Modules: {
         Honcho: {

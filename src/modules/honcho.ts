@@ -42,28 +42,32 @@ export class HonchoModule implements DiscordMessageCreateListener {
     }
 
     /* Honcho functionality */
-    private honcho: Honcho.Honcho;
+    private honcho: Honcho.Honcho | undefined;
 
     constructor() {
-        const environment = config.get<string>('Modules.Honcho.Config.environment');
+        try {
+            const environment = config.get<string>('Modules.Honcho.Config.environment');
 
-        if (environment !== 'local' && environment !== 'production') {
-            throw new Error(`Invalid Honcho environment: ${environment}`);
+            if (environment !== 'local' && environment !== 'production') {
+                throw new Error(`Invalid Honcho environment: ${environment}`);
+            }
+
+            this.honcho = new Honcho.Honcho({
+                workspaceId: config.get<string>('Modules.Honcho.Config.workspaceId') || config.get<string>('Global.botName'),
+                apiKey: config.get<string>('Modules.Honcho.Config.apiKey'),
+                environment: environment,
+                baseURL: config.get<string>('Modules.Honcho.Config.baseUrl'),
+                timeout: config.get<number>('Modules.Honcho.Config.timeout'),
+                maxRetries: config.get<number>('Modules.Honcho.Config.maxRetries')
+            });
+        } catch (e) {
+            getCommonLogger().logError(`Failed to initialize Honcho module, got ${e}`);
         }
-
-        this.honcho = new Honcho.Honcho({
-            workspaceId: config.get<string>('Modules.Honcho.Config.workspaceId') || config.get<string>('Global.botName'),
-            apiKey: config.get<string>('Modules.Honcho.Config.apiKey'),
-            environment: environment,
-            baseURL: config.get<string>('Modules.Honcho.Config.baseUrl'),
-            timeout: config.get<number>('Modules.Honcho.Config.timeout'),
-            maxRetries: config.get<number>('Modules.Honcho.Config.maxRetries')
-        });
     }
 
     async getRuntimeData(userId: string, sessionId: string): Promise<HonchoRuntimeData> {
-        const peer = await this.honcho.peer(storedUserName(userId));
-        const session = await this.honcho.session(storedSessionName(sessionId));
+        const peer = await this.honcho!.peer(storedUserName(userId));
+        const session = await this.honcho!.session(storedSessionName(sessionId));
         return new HonchoRuntimeData(peer, session);
     }
 
@@ -84,7 +88,7 @@ export class HonchoModule implements DiscordMessageCreateListener {
                     message.content);
             }
         } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to log ${message} to stenographer, got ${e}`);
+            getCommonLogger().logError(`Failed to log message into honcho, got ${e}`);
         }
     }
 
@@ -93,7 +97,7 @@ export class HonchoModule implements DiscordMessageCreateListener {
             const honchoRuntimeData = await this.getRuntimeData(userId, sessionId);
             await honchoRuntimeData.session.addMessages([honchoRuntimeData.peer.message(message)]);
         } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to push message to honcho, got ${e}`);
+            getCommonLogger().logError(`Failed to push message to honcho, got ${e}`);
         }
     }
 
@@ -111,7 +115,7 @@ export class HonchoModule implements DiscordMessageCreateListener {
                 return config.get<string>("Modules.Honcho.Constants.systemPromptPrefix") + context.peerRepresentation;
             }
         } catch (e) {
-            getCommonLogger().logErrorAsync(`Failed to get system prompt from honcho, got ${e}`);
+            getCommonLogger().logError(`Failed to get system prompt from honcho, got ${e}`);
         }
 
         return '';

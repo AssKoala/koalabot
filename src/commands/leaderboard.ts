@@ -191,7 +191,7 @@ class ProfanityLeaderboard {
         using perfCounter = PerformanceCounter.Create("updateProfanityLeaderboard(): ");
 
         try {
-            if (message.author.bot) return;
+            if (DiscordPlatform.shouldIgnoreMessage(message)) return;
 
             const stdMsg = LoggerConcrete.getStandardDiscordMessageFormat(message);
             const discordStenographerMsg = DiscordStenographerMessage.parseFromStandardMessageFormat(message.guildId, message.channelId, stdMsg);

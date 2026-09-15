@@ -7,7 +7,7 @@ import YahooFinance from 'yahoo-finance2';
 
 import { DiscordBotCommand, registerDiscordBotCommand } from '../api/discordbotcommand.js';
 import { PerformanceCounter } from '../performancecounter.js';
-import { formatDate, formatPercent } from './stockformatter.js';
+import { formatDate, formatPercent } from './internal/stockformatter.js';
 
 type PricePoint = {
     date: Date;

@@ -89,4 +89,13 @@ export class DiscordPlatform {
     public static createTypingObject(channel: Discord.Channel) {
         return new AutoTyper(channel);
     }
+
+    public static shouldIgnoreMessage(message: Discord.Message): boolean {
+        return message.author.bot && !this.isMessageFromSafeBot(message);
+    }
+
+    public static isMessageFromSafeBot(message: Discord.Message): boolean {
+        const safeBotIds = config.get<string>("Discord.safeBotIds").split(',').map(id => id.trim()).filter(id => id.length > 0);
+        return safeBotIds.includes(message.author.id);
+    }
 }

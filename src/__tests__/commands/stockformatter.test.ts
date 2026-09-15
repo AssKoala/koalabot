@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { formatDate, formatPercent } from '../../commands/stockformatter.js';
+import { formatDate, formatPercent } from '../../commands/internal/stockformatter.js';
 
 describe('stockformatter', () => {
     test('formatPercent: positive values use up arrow', () => {
